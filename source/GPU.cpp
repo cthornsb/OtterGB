@@ -125,14 +125,19 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	// Set pointers to background maps data in VRAM
 	bgMap0.setData(&mem[0][0x1800]);
 	bgMap1.setData(&mem[0][0x1C00]);
-
-	// Setup the window
-	window = new sdlWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
-	window->initialize();
+	
+	window = 0x0;
 }
 
 GPU::~GPU(){
-	delete window;
+	if(window)
+		delete window;
+}
+
+void GPU::initialize(){
+	// Setup the window
+	window = new sdlWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
+	window->initialize();
 }
 
 void GPU::debug(){

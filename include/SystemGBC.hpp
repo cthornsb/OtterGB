@@ -17,7 +17,9 @@ class SystemGBC{
 public:
 	SystemGBC();
 
-	bool execute(const std::string &fname);
+	bool initialize(const std::string &fname);
+
+	bool execute();
 	
 	bool write(const unsigned short &loc, unsigned char *src){ return write(loc, (*src)); }
 	
@@ -32,6 +34,18 @@ public:
 	unsigned char *getPtr(const unsigned short &loc);
 	
 	unsigned char *getPtrToRegister(const unsigned short &reg);
+
+	 // Toggle CPU debug flag
+	void setDebugMode(bool state=true);
+
+	// Toggle framerate output
+	void setDisplayFramerate(bool state=true);
+
+	// Set CPU frequency multiplier
+	void setCpuFrequency(const double &multiplier);
+
+	// Toggle verbose flag
+	void setVerboseMode(bool state=true);
 	
 	bool dumpMemory(const char *fname);
 	
@@ -50,6 +64,8 @@ public:
 	void enableInterrupts(bool state=true){ masterInterruptEnable = (state ? 0x1 : 0x0); }
 	
 private:
+	bool verboseMode;
+
 	unsigned char masterInterruptEnable;
 	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)

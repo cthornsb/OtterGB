@@ -20,50 +20,53 @@ class Cartridge;
 
 class LR35902 : public SystemComponent {
 public:
-	LR35902() : SystemComponent() { }
+	LR35902() : SystemComponent(), debugMode(false) { }
 
 	bool initialize();
 
 	unsigned short execute(Cartridge *cart);
 
+	unsigned short getProgramCounter() const { return PC; }
+
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
-	unsigned short getProgramCounter() const { return PC; }
+	void setDebugMode(bool state=true){ debugMode = state; }
 
 	// Should this be public??
 	void callInterruptVector(const unsigned char &offset);
 
 protected:
-	unsigned char A; // Accumulator
-	unsigned char B; // B register
-	unsigned char C; // C register
-	unsigned char D; // D register
-	unsigned char E; // E register
-	unsigned char H; // H register
-	unsigned char L; // L register
-
-	unsigned char F; // Flags register
-
-	unsigned char d8; // 8-bit immediate data
-	unsigned char d16h; // High 8 bits of 16-bit immediate data
-	unsigned char d16l; // Low 8 bits of 16-bit immediate data
-
-	unsigned short SP; // Stack Pointer (16-bit)
-	unsigned short PC; // Program Counter (16-bit)
-	unsigned short nCycles; ///< Instruction clock cycle counter
-
-	std::string opcodes[256]; // Name of each opcode (for debugging)
-	std::string opcodesCB[256]; // Name of each CB-prefix opcode (for debugging)
-
-	void (LR35902::*funcPtr[256])(); // Opcode functions for LR35902 processor
-	void (LR35902::*funcPtrCB[256])(); // CB-Prefix opcode functions for LR35902 processor
-
+	bool debugMode;
 	bool halfCarry;
 	bool fullCarry;
 
+	unsigned char A; ///< Accumulator
+	unsigned char B; ///< B register
+	unsigned char C; ///< C register
+	unsigned char D; ///< D register
+	unsigned char E; ///< E register
+	unsigned char H; ///< H register
+	unsigned char L; ///< L register
+
+	unsigned char F; ///< Flags register
+
+	unsigned char d8; ///< 8-bit immediate data
+	unsigned char d16h; ///< High 8 bits of 16-bit immediate data
+	unsigned char d16l; ///< Low 8 bits of 16-bit immediate data
+
+	unsigned short SP; ///< Stack Pointer (16-bit)
+	unsigned short PC; ///< Program Counter (16-bit)
+	unsigned short nCycles; ///< Instruction clock cycle counter
+
+	std::string opcodes[256]; ///< Name of each opcode (for debugging)
+	std::string opcodesCB[256]; ///< Name of each CB-prefix opcode (for debugging)
+
+	void (LR35902::*funcPtr[256])(); ///< Opcode functions for LR35902 processor
+	void (LR35902::*funcPtrCB[256])(); ///< CB-Prefix opcode functions for LR35902 processor
+
 	void setFlag(const unsigned char &bit, bool state=true);
 
-	void setFlags(bool Z, bool S, bool H, bool C);
+	void setFlags(bool zflag, bool sflag, bool hflag, bool cflag);
 
 	unsigned short get_d16();
 

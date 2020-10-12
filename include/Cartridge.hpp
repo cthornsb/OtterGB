@@ -20,7 +20,7 @@ public:
 
 	SystemComponent *getRam(){ return &ram; }
 
-	bool readRom(const std::string &fname);
+	bool readRom(const std::string &fname, bool verbose=false);
 	
 	unsigned short getProgramEntryPoint() const { return programStart; }
 

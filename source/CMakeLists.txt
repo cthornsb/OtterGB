@@ -1,4 +1,4 @@
-set(CORE_SOURCES sdlWindow.cpp colors.cpp LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp)
+set(CORE_SOURCES sdlWindow.cpp colors.cpp LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp)
 
 #Add the sources to the library.
 add_library(CORE_OBJECTS OBJECT ${CORE_SOURCES})

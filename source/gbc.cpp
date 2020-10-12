@@ -1,14 +1,53 @@
+#include <iostream>
 #include <string>
+#include <stdlib.h>
 
+#include "optionHandler.hpp"
 #include "SystemGBC.hpp"
 
 int main(int argc, char *argv[]){
-	SystemGBC gbc;
+	optionHandler handler;
+	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
+	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable CPU instruction debugging mode."));
+	handler.add(optionExt("framerate", no_argument, NULL, 'f', "", "Output emulation framerate."));
+	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
+	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
 	
-	if(argc <= 1)
-		gbc.execute("../../roms/cpu_instrs.gb");
-	else
-		gbc.execute(std::string(argv[1]));
+	// Handle user input.
+	if(!handler.setup(argc, argv))
+		return 1;
+
+	// Main system bus
+	SystemGBC gbc;
+
+	std::string inputFilename;
+	if(handler.getOption(0)->active) // Set input filename
+		inputFilename = handler.getOption(0)->argument;
+
+	if(handler.getOption(1)->active) // Toggle debug flag
+		gbc.setDebugMode(true);
+
+	if(handler.getOption(2)->active) // Toggle framerate output
+		gbc.setDisplayFramerate(true);
+
+	if(handler.getOption(3)->active) // Set CPU frequency multiplier
+		gbc.setCpuFrequency(strtod(handler.getOption(3)->argument.c_str(), NULL));
+
+	if(handler.getOption(4)->active) // Toggle verbose flag
+		gbc.setVerboseMode(true);
+
+	// Check for ROM filename.
+	if(inputFilename.empty()){
+		std::cout << " ERROR! Input gb/gbc ROM file not specified!\n";
+		return 2;
+	}
+
+	// Execute the ROM
+	if(!gbc.initialize(inputFilename)){
+		std::cout << " ERROR! Failed to read input ROM file \"" << inputFilename << "\"!\n";
+		return 3;
+	}
+	gbc.execute();
 
 	return 0;
 }

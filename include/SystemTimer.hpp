@@ -14,11 +14,15 @@ public:
 	
 	void setFrequencyMultiplier(const double &mult){ frequencyMultiplier = mult; }
 	
+	void setDisplayFramerate(bool state=true){ displayFramerate = state; }
+	
 	bool sync(const unsigned short &nCycles=1);
 
 	bool wait(const double &microseconds);
 
 private:
+	bool displayFramerate;
+
 	double frequencyMultiplier;
 	
 	unsigned int cyclesSinceLastVSync; ///< The number of cycles since the last Vertical Sync

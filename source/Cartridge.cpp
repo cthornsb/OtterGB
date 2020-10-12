@@ -92,7 +92,7 @@ bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
 	return true;
 }
 
-bool Cartridge::readRom(const std::string &fname){
+bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	// Open the rom file
 	std::ifstream rom(fname.c_str(), std::ios::binary);
 	if(!rom.good())
@@ -113,6 +113,10 @@ bool Cartridge::readRom(const std::string &fname){
 	
 	// Make the ROM read-only
 	setReadOnly();
+	
+	// Print the cartridge header
+	if(verbose) 
+		print();
 	
 	return true;
 }
@@ -204,8 +208,6 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	
 	// Set the default ROM bank for SWAP
 	bs = 1;
-	
-	print();
 	
 	return 79;
 }

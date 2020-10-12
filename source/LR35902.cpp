@@ -19,9 +19,6 @@ const unsigned char FLAG_S_MASK = 0x40;
 const unsigned char FLAG_H_MASK = 0x20;
 const unsigned char FLAG_C_MASK = 0x10;
 
-// This won't be global later
-bool debugMode = false;
-
 const unsigned char ZERO = 0x0;
 
 // Set a PC breakpoint for debugging.
@@ -135,11 +132,11 @@ void LR35902::setFlag(const unsigned char &bit, bool state/*=true*/){
 	else      res_d8(&F, bit);
 }
 
-void LR35902::setFlags(bool Z, bool S, bool H, bool C){
-	setFlag(FLAG_Z_BIT, Z);
-	setFlag(FLAG_S_BIT, S);
-	setFlag(FLAG_H_BIT, H);
-	setFlag(FLAG_C_BIT, C);
+void LR35902::setFlags(bool zflag, bool sflag, bool hflag, bool cflag){
+	setFlag(FLAG_Z_BIT, zflag);
+	setFlag(FLAG_S_BIT, sflag);
+	setFlag(FLAG_H_BIT, hflag);
+	setFlag(FLAG_C_BIT, cflag);
 }
 
 unsigned short LR35902::get_d16(){ return getUShort(d16h, d16l); }

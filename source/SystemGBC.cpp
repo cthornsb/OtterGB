@@ -27,7 +27,9 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : masterInterruptEnable(0x1) { 
+SystemGBC::SystemGBC() : verboseMode(false), masterInterruptEnable(0x1) { }
+
+bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
 
 	// Set pointers to joypad registers
@@ -183,29 +185,25 @@ SystemGBC::SystemGBC() : masterInterruptEnable(0x1) {
 	(*rFF75)  = 0x8F;
 	(*rFF76)  = 0x00;
 	(*rFF77)  = 0x00;
+	
+	// Read the ROM into memory
+	bool retval = cart.readRom(fname, verboseMode);
+	if(retval) // Initialize the SDL window
+		gpu.initialize();
+	
+	return retval;
 }
 
-bool SystemGBC::execute(const std::string &fname){
-	// Read the ROM into memory
-	cart.readRom(fname);
-
-	// Dump memory
-	//dumpMemory("dump.out");
-
+bool SystemGBC::execute(){
 	// Set the PC to the entry point of the program.
 	cpu.setProgramCounter(cart.getProgramEntryPoint());
-
-	// Slow down the system clock so we can see what's going on.
-	//clock.setFrequencyMultiplier(0.05);
 
 	// Run the ROM. Main loop.
 	unsigned short nCycles = 1;
 	while(true){
 		// Check the status of the GPU and LCD screen
-		if(!gpu.getWindowStatus()){
-			//dumpMemory("mem.dat");
+		if(!gpu.getWindowStatus())
 			break;
-		}
 
 		// Check for pending interrupts.
 		if(masterInterruptEnable == 0x0 || (*rIF) == 0x0)
@@ -235,11 +233,8 @@ bool SystemGBC::execute(const std::string &fname){
 
 		// Sync with the GBC system clock.
 		// Wait a certain number of cycles based on the opcode executed		
-		if(clock.sync(nCycles)){
+		if(clock.sync(nCycles))
 			gpu.render(); // Render the current frame
-			//gpu.drawTileMaps();
-			//gpu.render();
-		}
 	}
 }
 
@@ -453,6 +448,25 @@ unsigned char *SystemGBC::getPtrToRegister(const unsigned short &reg){
 	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
 		return 0x0;
 	return &registers[(reg & 0x00FF)];
+}
+
+void SystemGBC::setDebugMode(bool state/*=true*/){
+	cpu.setDebugMode(state);
+}
+
+// Toggle framerate output
+void SystemGBC::setDisplayFramerate(bool state/*=true*/){
+	clock.setDisplayFramerate(state);
+}
+
+// Set CPU frequency multiplier
+void SystemGBC::setCpuFrequency(const double &multiplier){
+	clock.setFrequencyMultiplier(multiplier);
+}
+
+// Toggle verbose flag
+void SystemGBC::setVerboseMode(bool state/*=true*/){
+	verboseMode = true;
 }
 
 bool SystemGBC::dumpMemory(const char *fname){

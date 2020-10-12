@@ -134,6 +134,8 @@ public:
 	GPU();
 
 	~GPU();
+	
+	void initialize();
 
 	void debug();
 
