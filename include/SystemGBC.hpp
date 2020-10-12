@@ -35,6 +35,8 @@ public:
 	
 	unsigned char *getPtrToRegister(const unsigned short &reg);
 
+	LR35902 *getCPU(){ return &cpu; }
+	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 
@@ -47,7 +49,7 @@ public:
 	// Toggle verbose flag
 	void setVerboseMode(bool state=true);
 	
-	void setBreakpoint(const unsigned short &breakpoint);
+	void setMemoryWatchRegion(const unsigned short &locL, const unsigned short &locH=0);
 	
 	bool dumpMemory(const char *fname);
 	
@@ -66,11 +68,20 @@ public:
 	void enableInterrupts(bool state=true){ masterInterruptEnable = (state ? 0x1 : 0x0); }
 	
 private:
-	bool verboseMode;
+	bool verboseMode; ///< Verbosity flag
+	bool debugMode; ///< Debug flag
 
-	unsigned char masterInterruptEnable;
-	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
+	unsigned short memoryAccessLow; ///< User-set memory 
+	unsigned short memoryAccessHigh; ///< 
+
+	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)
+	unsigned char dmaSourceH; ///< DMA source MSB
+	unsigned char dmaSourceL; ///< DMA source LSB
+	unsigned char dmaDestinationH; ///< DMA destination MSB
+	unsigned char dmaDestinationL; ///< DMA destination LSB
+
+	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
 	
 	Cartridge cart;
 	GPU gpu;
@@ -82,11 +93,6 @@ private:
 	SystemClock clock;
 	SystemTimer timer;
 	LR35902 cpu;
-
-	unsigned char dmaSourceH;
-	unsigned char dmaSourceL;
-	unsigned char dmaDestinationH;
-	unsigned char dmaDestinationL;
 	
 	void startDmaTransfer(const unsigned short &dest, const unsigned short &src, const unsigned short &N);
 

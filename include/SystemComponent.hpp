@@ -7,7 +7,7 @@ class SystemGBC;
 
 class SystemComponent{
 public:
-	SystemComponent() : sys(0x0), readOnly(0), offset(0), nBytes(0), nBanks(0), bs(0) { }
+	SystemComponent() : sys(0x0), readOnly(0), debugMode(false), offset(0), nBytes(0), nBanks(0), bs(0), size(0), labs(0), lrel(0) { }
 
 	SystemComponent(const unsigned int &nB, const unsigned int &N=1) : readOnly(0), offset(0), nBytes(nB), nBanks(N), bs(0) {
 		initialize(nB, N);
@@ -63,6 +63,8 @@ public:
 
 	unsigned int getSize() const { return size; }
 
+	void setDebugMode(bool state=true){ debugMode = state; }
+
 	void incL();
 
 	void decL();
@@ -71,6 +73,7 @@ protected:
 	SystemGBC *sys; // Pointer to the system bus
 	
 	bool readOnly; // Read-only flag
+	bool debugMode; // Debug flag
 
 	unsigned int offset; // Memory address offset
 	unsigned int nBytes; // Number of bytes per bank

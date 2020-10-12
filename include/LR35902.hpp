@@ -20,9 +20,9 @@ class Cartridge;
 
 class LR35902 : public SystemComponent {
 public:
-	LR35902() : SystemComponent(), debugMode(false), halfCarry(false), fullCarry(false), 
-	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), d8(0), d16h(0), d16l(0), 
-	            SP(0), PC(0), BP(0xFFFF), nCycles(0) { }
+	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
+	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
+	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), nCycles(0) { }
 
 	bool initialize();
 
@@ -32,15 +32,12 @@ public:
 
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
-	void setDebugMode(bool state=true){ debugMode = state; }
-
 	void setBreakpoint(const unsigned short &breakpoint){ BP = breakpoint; }
 
 	// Should this be public??
 	void callInterruptVector(const unsigned char &offset);
 
 protected:
-	bool debugMode;
 	bool halfCarry;
 	bool fullCarry;
 

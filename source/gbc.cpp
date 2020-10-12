@@ -1,7 +1,9 @@
 #include <iostream>
+#include <vector>
 #include <string>
 #include <stdlib.h>
 
+#include "Support.hpp"
 #include "optionHandler.hpp"
 #include "SystemGBC.hpp"
 
@@ -12,7 +14,8 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("framerate", no_argument, NULL, 'f', "", "Output emulation framerate."));
 	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
-	handler.add(optionExt("break", required_argument, NULL, 'B', "<breakpoint>", "Set 16-bit instruction breakpoint (base 16)."));
+	handler.add(optionExt("break", required_argument, NULL, 'B', "<NN>", "Set 16-bit instruction breakpoint, NN (base 16)."));
+	handler.add(optionExt("watch", required_argument, NULL, 'W', "<NN|NN1:NN2>", "Watch access of memory location NN or in range [NN1,NN2] (base 16)."));
 	
 	// Handle user input.
 	if(!handler.setup(argc, argv))
@@ -38,7 +41,18 @@ int main(int argc, char *argv[]){
 		gbc.setVerboseMode(true);
 
 	if(handler.getOption(5)->active) // Set program breakpoint
-		gbc.setBreakpoint((unsigned short)strtoul(handler.getOption(5)->argument.c_str(), NULL, 16));
+		gbc.getCPU()->setBreakpoint((unsigned short)strtoul(handler.getOption(5)->argument.c_str(), NULL, 16));
+
+	if(handler.getOption(6)->active){ // Set memory access watch region
+		std::vector<std::string> args;
+		unsigned int nArgs = splitString(handler.getOption(6)->argument, args, ':');
+		if(nArgs >= 2)
+			gbc.setMemoryWatchRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16), (unsigned short)strtoul(args[1].c_str(), NULL, 16));
+		else if(nArgs == 1)
+			gbc.setMemoryWatchRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16));
+		else
+			std::cout << " WARNING: Invalid memory range (" << handler.getOption(6)->argument << ").\n";			
+	}
 
 	// Check for ROM filename.
 	if(inputFilename.empty()){

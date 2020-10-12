@@ -27,7 +27,10 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : verboseMode(false), masterInterruptEnable(0x1) { }
+SystemGBC::SystemGBC() : verboseMode(false), debugMode(false), memoryAccessLow(0), memoryAccessHigh(0), 
+                         masterInterruptEnable(0x1), interruptEnable(0), 
+                         dmaSourceH(0), dmaSourceL(0), 
+                         dmaDestinationH(0), dmaDestinationL(0) { }
 
 bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
@@ -253,6 +256,10 @@ void SystemGBC::handleSerialInterrupt(){ (*rIF) |= 0x8; }
 void SystemGBC::handleJoypadInterrupt(){ (*rIF) |= 0x10; }
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
+	// Check for memory access watch
+	if(loc >= memoryAccessLow && loc <= memoryAccessHigh)
+		std::cout << " (W) PC=" << getHex(cpu.getProgramCounter()) << " " << getHex(src) << "->[" << getHex(loc) << "]\n";
+
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
@@ -361,6 +368,10 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
+	// Check for memory access watch
+	if(loc >= memoryAccessLow && loc <= memoryAccessHigh)
+		std::cout << " (R) PC=" << getHex(cpu.getProgramCounter()) << " [" << getHex(loc) << "]\n";
+
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
@@ -451,7 +462,16 @@ unsigned char *SystemGBC::getPtrToRegister(const unsigned short &reg){
 }
 
 void SystemGBC::setDebugMode(bool state/*=true*/){
+	debugMode = state;
 	cpu.setDebugMode(state);
+	timer.setDebugMode(state);
+	clock.setDebugMode(state);
+	hram.setDebugMode(state);
+	wram.setDebugMode(state);
+	joy.setDebugMode(state);
+	oam.setDebugMode(state);
+	sound.setDebugMode(state);
+	gpu.setDebugMode(state);
 }
 
 // Toggle framerate output
@@ -466,11 +486,19 @@ void SystemGBC::setCpuFrequency(const double &multiplier){
 
 // Toggle verbose flag
 void SystemGBC::setVerboseMode(bool state/*=true*/){
-	verboseMode = true;
+	verboseMode = state;
 }
 
-void SystemGBC::setBreakpoint(const unsigned short &breakpoint){
-	cpu.setBreakpoint(breakpoint);
+void SystemGBC::setMemoryWatchRegion(const unsigned short &locL, const unsigned short &locH/*=0*/){
+	memoryAccessLow = locL;
+	if(locH > locL){
+		memoryAccessHigh = locH;
+		std::cout << " Watching memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
+	}
+	else{
+		memoryAccessHigh = locL;
+		std::cout << " Watching memory location " << getHex(locL) << std::endl;
+	}
 }
 
 bool SystemGBC::dumpMemory(const char *fname){
