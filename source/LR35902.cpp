@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <sstream>
 #include <stdlib.h>
 
@@ -7,7 +6,9 @@
 #include "LR35902.hpp"
 #include "SystemGBC.hpp"
 #include "Cartridge.hpp"
+
 #include "Opcodes.hpp"
+#include "OpcodeNames.hpp"
 
 const unsigned char FLAG_Z_BIT = 7;
 const unsigned char FLAG_S_BIT = 6;
@@ -21,12 +22,19 @@ const unsigned char FLAG_C_MASK = 0x10;
 
 const unsigned char ZERO = 0x0;
 
+unsigned short LR35902::execute(const unsigned char &op){
+	if(!isPrefixCB)
+		(this->*funcPtr[op])();
+	else
+		(this->*funcPtrCB[op])();
+}
+
 unsigned short LR35902::execute(Cartridge *cart){
 	// Start reading the rom
 	std::string name;
-	unsigned short len;
 	unsigned char op;
-	bool isPrefixCB = false;
+	isPrefixCB = false;
+	nBytes = 0; // Zero the instruction length
 	nCycles = 0; // Zero the CPU cycles counter
 
 	if(PC == BP) // Check for instruction breakpoint
@@ -38,16 +46,16 @@ unsigned short LR35902::execute(Cartridge *cart){
 	
 	if(op != 0xCB){ // Normal opcode
 		if(debugMode)
-			name = opcodes[op];
-		len = opcodeLengths[op];
+			name = opcodeNames[op];
+		nBytes = opcodeLengths[op];
 		nCycles = opcodeCycles[op];
 	}
 	else{ // CB prefix
 		isPrefixCB = true;
 		sys->read(PC++, op);
 		if(debugMode)
-			name = opcodesCB[op];
-		len = 1;
+			name = opcodeNamesCB[op];
+		nBytes = 1;
 		nCycles = (op & 0xF != 0x6) ? 8 : 16;
 	}
 	
@@ -62,22 +70,20 @@ unsigned short LR35902::execute(Cartridge *cart){
 	}
 
 	// Read the opcode's accompanying value (if any)
-	if(len == 2){ // Read 8 bits (valid targets: d8, d8, d8)
+	if(nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
 		sys->read(PC++, d8);
 	}
-	else if(len == 3){ // Read 16 bits (valid targets: d16, d16)
+	else if(nBytes == 3){ // Read 16 bits (valid targets: d16, d16)
 		// Low byte read first!
 		sys->read(PC++, d16l);
 		sys->read(PC++, d16h);
 	}
 
 	if(debugMode)
-		stream << " d8=" << getHex(d8) << " d16=" << getHex(get_d16()) << " " << name;
+		stream << " d8=" << getHex(d8) << " d16=" << getHex(getd16()) << " " << name;
 
-	if(!isPrefixCB)
-		(this->*funcPtr[op])();
-	else
-		(this->*funcPtrCB[op])();
+	// Execute the instruction
+	execute(op);
 
 	if(debugMode){// && op != 0x0)
 		std::cout << stream.str();
@@ -102,15 +108,15 @@ void LR35902::setFlags(bool zflag, bool sflag, bool hflag, bool cflag){
 	setFlag(FLAG_C_BIT, cflag);
 }
 
-unsigned short LR35902::get_d16(){ return getUShort(d16h, d16l); }
+unsigned short LR35902::getd16() const { return getUShort(d16h, d16l); }
 
-unsigned short LR35902::getAF(){ return getUShort(A, F); }
+unsigned short LR35902::getAF() const { return getUShort(A, F); }
 
-unsigned short LR35902::getBC(){ return getUShort(B, C); }
+unsigned short LR35902::getBC() const { return getUShort(B, C); }
 
-unsigned short LR35902::getDE(){ return getUShort(D, E); }
+unsigned short LR35902::getDE() const { return getUShort(D, E); }
 
-unsigned short LR35902::getHL(){ return getUShort(H, L); }
+unsigned short LR35902::getHL() const { return getUShort(H, L); }
 
 unsigned short LR35902::setAF(const unsigned short &val){
 	A = (0xFF00 & val) >> 8;
@@ -464,7 +470,7 @@ void LR35902::ADD_SP_r8(){
 
 void LR35902::LD_a16_A(){
 	// Set memory location (a16) to register A.
-	sys->write(get_d16(), &A);
+	sys->write(getd16(), &A);
 }
 
 // LD HL,SP+r8 or LDHL SP,r8
@@ -486,7 +492,7 @@ void LR35902::LD_HL_d16(){
 
 void LR35902::LD_a16_SP(){
 	// Write stack pointer to memory location (a16).
-	unsigned short target = get_d16();
+	unsigned short target = getd16();
 	sys->write(target, (0x00FF & SP)); // Write the low byte first
 	sys->write(target+1, (0xFF00 &SP) >> 8); // Write the high byte last
 }
@@ -567,7 +573,7 @@ void LR35902::ld_aHL_d8(unsigned char *arg){
 
 void LR35902::LD_aHL_d16(){
 	// Write d16 into memory location (HL).
-	unsigned short val = get_d16();
+	unsigned short val = getd16();
 	unsigned short HL = getHL();
 	sys->write(HL, (0x00FF & val)); // Write the low byte first
 	sys->write(HL+1, (0xFF00 & val) >> 8); // Write the high byte last		
@@ -841,51 +847,6 @@ void LR35902::SET_7_aHL(){
 }
 
 bool LR35902::initialize(){
-	std::ifstream f;
-	
-	//if(debugMode){ // Read the opcode names
-	if(true){
-		unsigned int row = 0;
-		unsigned int col = 0;
-		std::string line;
-		f.open("../../assets/opcodes.dat");
-		if(!f.good()){
-			std::cout << " WARNING! Failed to read file \"opcodes.dat\", disabling debug mode.\n";
-			debugMode = false;
-		}
-		while(true){
-			getline(f, line);
-			if(f.eof() || !f.good()) break;
-			std::vector<std::string> cells;
-			if(splitString(line, cells) < 16) continue;
-			for(int i = 0; i < 16; i++)
-				opcodes[row*16+i] = cells[i];
-			row++;
-		}
-		f.close();
-	}
-	
-	//if(debugMode){ // Read the CB prefix opcodes
-	if(true){
-		unsigned int row = 0;
-		std::string line;
-		f.open("../../assets/opcodesCB.dat");
-		if(!f.good()){
-			std::cout << " WARNING! Failed to read file \"opcodesCB.dat\", disabling debug mode.\n";
-			debugMode = false;
-		}
-		while(true){
-			getline(f, line);
-			if(f.eof() || !f.good()) break;
-			std::vector<std::string> cells;
-			if(splitString(line, cells) < 16) continue;
-			for(int i = 0; i < 16; i++)
-				opcodesCB[row*16+i] = cells[i];
-			row++;
-		}
-		f.close();
-	}
-
 	// Set startup values for the CPU registers
 	setAF(0x01B0);
 	setBC(0x0013);

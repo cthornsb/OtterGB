@@ -26,13 +26,49 @@ public:
 
 	bool initialize();
 
+	// Execute an instruction and return the number of clock cycles.
+	unsigned short execute(const unsigned char &op);
+
+	// Read the next instruction from the cartridge ROM and return the number of clock cycles.
 	unsigned short execute(Cartridge *cart);
 
 	unsigned short getProgramCounter() const { return PC; }
 
+	unsigned char getd8() const { return d8; }
+	
+	unsigned short getd16() const ;
+	
+	unsigned short getAF() const ;
+
+	unsigned short getBC() const ;
+
+	unsigned short getDE() const ;
+
+	unsigned short getHL() const ;
+
+	unsigned short getCycles() const { return nCycles; }
+	
+	unsigned short getLength() const { return nBytes; }
+
+	bool getPrefixCB() const { return isPrefixCB; }
+
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
 	void setBreakpoint(const unsigned short &breakpoint){ BP = breakpoint; }
+
+	void setd8(const unsigned char &d){ d8 = d; }
+	
+	void setd16(const unsigned short &dd);
+
+	unsigned short setAF(const unsigned short &val);
+
+	unsigned short setBC(const unsigned short &val);
+
+	unsigned short setDE(const unsigned short &val);
+
+	unsigned short setHL(const unsigned short &val);
+
+	void setPrefixCB(bool state){ isPrefixCB = state; }
 
 	// Should this be public??
 	void callInterruptVector(const unsigned char &offset);
@@ -58,10 +94,11 @@ protected:
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
 	unsigned short BP; ///< User program counter breakpoint
-	unsigned short nCycles; ///< Instruction clock cycle counter
+	
+	unsigned short nCycles; ///< Length of last instruction in clock cycles
+	unsigned short nBytes; ///< Length of last instruction in bytes
 
-	std::string opcodes[256]; ///< Name of each opcode (for debugging)
-	std::string opcodesCB[256]; ///< Name of each CB-prefix opcode (for debugging)
+	bool isPrefixCB; ///< Flag indicating that the last instruction had a CB prefix
 
 	void (LR35902::*funcPtr[256])(); ///< Opcode functions for LR35902 processor
 	void (LR35902::*funcPtrCB[256])(); ///< CB-Prefix opcode functions for LR35902 processor
@@ -69,24 +106,6 @@ protected:
 	void setFlag(const unsigned char &bit, bool state=true);
 
 	void setFlags(bool zflag, bool sflag, bool hflag, bool cflag);
-
-	unsigned short get_d16();
-
-	unsigned short getAF();
-
-	unsigned short getBC();
-
-	unsigned short getDE();
-
-	unsigned short getHL();
-
-	unsigned short setAF(const unsigned short &val);
-
-	unsigned short setBC(const unsigned short &val);
-
-	unsigned short setDE(const unsigned short &val);
-
-	unsigned short setHL(const unsigned short &val);
 
 	void rlc_d8(unsigned char *arg);
 
