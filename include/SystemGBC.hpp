@@ -49,7 +49,9 @@ public:
 	// Toggle verbose flag
 	void setVerboseMode(bool state=true);
 	
-	void setMemoryWatchRegion(const unsigned short &locL, const unsigned short &locH=0);
+	void setMemoryWriteRegion(const unsigned short &locL, const unsigned short &locH=0);
+	
+	void setMemoryReadRegion(const unsigned short &locL, const unsigned short &locH=0);
 	
 	bool dumpMemory(const char *fname);
 	
@@ -71,15 +73,15 @@ private:
 	bool verboseMode; ///< Verbosity flag
 	bool debugMode; ///< Debug flag
 
-	unsigned short memoryAccessLow; ///< User-set memory 
-	unsigned short memoryAccessHigh; ///< 
-
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB
 	unsigned char dmaDestinationH; ///< DMA destination MSB
 	unsigned char dmaDestinationL; ///< DMA destination LSB
+
+	unsigned short memoryAccessWrite[2]; ///< User-set memory 
+	unsigned short memoryAccessRead[2]; ///< 
 
 	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
 	

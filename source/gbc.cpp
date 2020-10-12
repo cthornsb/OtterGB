@@ -15,8 +15,9 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
 	handler.add(optionExt("break", required_argument, NULL, 'B', "<NN>", "Set 16-bit instruction breakpoint, NN (base 16)."));
-	handler.add(optionExt("watch", required_argument, NULL, 'W', "<NN|NN1:NN2>", "Watch access of memory location NN or in range [NN1,NN2] (base 16)."));
-	
+	handler.add(optionExt("write-watch", required_argument, NULL, 'W', "<NN|NN1:NN2>", "Watch memory write to location NN or in range [NN1,NN2] (base 16)."));
+	handler.add(optionExt("read-watch", required_argument, NULL, 'R', "<NN|NN1:NN2>", "Watch memory read of memory location NN or in range [NN1,NN2] (base 16)."));
+		
 	// Handle user input.
 	if(!handler.setup(argc, argv))
 		return 1;
@@ -43,15 +44,26 @@ int main(int argc, char *argv[]){
 	if(handler.getOption(5)->active) // Set program breakpoint
 		gbc.getCPU()->setBreakpoint((unsigned short)strtoul(handler.getOption(5)->argument.c_str(), NULL, 16));
 
-	if(handler.getOption(6)->active){ // Set memory access watch region
+	if(handler.getOption(6)->active){ // Set memory write watch region
 		std::vector<std::string> args;
 		unsigned int nArgs = splitString(handler.getOption(6)->argument, args, ':');
 		if(nArgs >= 2)
-			gbc.setMemoryWatchRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16), (unsigned short)strtoul(args[1].c_str(), NULL, 16));
+			gbc.setMemoryWriteRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16), (unsigned short)strtoul(args[1].c_str(), NULL, 16));
 		else if(nArgs == 1)
-			gbc.setMemoryWatchRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16));
+			gbc.setMemoryWriteRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16));
 		else
 			std::cout << " WARNING: Invalid memory range (" << handler.getOption(6)->argument << ").\n";			
+	}
+
+	if(handler.getOption(7)->active){ // Set memory read watch region
+		std::vector<std::string> args;
+		unsigned int nArgs = splitString(handler.getOption(7)->argument, args, ':');
+		if(nArgs >= 2)
+			gbc.setMemoryReadRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16), (unsigned short)strtoul(args[1].c_str(), NULL, 16));
+		else if(nArgs == 1)
+			gbc.setMemoryReadRegion((unsigned short)strtoul(args[0].c_str(), NULL, 16));
+		else
+			std::cout << " WARNING: Invalid memory range (" << handler.getOption(7)->argument << ").\n";			
 	}
 
 	// Check for ROM filename.

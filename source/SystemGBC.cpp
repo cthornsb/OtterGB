@@ -27,10 +27,14 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : verboseMode(false), debugMode(false), memoryAccessLow(0), memoryAccessHigh(0), 
-                         masterInterruptEnable(0x1), interruptEnable(0), 
-                         dmaSourceH(0), dmaSourceL(0), 
-                         dmaDestinationH(0), dmaDestinationL(0) { }
+SystemGBC::SystemGBC() : verboseMode(false), debugMode(false), masterInterruptEnable(0x1), interruptEnable(0), 
+                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
+	// Disable memory reagion monitor
+	memoryAccessWrite[0] = 1; 
+	memoryAccessWrite[1] = 0;
+	memoryAccessRead[0] = 1; 
+	memoryAccessRead[1] = 0;
+}
 
 bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
@@ -256,10 +260,6 @@ void SystemGBC::handleSerialInterrupt(){ (*rIF) |= 0x8; }
 void SystemGBC::handleJoypadInterrupt(){ (*rIF) |= 0x10; }
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
-	// Check for memory access watch
-	if(loc >= memoryAccessLow && loc <= memoryAccessHigh)
-		std::cout << " (W) PC=" << getHex(cpu.getProgramCounter()) << " " << getHex(src) << "->[" << getHex(loc) << "]\n";
-
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
@@ -363,15 +363,21 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 				return false;
 		}
 	}
+
+	// Check for memory access watch
+	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
+		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		if(cpu.getLength() == 2)
+			std::cout << "d8=" << getHex(cpu.getd8());
+		else if(cpu.getLength() == 3)
+			std::cout << "d16=" << getHex(cpu.getd16());
+		std::cout << std::endl;
+	}
 	
 	return true; // Successfully wrote to memory location (loc)
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
-	// Check for memory access watch
-	if(loc >= memoryAccessLow && loc <= memoryAccessHigh)
-		std::cout << " (R) PC=" << getHex(cpu.getProgramCounter()) << " [" << getHex(loc) << "]\n";
-
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
@@ -439,6 +445,10 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 				return false;
 		}
 	}
+
+	// Check for memory access watch
+	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1])
+		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " [" << getHex(loc) << "] dest=" << getHex(dest) << "\n";
 	
 	return true; // Successfully read from memory location (loc)
 }
@@ -489,15 +499,27 @@ void SystemGBC::setVerboseMode(bool state/*=true*/){
 	verboseMode = state;
 }
 
-void SystemGBC::setMemoryWatchRegion(const unsigned short &locL, const unsigned short &locH/*=0*/){
-	memoryAccessLow = locL;
+void SystemGBC::setMemoryWriteRegion(const unsigned short &locL, const unsigned short &locH/*=0*/){
+	memoryAccessWrite[0] = locL;
 	if(locH > locL){
-		memoryAccessHigh = locH;
-		std::cout << " Watching memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
+		memoryAccessWrite[1] = locH;
+		std::cout << " Watching writes to memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
 	}
 	else{
-		memoryAccessHigh = locL;
-		std::cout << " Watching memory location " << getHex(locL) << std::endl;
+		memoryAccessWrite[1] = locL;
+		std::cout << " Watching writes to memory location " << getHex(locL) << std::endl;
+	}
+}
+
+void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned short &locH/*=0*/){
+	memoryAccessRead[0] = locL;
+	if(locH > locL){
+		memoryAccessRead[1] = locH;
+		std::cout << " Watching reads from memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
+	}
+	else{
+		memoryAccessRead[1] = locL;
+		std::cout << " Watching reads from memory location " << getHex(locL) << std::endl;
 	}
 }
 
