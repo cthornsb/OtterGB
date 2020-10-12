@@ -12,6 +12,7 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("framerate", no_argument, NULL, 'f', "", "Output emulation framerate."));
 	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
+	handler.add(optionExt("break", required_argument, NULL, 'B', "<breakpoint>", "Set 16-bit instruction breakpoint (base 16)."));
 	
 	// Handle user input.
 	if(!handler.setup(argc, argv))
@@ -35,6 +36,9 @@ int main(int argc, char *argv[]){
 
 	if(handler.getOption(4)->active) // Toggle verbose flag
 		gbc.setVerboseMode(true);
+
+	if(handler.getOption(5)->active) // Set program breakpoint
+		gbc.setBreakpoint((unsigned short)strtoul(handler.getOption(5)->argument.c_str(), NULL, 16));
 
 	// Check for ROM filename.
 	if(inputFilename.empty()){

@@ -469,6 +469,10 @@ void SystemGBC::setVerboseMode(bool state/*=true*/){
 	verboseMode = true;
 }
 
+void SystemGBC::setBreakpoint(const unsigned short &breakpoint){
+	cpu.setBreakpoint(breakpoint);
+}
+
 bool SystemGBC::dumpMemory(const char *fname){
 	std::ofstream ofile(fname, std::ios::binary);
 	if(!ofile.good())

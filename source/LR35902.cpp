@@ -21,16 +21,6 @@ const unsigned char FLAG_C_MASK = 0x10;
 
 const unsigned char ZERO = 0x0;
 
-// Set a PC breakpoint for debugging.
-//unsigned short BP1 = 0x2795; // Start displaying opcodes and registers
-//unsigned short BP2 = 0x27a3; // Start stepping through the program
-unsigned short BP1 = 0xffff; // Start displaying opcodes and registers
-unsigned short BP2 = 0xffff; // Start stepping through the program
-unsigned short BPcycles = 0;
-bool stepthru = false;
-
-unsigned char pokeByte = 0x02;
-
 unsigned short LR35902::execute(Cartridge *cart){
 	// Start reading the rom
 	std::string name;
@@ -39,17 +29,8 @@ unsigned short LR35902::execute(Cartridge *cart){
 	bool isPrefixCB = false;
 	nCycles = 0; // Zero the CPU cycles counter
 
-	if(op == 0x10 || op == 0x76){ // STOP / HALT
-		BP1 = PC;
-		BP2 = PC;
-	}
-
-	if(PC == BP1){ // Debugging
-		std::cout << " DEBUG: PC=" << getHex(BP1) << std::endl;
-		if(BPcycles != 0)
-			std::cout << " DEBUG: Skipped " << BPcycles << " cycles.\n";
+	if(PC == BP) // Check for instruction breakpoint
 		debugMode = true;
-	}
 
 	// Read an opcode
 	if(!sys->read(PC++, &op))
@@ -90,15 +71,8 @@ unsigned short LR35902::execute(Cartridge *cart){
 		sys->read(PC++, d16h);
 	}
 
-	if(debugMode){
+	if(debugMode)
 		stream << " d8=" << getHex(d8) << " d16=" << getHex(get_d16()) << " " << name;
-		/*if(((d8 & 0x80) != 0) && (op == 24 || op == 32 || op == 40 || op == 48 || op == 56)){
-			BP1 = PC;
-			BP2 = PC;
-			BPcycles = 0;
-			debugMode = false;
-		}*/
-	}
 
 	if(!isPrefixCB)
 		(this->*funcPtr[op])();
@@ -106,23 +80,12 @@ unsigned short LR35902::execute(Cartridge *cart){
 		(this->*funcPtrCB[op])();
 
 	if(debugMode){// && op != 0x0)
-		std::cout << stream.str();// << std::endl;
+		std::cout << stream.str();
 
-		if(!stepthru){
-			// Wait for the user to hit enter
-			std::string dummy;
-			getline(std::cin, dummy);
-		}
-		else{
-			if(PC >= BP2)
-				stepthru = true;
-			std::cout << std::endl;
-		}
-
-		//std::cout << stream.str() << "   \r" << std::flush;
+		// Wait for the user to hit enter
+		std::string dummy;
+		getline(std::cin, dummy);
 	}
-	
-	BPcycles += nCycles;
 	
 	return nCycles;
 }
@@ -578,8 +541,6 @@ void LR35902::LDI_A_aHL(){
 
 void LR35902::LDH_a8_A(){
 	// Put register A into high memory location ($FF00+a8).
-	//if(d8 == pokeByte)
-	//	std::cout << " LDH [" << getHex((unsigned short)(0xFF00+d8)) << "] <- " << getHex(A) << " : PC=" << getHex((unsigned short)(PC-2)) << std::endl;
 	sys->write((0xFF00 + d8), &A);
 }
 
@@ -587,8 +548,6 @@ void LR35902::LDH_a8_A(){
 
 void LR35902::LDH_A_a8(){
 	// Put high memory location ($FF00+a8) into register A.
-	//if(d8 == pokeByte)
-	//	std::cout << " LDH A <- [" << getHex((unsigned short)(0xFF00+d8)) << "] : PC=" << getHex((unsigned short)(PC-2)) << std::endl;
 	sys->read((0xFF00 + d8), &A);
 }
 

@@ -47,6 +47,8 @@ public:
 	// Toggle verbose flag
 	void setVerboseMode(bool state=true);
 	
+	void setBreakpoint(const unsigned short &breakpoint);
+	
 	bool dumpMemory(const char *fname);
 	
 	void handleHBlankPeriod();
