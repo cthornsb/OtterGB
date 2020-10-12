@@ -27,7 +27,7 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : verboseMode(false), debugMode(false), masterInterruptEnable(0x1), interruptEnable(0), 
+SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), masterInterruptEnable(0x1), interruptEnable(0), 
                          dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
 	// Disable memory reagion monitor
 	memoryAccessWrite[0] = 1; 
@@ -241,12 +241,14 @@ bool SystemGBC::execute(){
 		// Sync with the GBC system clock.
 		// Wait a certain number of cycles based on the opcode executed		
 		if(clock.sync(nCycles))
-			gpu.render(); // Render the current frame
+			if(nFrames++ % frameSkip == 0)
+				gpu.render(); // Render the current frame
 	}
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	gpu.drawNextScanline(&oam);
+	if(nFrames % frameSkip == 0)
+		gpu.drawNextScanline(&oam);
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ (*rIF) |= 0x1; }

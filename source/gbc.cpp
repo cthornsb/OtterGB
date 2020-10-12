@@ -17,6 +17,7 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("break", required_argument, NULL, 'B', "<NN>", "Set 16-bit instruction breakpoint, NN (base 16)."));
 	handler.add(optionExt("write-watch", required_argument, NULL, 'W', "<NN|NN1:NN2>", "Watch memory write to location NN or in range [NN1,NN2] (base 16)."));
 	handler.add(optionExt("read-watch", required_argument, NULL, 'R', "<NN|NN1:NN2>", "Watch memory read of memory location NN or in range [NN1,NN2] (base 16)."));
+	handler.add(optionExt("frame-skip", required_argument, NULL, 's', "<N>", "Render 1 out of every N frames (improves framerate)."));
 		
 	// Handle user input.
 	if(!handler.setup(argc, argv))
@@ -65,6 +66,9 @@ int main(int argc, char *argv[]){
 		else
 			std::cout << " WARNING: Invalid memory range (" << handler.getOption(7)->argument << ").\n";			
 	}
+
+	if(handler.getOption(8)->active) // Set frame-skip
+		gbc.setFrameSkip((unsigned short)strtoul(handler.getOption(8)->argument.c_str(), NULL, 10));
 
 	// Check for ROM filename.
 	if(inputFilename.empty()){

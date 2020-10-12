@@ -53,6 +53,8 @@ public:
 	
 	void setMemoryReadRegion(const unsigned short &locL, const unsigned short &locH=0);
 	
+	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
+	
 	bool dumpMemory(const char *fname);
 	
 	void handleHBlankPeriod();
@@ -70,6 +72,9 @@ public:
 	void enableInterrupts(bool state=true){ masterInterruptEnable = (state ? 0x1 : 0x0); }
 	
 private:
+	unsigned short nFrames;
+	unsigned short frameSkip;
+
 	bool verboseMode; ///< Verbosity flag
 	bool debugMode; ///< Debug flag
 
