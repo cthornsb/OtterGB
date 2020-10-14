@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+#include "Opcodes.hpp"
+#include "OpcodeNames.hpp"
+
 unsigned int splitString(const std::string &input, std::vector<std::string> &output, const char &delim='\t'){
 	output.clear();
 	size_t start = 0;
@@ -40,7 +43,7 @@ std::string getHex(const unsigned short &input){
 bool injectArgs(std::string &input, const std::string &injectedText, const std::string &target="$"){
 	size_t index = input.find(target);
 	if(index == std::string::npos) return false;
-	input = input.substr(0, index) + injectedText + input.substr(index+1);
+	input = input.substr(0, index) + injectedText + input.substr(index+target.length());
 	return true;
 }
 
@@ -88,76 +91,21 @@ unsigned int readHeader(std::ifstream &f){
 
 int main(){
 	// Open the rom file
-	std::ifstream rom("../roms/Tetris.gb", std::ios::binary);
+	std::ifstream rom("./roms/Yoshi's Cookie.gb", std::ios::binary);
 	if(!rom.good())
 		return 1;
 
 	// Open the output file
-	std::ofstream fout("tetris.dat");
+	std::ofstream fout("dk.dat");
 
-	std::string opcodes[16][16];
-	std::string opcodesCB[16][16];
-	unsigned int opcodeLengths[16][16];
-	
 	unsigned char z80[12] = {0xD3, 0xDB, 0xDD, 0xE3, 
 	                         0xE4, 0xEB, 0xEC, 0xED,
 	                         0xF2, 0xF4, 0xFC, 0xFD};
 	
-	// Read the opcode names
-	unsigned int row = 0;
-	unsigned int col = 0;
-	std::string line;
-	std::ifstream f("../assets/opcodes.dat");
-	if(!f.good()){
-		return 2;
-	}
-	while(true){
-		getline(f, line);
-		if(f.eof() || !f.good()) break;
-		std::vector<std::string> cells;
-		if(splitString(line, cells) < 16) continue;
-		for(int i = 0; i < 16; i++)
-			opcodes[row][i] = cells[i];
-		row++;
-	}
-	f.close();
-
-	// Read the opcode byte lengths
-	f.open("../assets/length.dat");
-	if(!f.good()){
-		return 3;
-	}
-	for(int i = 0; i < 16; i++)
-		for(int j = 0; j < 16; j++){
-			f >> opcodeLengths[i][j];
-			if(f.eof() || !f.good()){
-				f.close();
-				return 3;
-			}
-		}
-	f.close();
-
-	// Read the CB prefix opcodes
-	row = 0;
-	f.open("../assets/opcodesCB.dat");
-	if(!f.good()){
-		return 4;
-	}
-	while(true){
-		getline(f, line);
-		if(f.eof() || !f.good()) break;
-		std::vector<std::string> cells;
-		if(splitString(line, cells) < 16) continue;
-		for(int i = 0; i < 16; i++)
-			opcodesCB[row][i] = cells[i];
-		row++;
-	}
-	f.close();
-
 	// Set the initial value of the program counter (PC)
-	unsigned short pc = 0x2795; // program counter
+	unsigned short pc = 0x0000; // program counter
 	if(pc != 0);
-	rom.seekg(pc);
+		rom.seekg(pc);
 
 	// Start disassembling the rom
 	unsigned char op;
@@ -177,15 +125,12 @@ int main(){
 		unsigned int len;
 		if(op != 0xCB){
 			// Look-up the opcode in the opcode table
-			row = op / 16;
-			col = op % 16;
-			
 			if(!isPrefixCB){ // Normal opcode
-				name = opcodes[row][col];
-				len = opcodeLengths[row][col];
+				name = opcodeNames[op];
+				len = opcodeLengths[op];
 			}
 			else{ // CB prefix
-				name = opcodesCB[row][col];
+				name = opcodeNamesCB[op];
 				len = 1;
 				isPrefixCB = false;
 			}
@@ -214,20 +159,29 @@ int main(){
 			val16 = 0x0;
 
 			// Read the opcode's accompanying value (if any)
+			std::string arg;
 			if(len == 1){ // Do nothing
 			}
 			else if(len == 2){ // Read 8 bits (valid targets: d8, a8, r8)
 				rom.read((char*)&val8, 1);
-				if(!injectArgs(name, getHex(val8), "$") && op != 0x10){ // Ignore STOP 0
-					std::cout << " WARNING: Found no target for opcode (" << getHex(op) << ").\n";
+				arg = getHex(val8);
+				if(!injectArgs(name, arg, "d8") && op != 0x10){ // Ignore STOP 0
+					if(!injectArgs(name, arg, "a8")){
+						if(!injectArgs(name, arg, "r8")){
+							std::cout << " WARNING: Found no target for opcode (" << getHex(op) << ") " << name << "\n";
+						}
+					}
 				}
 			}
 			else if(len == 3){ // Read 16 bits (valid targets: d16, a16)
 				rom.read((char*)&val16l, 1);
 				rom.read((char*)&val16h, 1);
 				val16 = ((val16h & 0x00FF) << 8) + val16l;
-				if(!injectArgs(name, getHex(val16), "$")){
-					std::cout << " WARNING: Found no target for opcode (" << getHex(op) << ").\n";
+				arg = getHex(val16);
+				if(!injectArgs(name, arg, "d16")){
+					if(!injectArgs(name, arg, "a16")){
+						std::cout << " WARNING: Found no target for opcode (" << getHex(op) << ") " << name << "\n";
+					}
 				}
 			}
 			else{
