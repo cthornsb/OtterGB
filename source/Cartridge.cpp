@@ -32,28 +32,37 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		case 0x0: // ROM only
 			break;
 		case 0x1 ... 0x3: // MBC1
-			if(writeLoc < 0x2000){ // RAM enable (write only)
+			if(reg < 0x2000){ // RAM enable (write only)
 				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
 				extRamEnabled = ((val & 0x0F) == 0x0A);
 			}
-			else if(writeLoc >= 0x2000 && writeLoc < 0x4000){ // ROM bank number register (write only)
+			else if(reg < 0x4000){ // ROM bank number register (write only)
 				// 5-bit register [0x01, 0x1F] (write only)
 				// Specify lower 5 bits of ROM bank number
 				bs |= (val & 0x1F);
 			}
-			else if(writeLoc >= 0x4000 && writeLoc < 0x6000){
+			else if(reg < 0x6000){
 				// 2-bit register [0x0, 0x3] (write only)
-				if(!ramSelect) // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
+				if(!ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
 					bs |= (val & 0x60);
+				}
 				else // Specify RAM bank number (if in RAM select mode).
 					ram.setBank((val & 0x60) >> 5);
 			}
-			else if(writeLoc >= 0x6000 && writeLoc < 0x8000){ // ROM/RAM mode select
+			else if(reg < 0x8000){ // ROM/RAM mode select
 				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
 				ramSelect = (val & 0x1) != 0;
 			}
 			break;
 		case 0x5 ... 0x6: // MBC2
+			if(reg < 0x2000){ // RAM enable (write only)
+				if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
+					extRamEnabled = true;
+			}
+			else if(reg < 0x4000){ // ROM bank number (write only)
+				if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
+					bs = (val & 0x0F);
+			}
 			break;
 		case 0xB ... 0xD: // MMM01
 			break;
@@ -77,7 +86,8 @@ bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
 			// MBC1 has no registers which may be read
 			return false;
 		case 0x5 ... 0x6: // MBC2
-			break;
+			// MBC2 has no registers which may be read
+			return false;
 		case 0xB ... 0xD: // MMM01
 			break;
 		case 0xF ... 0x13: // MBC3
