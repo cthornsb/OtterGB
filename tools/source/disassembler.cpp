@@ -89,14 +89,26 @@ unsigned int readHeader(std::ifstream &f){
 	return 79;
 }
 
-int main(){
-	// Open the rom file
-	std::ifstream rom("./roms/Yoshi's Cookie.gb", std::ios::binary);
-	if(!rom.good())
+int main(int argc, char *argv[]){
+	if(argc < 2)
 		return 1;
 
+	// Open the rom file
+	std::ifstream rom(argv[1], std::ios::binary);
+	if(!rom.good())
+		return 2;
+
 	// Open the output file
-	std::ofstream fout("dk.dat");
+	std::ofstream fout;
+	if(argc < 3)
+		fout.open("out.s");
+	else
+		fout.open(argv[2]);
+		
+	if(!fout.good()){
+		rom.close();
+		return 3;
+	}
 
 	unsigned char z80[12] = {0xD3, 0xDB, 0xDD, 0xE3, 
 	                         0xE4, 0xEB, 0xEC, 0xED,
