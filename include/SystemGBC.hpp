@@ -72,6 +72,10 @@ public:
 	void enableInterrupts(){ masterInterruptEnable = 0x1; }
 	
 	void disableInterrupts(){ masterInterruptEnable = 0x0; }
+
+	void haltCPU(){ cpuHalted = true; }
+	
+	void stopCPU(){ cpuStopped = true; }
 	
 private:
 	unsigned short nFrames;
@@ -79,6 +83,9 @@ private:
 
 	bool verboseMode; ///< Verbosity flag
 	bool debugMode; ///< Debug flag
+
+	bool cpuStopped; ///< 
+	bool cpuHalted; ///<
 
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)

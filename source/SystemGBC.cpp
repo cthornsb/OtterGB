@@ -27,9 +27,9 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), masterInterruptEnable(0x1), interruptEnable(0), 
-                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
-	// Disable memory reagion monitor
+SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false),
+                         masterInterruptEnable(0x1), interruptEnable(0), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
+	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
 	memoryAccessRead[0] = 1; 
@@ -213,7 +213,7 @@ bool SystemGBC::execute(){
 			break;
 
 		// Check for pending interrupts.
-		if(masterInterruptEnable && (*rIF) != 0x0){
+		if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
 			if(((*rIF) & 0x1) != 0) // VBlank
 				acknowledgeVBlankInterrupt();
 			if(((*rIF) & 0x2) != 0) // LCDC STAT
@@ -225,10 +225,20 @@ bool SystemGBC::execute(){
 			if(((*rIF) & 0x10) != 0) // Joypad
 				acknowledgeJoypadInterrupt();
 		}
+		
+		// Check for interrupt out of HALT
+		if(cpuHalted){
+			if(((*rIE) & (*rIF)) != 0)
+				cpuHalted = false;
+		}
 			
-		// Perform one instruction.
-		if((nCycles = cpu.execute(&cart)) == 0)
-			break;
+		// Check if the CPU is halted.
+		if(!cpuHalted){
+			// Perform one instruction.
+			if((nCycles = cpu.execute(&cart)) == 0)
+				break;
+		}
+		else nCycles = 4; // NOP
 
 		// Update system timer.
 		timer.onClockUpdate(nCycles);
@@ -605,7 +615,6 @@ void SystemGBC::acknowledgeLcdInterrupt(){
 void SystemGBC::acknowledgeTimerInterrupt(){
 	(*rIF) &= 0xFB;
 	if((interruptEnable & 0x4) != 0){ // Execute interrupt
-		std::cout << " HERE!\n";
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x50);
 	}
@@ -622,7 +631,6 @@ void SystemGBC::acknowledgeSerialInterrupt(){
 void SystemGBC::acknowledgeJoypadInterrupt(){
 	(*rIF) &= 0xEF;
 	if((interruptEnable & 0x10) != 0){ // Execute interrupt
-		std::cout << " JOYP\n";
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x60);
 	}

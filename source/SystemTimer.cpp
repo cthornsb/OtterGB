@@ -207,7 +207,6 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 		default:
 			return false;
 	}
-	std::cout << " (W) : " << getHex(reg) << "\t" << getHex(val) << std::endl;
 	return true;
 }
 

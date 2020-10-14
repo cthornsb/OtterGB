@@ -752,13 +752,13 @@ void LR35902::EI(){ sys->enableInterrupts(); }
 // STOP 0
 
 void LR35902::STOP_0(){ 
-	std::cout << " not implemented\n";
+	sys->stopCPU();
 }
 
 // HALT
 
 void LR35902::HALT(){ 
-	std::cout << " not implemented\n";
+	sys->haltCPU();
 }
 
 /////////////////////////////////////////////////////////////////////
