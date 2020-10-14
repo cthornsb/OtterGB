@@ -213,9 +213,7 @@ bool SystemGBC::execute(){
 			break;
 
 		// Check for pending interrupts.
-		if(masterInterruptEnable == 0x0 || (*rIF) == 0x0)
-			(*rIF) = 0x0; // Clear pending interrupts
-		else{
+		if(masterInterruptEnable && (*rIF) != 0x0){
 			if(((*rIF) & 0x1) != 0) // VBlank
 				acknowledgeVBlankInterrupt();
 			if(((*rIF) & 0x2) != 0) // LCDC STAT
