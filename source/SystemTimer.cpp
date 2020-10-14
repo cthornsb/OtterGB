@@ -144,10 +144,10 @@ void SystemClock::mode2Interrupt(){
 // class ComponentTimer
 /////////////////////////////////////////////////////////////////////
 
-bool ComponentTimer::onClockTick(const unsigned short &ticks){
-	nCycles += ticks;
-	if(nCycles >= timerPeriod){
-		nCycles = nCycles % timerPeriod;
+bool ComponentTimer::onClockUpdate(const unsigned short &nCycles){
+	nCyclesSinceLastTick += nCycles;
+	if(nCyclesSinceLastTick >= timerPeriod){
+		nCyclesSinceLastTick = nCyclesSinceLastTick % timerPeriod;
 		timerCounter++;
 		rollOver();
 		return true;
@@ -207,6 +207,7 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 		default:
 			return false;
 	}
+	std::cout << " (W) : " << getHex(reg) << "\t" << getHex(val) << std::endl;
 	return true;
 }
 
@@ -230,22 +231,28 @@ bool SystemTimer::readRegister(const unsigned short &reg, unsigned char &dest){
 	return true;
 }
 
-bool SystemTimer::onClockTick(const unsigned short &ticks){
+bool SystemTimer::onClockUpdate(const unsigned short &nCycles){
 	if(!timerEnable) return false;
-	if((nDividerCycles += ticks) >= 256){ // DIV (divider register) incremented at a rate of 16384 Hz
+	if((nDividerCycles += nCycles) >= 256){ // DIV (divider register) incremented at a rate of 16384 Hz
 		nDividerCycles = nDividerCycles % 256;
 		(*rDIV)++;
 	}
-	if((nCycles += ticks) >= timerPeriod){
-		// Handle timerPeriod==16 here!!!
-		rollOver();
+	nCyclesSinceLastTick += nCycles;
+	if(nCyclesSinceLastTick >= timerPeriod){
+		// Check the number of times the timer has ticked since we last checked.
+		for(unsigned short i = 0; i < (nCyclesSinceLastTick/timerPeriod); i++){
+			if(++(*rTIMA) == 0x0) // Timer counter has rolled over
+				rollOver();
+		}
+		// Reset the cycle counter.
+		nCyclesSinceLastTick = nCyclesSinceLastTick % timerPeriod;
 		return true;
 	}
 	return false;
 }
 
 void SystemTimer::rollOver(){
-	nCycles = nCycles % timerPeriod;
+	nCyclesSinceLastTick = nCyclesSinceLastTick % timerPeriod;
 	(*rTIMA) = (*rTMA);
 	sys->handleTimerInterrupt();
 }

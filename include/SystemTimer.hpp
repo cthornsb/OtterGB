@@ -42,9 +42,9 @@ private:
 
 class ComponentTimer {
 public:
-	ComponentTimer() : nCycles(0), timerPeriod(1), timerCounter(0), timerEnable(true) { }
+	ComponentTimer() : nCyclesSinceLastTick(0), timerPeriod(1), timerCounter(0), timerEnable(true) { }
 	
-	ComponentTimer(const unsigned short &period) : nCycles(0), timerPeriod(period), timerCounter(0), timerEnable(true) { }
+	ComponentTimer(const unsigned short &period) : nCyclesSinceLastTick(0), timerPeriod(period), timerCounter(0), timerEnable(true) { }
 	
 	void enable(){ timerEnable = true; }
 	
@@ -56,12 +56,12 @@ public:
 	
 	unsigned short getTimerCounter() const { return timerCounter; }
 
-	void reset(){ nCycles = 0; }
+	void reset(){ nCyclesSinceLastTick = 0; }
 	
-	virtual bool onClockTick(const unsigned short &ticks);
+	virtual bool onClockUpdate(const unsigned short &nCycles);
 
 protected:
-	unsigned short nCycles;
+	unsigned short nCyclesSinceLastTick;
 	unsigned short timerPeriod;
 	unsigned short timerCounter;
 
@@ -84,7 +84,7 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 	
-	virtual bool onClockTick(const unsigned short &ticks);
+	virtual bool onClockUpdate(const unsigned short &nCycles);
 	
 private:
 	unsigned short nDividerCycles;

@@ -231,10 +231,10 @@ bool SystemGBC::execute(){
 			break;
 
 		// Update system timer.
-		timer.onClockTick(nCycles);
+		timer.onClockUpdate(nCycles);
 
 		// Update sound processor.
-		sound.onClockTick(nCycles);
+		sound.onClockUpdate(nCycles);
 
 		// Sync with the GBC system clock.
 		// Wait a certain number of cycles based on the opcode executed		
@@ -605,6 +605,7 @@ void SystemGBC::acknowledgeLcdInterrupt(){
 void SystemGBC::acknowledgeTimerInterrupt(){
 	(*rIF) &= 0xFB;
 	if((interruptEnable & 0x4) != 0){ // Execute interrupt
+		std::cout << " HERE!\n";
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x50);
 	}
