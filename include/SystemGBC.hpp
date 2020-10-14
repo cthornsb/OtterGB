@@ -69,7 +69,9 @@ public:
 	
 	void handleJoypadInterrupt();
 
-	void enableInterrupts(bool state=true){ masterInterruptEnable = (state ? 0x1 : 0x0); }
+	void enableInterrupts(){ masterInterruptEnable = 0x1; }
+	
+	void disableInterrupts(){ masterInterruptEnable = 0x0; }
 	
 private:
 	unsigned short nFrames;

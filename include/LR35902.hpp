@@ -103,6 +103,14 @@ protected:
 	void (LR35902::*funcPtr[256])(); ///< Opcode functions for LR35902 processor
 	void (LR35902::*funcPtrCB[256])(); ///< CB-Prefix opcode functions for LR35902 processor
 
+	bool getFlagZ() const { return ((F & FLAG_Z_MASK) != 0); }
+	
+	bool getFlagS() const { return ((F & FLAG_S_MASK) != 0); }
+	
+	bool getFlagH() const { return ((F & FLAG_H_MASK) != 0); }
+	
+	bool getFlagC() const { return ((F & FLAG_C_MASK) != 0); }
+
 	void setFlag(const unsigned char &bit, bool state=true);
 
 	void setFlags(bool zflag, bool sflag, bool hflag, bool cflag);
@@ -155,9 +163,13 @@ protected:
 
 	void cp_d8(unsigned char *arg);
 
-	void push_d16(unsigned char *addrH, unsigned char *addrL);
+	void push_d16(const unsigned char &addrH, const unsigned char &addrL);
+
+	void push_d16(const unsigned short &addr);
 
 	void pop_d16(unsigned char *addrH, unsigned char *addrL);
+
+	void pop_d16(unsigned short *addr);
 
 	void jp_d16(unsigned char *addrH, unsigned char *addrL);
 
@@ -173,9 +185,9 @@ protected:
 
 	void ret_cc();
 
-	void getCarries(unsigned char *arg1, unsigned char *arg2, bool sub=false);
+	void getCarries(const unsigned char &arg1, const unsigned char &arg2, bool sub=false);
 
-	void getCarries(unsigned char *arg1, bool sub=false);
+	void getCarries(const unsigned char &arg1, bool sub=false);
 
 	void sla_d8(unsigned char *arg);
 
@@ -236,17 +248,13 @@ protected:
 	void RRA(){ rr_d8(&A); }
 	void RRCA(){ rrc_d8(&A); }
 
-	// STOP 0
-
-	void STOP_0(){ }
-
 	// JR
 
 	void JR_r8(){ jr_n(&d8); }
-	void JR_NZ_r8(){ if((F & FLAG_Z_MASK) == 0) jr_cc_n(&d8); }
-	void JR_Z_r8(){ if((F & FLAG_Z_MASK) != 0) jr_cc_n(&d8); }
-	void JR_NC_r8(){ if((F & FLAG_C_MASK) == 0) jr_cc_n(&d8); }
-	void JR_C_r8(){ if((F & FLAG_C_MASK) != 0) jr_cc_n(&d8); }
+	void JR_NZ_r8(){ if(!getFlagZ()) jr_cc_n(&d8); }
+	void JR_Z_r8(){ if(getFlagZ()) jr_cc_n(&d8); }
+	void JR_NC_r8(){ if(!getFlagC()) jr_cc_n(&d8); }
+	void JR_C_r8(){ if(getFlagC()) jr_cc_n(&d8); }
 	
 	// DAA
 
@@ -322,11 +330,11 @@ protected:
 
 	// DEC SP
 
-	void DEC_SP(){ SP--; }
+	void DEC_SP();
 
 	// CCF
 
-	void CCF(){ setFlag(FLAG_C_BIT, (F & FLAG_C_MASK) == 0); }
+	void CCF(){ setFlag(FLAG_C_BIT, !getFlagC()); }
 
 	// LD B,A[B|C|D|E|H|L|d8]
 
@@ -434,10 +442,6 @@ protected:
 	void LD_aBC_A();
 
 	void LD_aDE_A();
-
-	// HALT
-
-	void HALT(){ }
 
 	// LD A,A[B|C|D|E|H|L|d8]
 
@@ -564,35 +568,35 @@ protected:
 
 	// PUSH BC[DE|HL|AF]
 
-	void PUSH_BC(){ push_d16(&B, &C); }
-	void PUSH_DE(){ push_d16(&D, &E); }
-	void PUSH_HL(){ push_d16(&H, &L); }
-	void PUSH_AF(){ push_d16(&A, &F); }
+	void PUSH_BC(){ push_d16(B, C); }
+	void PUSH_DE(){ push_d16(D, E); }
+	void PUSH_HL(){ push_d16(H, L); }
+	void PUSH_AF(){ push_d16(A, F); }
 
 	// POP BC[DE|HL|AF]
 
 	void POP_BC(){ pop_d16(&B, &C); }
 	void POP_DE(){ pop_d16(&D, &E); }
 	void POP_HL(){ pop_d16(&H, &L); }
-	void POP_AF(){ pop_d16(&A, &F); }
+	void POP_AF();
 
 	// JP 
 
 	void JP_d16(){ jp_d16(&d16h, &d16l); }
-	void JP_NZ_d16(){ if((F & FLAG_Z_MASK) == 0) jp_cc_d16(&d16h, &d16l); }
-	void JP_Z_d16(){ if((F & FLAG_Z_MASK) != 0) jp_cc_d16(&d16h, &d16l); }
-	void JP_NC_d16(){ if((F & FLAG_C_MASK) == 0) jp_cc_d16(&d16h, &d16l); }
-	void JP_C_d16(){ if((F & FLAG_C_MASK) != 0) jp_cc_d16(&d16h, &d16l); }
+	void JP_NZ_d16(){ if(!getFlagZ()) jp_cc_d16(&d16h, &d16l); }
+	void JP_Z_d16(){ if(getFlagZ()) jp_cc_d16(&d16h, &d16l); }
+	void JP_NC_d16(){ if(!getFlagC()) jp_cc_d16(&d16h, &d16l); }
+	void JP_C_d16(){ if(getFlagC()) jp_cc_d16(&d16h, &d16l); }
 
 	void JP_aHL();
 
 	// CALL
 
 	void CALL_a16(){ call_a16(&d16h, &d16l); }
-	void CALL_NZ_a16(){ if((F & FLAG_Z_MASK) == 0) call_cc_a16(&d16h, &d16l); }
-	void CALL_Z_a16(){ if((F & FLAG_Z_MASK) != 0) call_cc_a16(&d16h, &d16l); }
-	void CALL_NC_a16(){ if((F & FLAG_C_MASK) == 0) call_cc_a16(&d16h, &d16l); }
-	void CALL_C_a16(){ if((F & FLAG_C_MASK) != 0) call_cc_a16(&d16h, &d16l); }
+	void CALL_NZ_a16(){ if(!getFlagZ()) call_cc_a16(&d16h, &d16l); }
+	void CALL_Z_a16(){ if(getFlagZ()) call_cc_a16(&d16h, &d16l); }
+	void CALL_NC_a16(){ if(!getFlagC()) call_cc_a16(&d16h, &d16l); }
+	void CALL_C_a16(){ if(getFlagC()) call_cc_a16(&d16h, &d16l); }
 
 	// RST 00[08|10|18|20|28|30|38]H
 
@@ -608,10 +612,10 @@ protected:
 	// RET NZ[Z|NC|C]
 
 	void RET(){ ret(); }
-	void RET_NZ(){ if((F & FLAG_Z_MASK) == 0) ret_cc(); }
-	void RET_Z(){ if((F & FLAG_Z_MASK) != 0) ret_cc(); }
-	void RET_NC(){ if((F & FLAG_C_MASK) == 0) ret_cc(); }
-	void RET_C(){ if((F & FLAG_C_MASK) != 0) ret_cc(); }
+	void RET_NZ(){ if(!getFlagZ()) ret_cc(); }
+	void RET_Z(){ if(getFlagZ()) ret_cc(); }
+	void RET_NC(){ if(!getFlagC()) ret_cc(); }
+	void RET_C(){ if(getFlagC()) ret_cc(); }
 	void RETI();
 
 	// DI
@@ -621,6 +625,14 @@ protected:
 	// EI
 
 	void EI();
+
+	// STOP 0
+
+	void STOP_0();
+
+	// HALT
+
+	void HALT();
 
 	/////////////////////////////////////////////////////////////////////
 	//

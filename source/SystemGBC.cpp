@@ -341,7 +341,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	else{ // Attempt to write to memory
 		switch(loc){
 			case 0x0000 ... 0x7FFF: // Cartridge ROM 
-				cart.write(loc, src); // This is read-only (???)
+				cart.writeRegister(loc, src); // Write to cartridge MBC (if present)
 				break;
 			case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
 				gpu.write(loc, src);
@@ -590,7 +590,7 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 
 void SystemGBC::acknowledgeVBlankInterrupt(){
 	(*rIF) &= 0xFE;
-	if(masterInterruptEnable && ((interruptEnable & 0x1) != 0)){ // Execute interrupt
+	if((interruptEnable & 0x1) != 0){ // Execute interrupt
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x40);
 	}
@@ -598,7 +598,7 @@ void SystemGBC::acknowledgeVBlankInterrupt(){
 
 void SystemGBC::acknowledgeLcdInterrupt(){
 	(*rIF) &= 0xFD;
-	if(masterInterruptEnable && ((interruptEnable & 0x2) != 0)){ // Execute interrupt
+	if((interruptEnable & 0x2) != 0){ // Execute interrupt
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x48);
 	}
@@ -606,7 +606,7 @@ void SystemGBC::acknowledgeLcdInterrupt(){
 
 void SystemGBC::acknowledgeTimerInterrupt(){
 	(*rIF) &= 0xFB;
-	if(masterInterruptEnable && ((interruptEnable & 0x4) != 0)){ // Execute interrupt
+	if((interruptEnable & 0x4) != 0){ // Execute interrupt
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x50);
 	}
@@ -614,7 +614,7 @@ void SystemGBC::acknowledgeTimerInterrupt(){
 
 void SystemGBC::acknowledgeSerialInterrupt(){
 	(*rIF) &= 0xF7;
-	if(masterInterruptEnable && ((interruptEnable & 0x8) != 0)){ // Execute interrupt
+	if((interruptEnable & 0x8) != 0){ // Execute interrupt
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x58);
 	}
@@ -622,7 +622,7 @@ void SystemGBC::acknowledgeSerialInterrupt(){
 
 void SystemGBC::acknowledgeJoypadInterrupt(){
 	(*rIF) &= 0xEF;
-	if(masterInterruptEnable && ((interruptEnable & 0x10) != 0)){ // Execute interrupt
+	if((interruptEnable & 0x10) != 0){ // Execute interrupt
 		std::cout << " JOYP\n";
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x60);

@@ -87,6 +87,7 @@ unsigned short LR35902::execute(Cartridge *cart){
 
 	if(debugMode){// && op != 0x0)
 		std::cout << stream.str();
+		//std::cout << stream.str() << "   \r" << std::flush;
 
 		// Wait for the user to hit enter
 		std::string dummy;
@@ -121,6 +122,7 @@ unsigned short LR35902::getHL() const { return getUShort(H, L); }
 unsigned short LR35902::setAF(const unsigned short &val){
 	A = (0xFF00 & val) >> 8;
 	F = 0x00FF & val;
+	F &= 0xF0; // Bottom 4 bits of F are always zero
 }
 
 unsigned short LR35902::setBC(const unsigned short &val){
@@ -160,8 +162,8 @@ void LR35902::rl_d8(unsigned char *arg){
 	// Left bitshift (arg), copying the 7th bit into the carry 
 	// bit which is copied into 0th bit of (arg).
 	bool highBit = ((*arg) & 0x80) != 0;
-	if(F & FLAG_C_MASK != 0) (*arg) = ((*arg) << 1) | 0x01;
-	else                     (*arg) = ((*arg) << 1) & 0xFE;
+	if(getFlagC()) (*arg) = ((*arg) << 1) | 0x01;
+	else           (*arg) = ((*arg) << 1) & 0xFE;
 	setFlags((*arg == 0), 0, 0, highBit);
 }
 
@@ -169,8 +171,8 @@ void LR35902::rr_d8(unsigned char *arg){
 	// Right bitshift (arg), copying the 0th bit into the carry 
 	// bit which is copied into 7th bit of (arg).
 	bool lowBit = ((*arg) & 0x1) != 0;
-	if(F & FLAG_C_MASK) (*arg) = ((*arg) >> 1) | 0x80;
-	else                (*arg) = ((*arg) >> 1) & 0x7F;
+	if(getFlagC()) (*arg) = ((*arg) >> 1) | 0x80;
+	else           (*arg) = ((*arg) >> 1) & 0x7F;
 	setFlags((*arg == 0), 0, 0, lowBit);
 }
 
@@ -185,17 +187,17 @@ void LR35902::set_d8(unsigned char *arg, const unsigned char &bit){
 }
 
 void LR35902::inc_d16(unsigned char *addrH, unsigned char *addrL){
-	if(++(*addrL) == 0x0) // Half-Carry
+	if(++(*addrL) == 0x0) // Carry from 7th bit (full)
 		(*addrH)++;
 }
 
 void LR35902::dec_d16(unsigned char *addrH, unsigned char *addrL){
-	if(--(*addrL) == 0xFF) // Half-Carry
+	if(--(*addrL) == 0xFF) // Carry from 7th bit (full)
 		(*addrH)--;
 }
 
 void LR35902::inc_d8(unsigned char *arg){
-	getCarries(arg);
+	getCarries(*arg);
 	(*arg) = (*arg) + 1;
 	setFlag(FLAG_Z_BIT, (*arg == 0));
 	setFlag(FLAG_S_BIT, 0);
@@ -203,7 +205,7 @@ void LR35902::inc_d8(unsigned char *arg){
 }
 
 void LR35902::dec_d8(unsigned char *arg){
-	getCarries(arg, true);
+	getCarries(*arg, true);
 	(*arg) = (*arg) - 1;
 	setFlag(FLAG_Z_BIT, (*arg == 0));
 	setFlag(FLAG_S_BIT, 1);
@@ -229,7 +231,7 @@ void LR35902::ld_SP_d16(unsigned char *addrH, unsigned char *addrL){
 }
 
 void LR35902::add_A_d8(unsigned char *arg){
-	getCarries(&A, arg);
+	getCarries(A, *arg);
 	A += (*arg);
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
@@ -243,16 +245,19 @@ void LR35902::add_A_aHL(){
 
 void LR35902::add_HL_d16(unsigned char *addrH, unsigned char *addrL){
 	// Add d16 to HL.
-	//getCarries(&H, addrH);
-	setHL(getHL() + getUShort(*addrH, *addrL));
+	unsigned short HL = getHL();
+	unsigned short dd = getUShort(*addrH, *addrL);
+	halfCarry = (((HL & 0xFFF) + (dd & 0xFFF)) & 0x1000) != 0; // Carry from bit 11
+	fullCarry = (((HL & 0xFFFFFFFF) + dd) & 0x00010000) != 0; // Carry from bit 15
+	setHL(getHL() + dd);
 	setFlag(FLAG_S_BIT, 0);
-	//setFlag(FLAG_H_BIT, halfCarry); // set if carry from bit 11
-	//setFlag(FLAG_C_BIT, fullCarry); // set if carry from bit 15
+	setFlag(FLAG_H_BIT, halfCarry);
+	setFlag(FLAG_C_BIT, fullCarry);
 }
 
 void LR35902::adc_A_d8(unsigned char *arg){
-	getCarries(&A, arg);
-	A += ((*arg) + (F & FLAG_C_MASK));
+	getCarries(A, *arg);
+	A += ((*arg) + (getFlagC() ? 1: 0));
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, halfCarry);
@@ -260,7 +265,7 @@ void LR35902::adc_A_d8(unsigned char *arg){
 }
 
 void LR35902::sub_A_d8(unsigned char *arg){
-	getCarries(&A, arg);
+	getCarries(A, *arg, true);
 	A = A - (*arg);
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 1);
@@ -269,8 +274,8 @@ void LR35902::sub_A_d8(unsigned char *arg){
 }
 
 void LR35902::sbc_A_d8(unsigned char *arg){
-	getCarries(&A, arg);
-	A = A - ((*arg) + (F & FLAG_C_MASK));
+	getCarries(A, *arg, true);
+	A = A - ((*arg) + (getFlagC() ? 1 : 0));
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 1);
 	setFlag(FLAG_H_BIT, halfCarry);
@@ -302,23 +307,38 @@ void LR35902::or_d8(unsigned char *arg){
 }
 
 void LR35902::cp_d8(unsigned char *arg){
-	getCarries(&A, arg);
+	getCarries(A, *arg);
 	setFlag(FLAG_Z_BIT, (A - (*arg) == 0));
 	setFlag(FLAG_S_BIT, 1);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::push_d16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::push_d16(const unsigned char &addrH, const unsigned char &addrL){
 	sys->write(SP-1, addrH);
 	sys->write(SP-2, addrL);
-	SP = SP-2;
+	DEC_SP();
+	DEC_SP();
+}
+
+void LR35902::push_d16(const unsigned short &addr){
+	unsigned char addrH = (addr & 0xFF00) >> 8;
+	unsigned char addrL = (addr & 0x00FF);
+	push_d16(addrH, addrL);
 }
 
 void LR35902::pop_d16(unsigned char *addrH, unsigned char *addrL){
 	sys->read(SP, addrL);
 	sys->read(SP+1, addrH);
-	SP = SP+2;
+	INC_SP();
+	INC_SP();
+}
+
+void LR35902::pop_d16(unsigned short *addr){
+	unsigned char addrH = ((*addr) & 0xFF00) >> 8;
+	unsigned char addrL = ((*addr) & 0x00FF);
+	pop_d16(&addrH, &addrL);
+	(*addr) = getUShort(addrH, addrL);
 }
 
 void LR35902::jp_d16(unsigned char *addrH, unsigned char *addrL){
@@ -332,10 +352,8 @@ void LR35902::jp_cc_d16(unsigned char *addrH, unsigned char *addrL){
 }
 
 void LR35902::call_a16(unsigned char *addrH, unsigned char *addrL){
-	sys->write(SP-1, (PC & 0xFF00) >> 8);
-	sys->write(SP-2, PC & 0x00FF);
-	jp_d16(addrH, addrL); 
-	SP = SP-2;
+	push_d16(PC); // Push the program counter onto the stack
+	jp_d16(addrH, addrL); // Jump to the called address
 }
 
 void LR35902::call_cc_a16(unsigned char *addrH, unsigned char *addrL){
@@ -344,18 +362,12 @@ void LR35902::call_cc_a16(unsigned char *addrH, unsigned char *addrL){
 }
 
 void LR35902::rst_n(unsigned char n){
-	sys->write(SP-1, (PC & 0xFF00) >> 8);
-	sys->write(SP-2, PC & 0x00FF);	
+	push_d16(PC); // Push the program counter onto the stack
 	PC = n & 0x00FF; // Zero the high bits
-	SP = SP-2;
 }
 
 void LR35902::ret(){
-	unsigned char pcl, pch;
-	sys->read(SP, pcl);
-	sys->read(SP+1, pch);
-	PC = getUShort(pch, pcl);
-	SP = SP+2;
+	pop_d16(&PC); // Pop the program counter off the stack
 }
 
 void LR35902::ret_cc(){
@@ -363,14 +375,14 @@ void LR35902::ret_cc(){
 	ret();
 }
 
-void LR35902::getCarries(unsigned char *arg1, unsigned char *arg2, bool sub/*=false*/){
-	halfCarry = (((*arg1 & 0xF) + (!sub ? 1 : -1)*(*arg2 & 0xF)) & 0x10) != 0;
-	fullCarry = (*arg1 + (!sub ? 1 : -1)*(*arg2)) & 0x100 != 0;
+void LR35902::getCarries(const unsigned char &arg1, const unsigned char &arg2, bool sub/*=false*/){ // ADD - SUB
+	halfCarry = (((arg1 & 0xF) + ((!sub ? (arg2) : ~(arg2)) & 0xF)) & 0x10) != 0;
+	fullCarry = (((arg1 & 0xFFFF) + (!sub ? (arg2) : ~(arg2))) & 0x0100) != 0;
 }
 
-void LR35902::getCarries(unsigned char *arg1, bool sub/*=false*/){
-	halfCarry = (((*arg1 & 0xF) + (!sub ? 1 : -1)) & 0x10) != 0;
-	fullCarry = (*arg1 + (!sub ? 1 : -1)) & 0x100 != 0;
+void LR35902::getCarries(const unsigned char &arg1, bool sub/*=false*/){ // INC - DEC
+	halfCarry = (((arg1 & 0xF) + ((!sub ? 0x01 : 0xFE) & 0xF)) & 0x10) != 0;
+	fullCarry = (((arg1 & 0xFFFF) + (!sub ? 0x01: 0xFE)) & 0x0100) != 0;
 }
 
 void LR35902::sla_d8(unsigned char *arg){
@@ -443,7 +455,25 @@ void LR35902::DEC_aHL(){
 void LR35902::DAA(){
 	// Decimal adjust register A.
 	// Convert register A into packed Binary Coded Decimal (BCD) representation.
-	std::cout << "not implemented\n";
+	// One byte in packed BCD may represent values between 0 and 99 (inclusive).	
+	if(!getFlagS()){ // After addition
+		if(getFlagC() || (A > 0x99)){ // Value overflow (>= 0x100)
+			A += 0x60;
+			setFlag(FLAG_C_BIT, 1);
+		}
+		if(getFlagH() || ((A & 0x0F) > 0x9)) // 
+			A += 0x6;
+	}
+	else{ // After subtraction
+		if(getFlagC()){
+			A -= 0x60;
+			setFlag(FLAG_C_BIT, 1);
+		}
+		if(getFlagH())
+			A -= 0x6;
+	}
+	setFlag(FLAG_Z_BIT, (A == 0));
+	setFlag(FLAG_H_BIT, 0);
 }
 
 // CPL
@@ -452,7 +482,15 @@ void LR35902::CPL(){ A = ~A; }
 
 // INC SP
 
-void LR35902::INC_SP(){ SP++; }
+void LR35902::INC_SP(){ 
+	SP++; 
+}
+
+// DEC SP
+
+void LR35902::DEC_SP(){ 
+	SP--; 
+}
 
 // SCF
 
@@ -462,8 +500,12 @@ void LR35902::SCF(){ set_d8(&F, FLAG_C_BIT); }
 
 void LR35902::ADD_SP_r8(){
 	// Add d8 (signed) to the stack pointer
-	SP += twosComp(d8);
-	//setFlags(0, 0, halfCarry, fullCarry);
+	short r8 = twosComp(d8);
+	unsigned char v1 = (SP & 0x00FF);
+	unsigned char v2 = (r8 & 0x00FF);
+	getCarries(v1, v2, (r8 < 0)); // Does this work???
+	SP += r8;
+	setFlags(0, 0, halfCarry, fullCarry);
 }
 
 // LD d16,A 
@@ -477,7 +519,12 @@ void LR35902::LD_a16_A(){
 
 void LR35902::LD_HL_SP_r8(){
 	// Load the address (SP+r8) into HL, note: r8 is signed.
-	setHL(SP + twosComp(d8));
+	short r8 = twosComp(d8);
+	unsigned char v1 = (SP & 0x00FF);
+	unsigned char v2 = (r8 & 0x00FF);
+	getCarries(v1, v2, (r8 < 0)); // Does this work???
+	setHL(SP + r8);
+	setFlags(0, 0, halfCarry, fullCarry);
 }
 
 // LD HL,d16
@@ -501,10 +548,13 @@ void LR35902::LD_a16_SP(){
 
 void LR35902::ADD_HL_SP(){
 	// Add SP to HL.
-	setHL(getHL() + SP);
+	unsigned short HL = getHL();
+	halfCarry = (((HL & 0xFFF) + (SP & 0xFFF)) & 0x1000) != 0; // Carry from bit 11
+	fullCarry = (((HL & 0xFFFFFFFF) + SP) & 0x00010000) != 0; // Carry from bit 15
+	setHL(HL + SP);
 	setFlag(FLAG_S_BIT, 0);
-	//setFlag(FLAG_H_BIT, // set if carry from bit 11
-	//setFlag(FLAG_C_BIT, // set if carry from bit 15
+	setFlag(FLAG_H_BIT, halfCarry);
+	setFlag(FLAG_C_BIT, fullCarry);
 }
 
 // LD HL-,A or LDD HL,A
@@ -670,6 +720,13 @@ void LR35902::CP_aHL(){
 	cp_d8(sys->getPtr(getHL()));
 }
 
+// POP AF
+
+void LR35902::POP_AF(){ 
+	pop_d16(&A, &F);
+	F &= 0xF0; // Bottom 4 bits of F are always zero
+}
+
 // JP 
 
 void LR35902::JP_aHL(){ 
@@ -686,11 +743,23 @@ void LR35902::RETI(){
 
 // DI
 
-void LR35902::DI(){ sys->enableInterrupts(false); }
+void LR35902::DI(){ sys->disableInterrupts(); }
 
 // EI
 
 void LR35902::EI(){ sys->enableInterrupts(); }
+
+// STOP 0
+
+void LR35902::STOP_0(){ 
+	std::cout << " not implemented\n";
+}
+
+// HALT
+
+void LR35902::HALT(){ 
+	std::cout << " not implemented\n";
+}
 
 /////////////////////////////////////////////////////////////////////
 // CB-PREFIX OPCODES
