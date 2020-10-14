@@ -14,8 +14,13 @@
 #define OAM_TABLE_LOW  0xFE00
 #define OAM_TABLE_HIGH 0xFEA0
 
-#define SCREEN_WIDTH_PIXELS 256
-#define SCREEN_HEIGHT_PIXELS 256
+#ifdef BACKGROUND_DEBUG
+	#define SCREEN_WIDTH_PIXELS 256
+	#define SCREEN_HEIGHT_PIXELS 256
+#else
+	#define SCREEN_WIDTH_PIXELS 160
+	#define SCREEN_HEIGHT_PIXELS 144
+#endif
 
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttHandler
@@ -165,15 +170,20 @@ void GPU::debug(){
 	render();
 }
 
+// NOTE: x is tile column, y is pixel scanline
 void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigned short &offset){
 	unsigned short tileY;
 	unsigned short pixelX, pixelY;
 	unsigned short tileID, bmpLow;
 	unsigned char colorByteHigh, colorByteLow;
-			
-	tileY = y / 8; // Current vertical BG tile
-	pixelY = y % 8; // Vertical pixel in the tile
-
+	
+	// Here (ry) is the real vertical coordinate on the background
+	// and (y) is the current scanline.
+	unsigned char ry = y + (*rSCY);
+	
+	tileY = ry / 8; // Current vertical BG tile
+	pixelY = ry % 8; // Vertical pixel in the tile
+	
 	// Draw the background tile
 	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
 	// Background & window tile data selection [0: 8800-97FF, 1: 8000-8FFF]
@@ -191,13 +201,17 @@ void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigne
 	// Draw the specified line
 	for(unsigned short dx = x*8; dx < (x+1)*8; dx++){
 		pixelX = 7 - (dx % 8); // Horizontal pixel in the tile
-		frameBuffer[y][dx] = (colorByteLow & (0x1 << pixelX)) >> pixelX;
-		frameBuffer[y][dx] += ((colorByteHigh & (0x1 << pixelX)) >> pixelX) << 1;
+		frameBuffer[ry][dx] = (colorByteLow & (0x1 << pixelX)) >> pixelX;
+		frameBuffer[ry][dx] += ((colorByteHigh & (0x1 << pixelX)) >> pixelX) << 1;
 	}
 }
 
 void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
-	if(y < (oam->yPos-16) || y > oam->yPos)
+	unsigned char xp = oam->xPos-8;
+	unsigned char yp = oam->yPos-16;
+
+	//if(y < (oam->yPos-16) || y > oam->yPos-8)
+	if(y < (yp) || y >= yp+(!objSizeSelect ? 8 : 16))
 		return;
 
 	unsigned short pixelY;
@@ -205,8 +219,12 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	unsigned char colorByteHigh, colorByteLow;
 	unsigned char pixelColor;
 	
+	// yPos in (0,160) -> yPos-16 in [0,144)
+	// xPos in (0,168) -> xPos-8 
+	
 	// Vertical pixel in the tile (minus 16)
 	pixelY = (oam->yPos - y) - 8; // or 16?
+	//pixelY = y - (oam->yPos + (!objSizeSelect ? 8 : 16));
 
 	/*unsigned char yPos; // Y-position of the current sprite (minus 16)
 	unsigned char xPos; // X-position of the current sprite (minus 8)
@@ -233,6 +251,10 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 		if((pixelColor & 0x3) != 0) // Check for transparent pixel
 			frameBuffer[y][oam->xPos - dx] = pixelColor;
 	}
+	
+	/*for(unsigned short dx = 0; dx < 8; dx++){
+		frameBuffer[y][xp+dx] = 0x3;
+	}*/
 
 	/*if(objSizeSelect){ // 8x16 sprites
 		bmpLow = 16*(oam->tileNum | 0x01); // Retrieve the background tile ID from OAM
@@ -267,17 +289,17 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			sys->handleLcdInterrupt();
 		}
 	}
-
-	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a white line)
-		window->setDrawColor(Colors::GB_GREEN);
-		window->drawLine(0, (*rLY), 159, (*rLY));
+	
+	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
+		for(unsigned short x = 0; x < 160; x++) // Horizontal pixel
+			frameBuffer[*rLY][x] = 0;
 		return;
 	}
 
 	// Handle the background and window layer
 	for(unsigned short xTile = 0; xTile < 32; xTile++){ // Horizontal tile
 		// Clear the current pixel (set it to white)
-		//frameBuffer[(*rLY)][x] = 0x0;
+		//frameBuffer[(y)][x] = 0x0;
 	
 		// Background & window tile attributes
 		//if(bGBCMODE){
@@ -285,9 +307,9 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		//}
 
 		if(winDisplayEnable) // Draw the window layer (if enabled)
-			drawTile(xTile, *rLY, (winTileMapSelect ? 0x1C00 : 0x1800) );
+			drawTile(xTile, (*rLY), (winTileMapSelect ? 0x1C00 : 0x1800) );
 		else // Draw the background layer
-			drawTile(xTile, *rLY, (bgTileMapSelect ? 0x1C00 : 0x1800) );
+			drawTile(xTile, (*rLY), (bgTileMapSelect ? 0x1C00 : 0x1800) );
 	}
 
 	// Handle the OBJ (sprite) layer
@@ -295,18 +317,65 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		bool visible = false;
 		while(oam->getNextSprite(visible)){
 			if(visible) // The sprite is on screen
-				drawSprite(*rLY, oam);
+				drawSprite((*rLY), oam);
 		}
 	}
 }
 
+#ifdef BACKGROUND_DEBUG
 void GPU::render(){	
 	// Update the screen
 	if(lcdDisplayEnable && window->status()){ // Check for events
+		// These variables will automatically handle screen wrapping
+		unsigned char sy = (*rSCY);
+		unsigned char sx;
+		for(unsigned short y = 0; y < 256; y++){ // Vertical pixel
+			sx = (*rSCX);
+			for(unsigned short x = 0; x < 256; x++){ // Horizontal pixel
+				if((y == 0 || y == 143) && x < 160)
+					window->setDrawColor(Colors::RED);
+				else if((x == 0 || x == 159) && y < 144)
+					window->setDrawColor(Colors::RED);
+				else{
+					// Draw the scanline
+					switch(frameBuffer[sy][sx]){
+						case 0: // White
+							window->setDrawColor(Colors::GB_GREEN);
+							break;						
+						case 1: // Light gray
+							window->setDrawColor(Colors::GB_LTGREEN);
+							break;					
+						case 2: // Dark gray
+							window->setDrawColor(Colors::GB_DKGREEN);
+							break;					
+						case 3: // Black
+							window->setDrawColor(Colors::GB_DKSTGREEN);
+							break;
+						default:
+							break;
+					}
+				}
+				window->drawPixel(sx, sy);
+				sx++;
+			}
+			sy++;
+		}
+		window->render();
+		window->clear(); // Clear the frame buffer (this prevents flickering)
+	}
+}
+#else
+void GPU::render(){	
+	// Update the screen
+	if(lcdDisplayEnable && window->status()){ // Check for events
+		// These variables will automatically handle screen wrapping
+		unsigned char sy = (*rSCY);
+		unsigned char sx;
 		for(unsigned short y = 0; y < 144; y++){ // Vertical pixel
+			sx = (*rSCX);
 			for(unsigned short x = 0; x < 160; x++){ // Horizontal pixel
 				// Draw the scanline
-				switch(frameBuffer[y][x]){
+				switch(frameBuffer[sy][sx]){
 					case 0: // White
 						window->setDrawColor(Colors::GB_GREEN);
 						break;						
@@ -323,12 +392,15 @@ void GPU::render(){
 						break;
 				}
 				window->drawPixel(x, y);
+				sx++;
 			}
+			sy++;
 		}
 		window->render();
 		window->clear(); // Clear the frame buffer (this prevents flickering)
 	}
 }
+#endif
 
 bool GPU::getWindowStatus(){
 	return window->status();
