@@ -56,7 +56,9 @@ unsigned short LR35902::execute(Cartridge *cart){
 		if(debugMode)
 			name = opcodeNamesCB[op];
 		nBytes = 1;
-		nCycles = (op & 0xF != 0x6) ? 8 : 16;
+		// All CB prefix opcodes take 8 cycles except for ones which operate
+		// on (HL), which take 16 cycles.
+		nCycles = (((op & 0xF) == 0x6)) || ((op & 0xF) == 0xE) ? 16 : 8;
 	}
 	
 	d8 = 0x0;
@@ -501,10 +503,10 @@ void LR35902::SCF(){ set_d8(&F, FLAG_C_BIT); }
 void LR35902::ADD_SP_r8(){
 	// Add d8 (signed) to the stack pointer
 	short r8 = twosComp(d8);
-	unsigned char v1 = (SP & 0x00FF);
-	unsigned char v2 = (r8 & 0x00FF);
-	getCarries(v1, v2, (r8 < 0)); // Does this work???
-	SP += r8;
+	unsigned short res = SP + r8;
+	halfCarry = ((SP ^ r8 ^ res) & 0x10) == 0x10;
+	fullCarry = ((SP ^ r8 ^ res) & 0x100) == 0x100;
+	SP = res;
 	setFlags(0, 0, halfCarry, fullCarry);
 }
 
@@ -520,9 +522,9 @@ void LR35902::LD_a16_A(){
 void LR35902::LD_HL_SP_r8(){
 	// Load the address (SP+r8) into HL, note: r8 is signed.
 	short r8 = twosComp(d8);
-	unsigned char v1 = (SP & 0x00FF);
-	unsigned char v2 = (r8 & 0x00FF);
-	getCarries(v1, v2, (r8 < 0)); // Does this work???
+	unsigned short res = SP + r8;
+	halfCarry = ((SP ^ r8 ^ res) & 0x10) == 0x10;
+	fullCarry = ((SP ^ r8 ^ res) & 0x100) == 0x100;
 	setHL(SP + r8);
 	setFlags(0, 0, halfCarry, fullCarry);
 }
