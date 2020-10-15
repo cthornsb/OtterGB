@@ -17,6 +17,7 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("break", required_argument, NULL, 'B', "<NN>", "Set 16-bit instruction breakpoint, NN (base 16)."));
 	handler.add(optionExt("write-watch", required_argument, NULL, 'W', "<NN|NN1:NN2>", "Watch memory write to location NN or in range [NN1,NN2] (base 16)."));
 	handler.add(optionExt("read-watch", required_argument, NULL, 'R', "<NN|NN1:NN2>", "Watch memory read of memory location NN or in range [NN1,NN2] (base 16)."));
+	handler.add(optionExt("opcode-watch", required_argument, NULL, 'O', "<N>", "Watch for specific opcode calls."));
 	handler.add(optionExt("frame-skip", required_argument, NULL, 's', "<N>", "Render 1 out of every N frames (improves framerate)."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 1)."));
 			
@@ -69,10 +70,13 @@ int main(int argc, char *argv[]){
 	}
 
 	if(handler.getOption(8)->active) // Set frame-skip
-		gbc.setFrameSkip((unsigned short)strtoul(handler.getOption(8)->argument.c_str(), NULL, 10));
+		gbc.getCPU()->setOpcode((unsigned short)strtoul(handler.getOption(8)->argument.c_str(), NULL, 16));
 
-	if(handler.getOption(9)->active) // Set pixel scaling factor
-		gbc.getGPU()->setPixelScale(strtoul(handler.getOption(9)->argument.c_str(), NULL, 10));
+	if(handler.getOption(9)->active) // Set frame-skip
+		gbc.setFrameSkip((unsigned short)strtoul(handler.getOption(9)->argument.c_str(), NULL, 10));
+
+	if(handler.getOption(10)->active) // Set pixel scaling factor
+		gbc.getGPU()->setPixelScale(strtoul(handler.getOption(10)->argument.c_str(), NULL, 10));
 
 	// Check for ROM filename.
 	if(inputFilename.empty()){

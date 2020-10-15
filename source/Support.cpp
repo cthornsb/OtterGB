@@ -50,4 +50,11 @@ std::string getBinary(const unsigned char &input, const int &startBit/*=0*/){
 	return stream.str();
 }
 
+std::string getBinary(const unsigned short &input, const int &startBit/*=0*/){
+	std::stringstream stream;
+	for(int i = 15; i >= startBit; i--)
+		stream << ((input & (0x1 << i)) != 0);
+	return stream.str();
+}
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l){ return (((0xFFFF & h) << 8) + l); }

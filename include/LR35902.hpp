@@ -22,7 +22,7 @@ class LR35902 : public SystemComponent {
 public:
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
-	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), nCycles(0) { }
+	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), OPM(0xFFFF), nCycles(0) { }
 
 	bool initialize();
 
@@ -55,6 +55,8 @@ public:
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
 	void setBreakpoint(const unsigned short &breakpoint){ BP = breakpoint; }
+
+	void setOpcode(const unsigned char &op){ OPM = (op & 0x00FF); }
 
 	void setd8(const unsigned char &d){ d8 = d; }
 	
@@ -93,7 +95,8 @@ protected:
 
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
-	unsigned short BP; ///< User program counter breakpoint
+	unsigned short BP; ///< User specified program counter breakpoint
+	unsigned short OPM; ///< User specified opcode monitor
 	
 	unsigned short nCycles; ///< Length of last instruction in clock cycles
 	unsigned short nBytes; ///< Length of last instruction in bytes
@@ -185,9 +188,9 @@ protected:
 
 	void ret_cc();
 
-	void getCarries(const unsigned char &arg1, const unsigned char &arg2, bool sub=false);
+	unsigned char getCarriesAdd(const unsigned char &arg1, const unsigned char &arg2, bool adc=false);
 
-	void getCarries(const unsigned char &arg1, bool sub=false);
+	unsigned char getCarriesSub(const unsigned char &arg1, const unsigned char &arg2, bool sbc=false);
 
 	void sla_d8(unsigned char *arg);
 
@@ -334,7 +337,7 @@ protected:
 
 	// CCF
 
-	void CCF(){ setFlag(FLAG_C_BIT, !getFlagC()); }
+	void CCF();
 
 	// LD B,A[B|C|D|E|H|L|d8]
 

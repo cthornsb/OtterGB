@@ -15,6 +15,8 @@ std::string getHex(const unsigned short &input);
 
 std::string getBinary(const unsigned char &input, const int &startBit=0);
 
+std::string getBinary(const unsigned short &input, const int &startBit=0);
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 
 #endif
