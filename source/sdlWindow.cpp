@@ -127,8 +127,6 @@ void sdlWindow::initialize(){
 
 	rectangle = new SDL_Rect;
 
-	std::cout << " HERE! nMult = " << nMult << std::endl;
-
 	// Open the SDL window
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_CreateWindowAndRenderer(W*nMult, H*nMult, 0, &window, &renderer);
