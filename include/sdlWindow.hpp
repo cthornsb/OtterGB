@@ -5,6 +5,7 @@
 
 class SDL_Renderer;
 class SDL_Window;
+class SDL_Rect;
 
 class SDL_KeyboardEvent;
 class SDL_MouseButtonEvent;
@@ -72,11 +73,11 @@ class sdlWindow{
 public:
 	/** Default constructor
 	  */
-	sdlWindow() : renderer(NULL), window(NULL), W(DEFAULT_WINDOW_WIDTH), H(DEFAULT_WINDOW_HEIGHT), init(false) { }
+	sdlWindow() : renderer(NULL), window(NULL), W(DEFAULT_WINDOW_WIDTH), H(DEFAULT_WINDOW_HEIGHT), nMult(1), init(false) { }
 	
 	/** Constructor taking the width and height of the window
 	  */
-	sdlWindow(const int &width, const int &height) : renderer(NULL), window(NULL), W(width), H(height), init(false) { }
+	sdlWindow(const int &width, const int &height) : renderer(NULL), window(NULL), W(width), H(height), nMult(1), init(false) { }
 
 	/** Destructor
 	  */
@@ -105,6 +106,10 @@ public:
 	/** Set the height of the window (in pixels)
 	  */
 	void setHeight(const int &height){ H = height; }
+
+	/** Set the integer pixel scaling multiplier (default = 1)
+	  */
+	void setScalingFactor(const int &scale){ nMult = scale; }
 
 	/** Set the current draw color
 	  */
@@ -155,11 +160,14 @@ private:
 
 	int W; ///< Width of the window (in pixels)
 	int H; ///< Height of the window (in pixels)
+	int nMult; ///< Integer multiplier for window scaling
 
 	bool init; ///< Flag indicating that the window has been initialized
 
 	sdlKeyEvent lastKey; ///< The last key which was pressed by the user
 	sdlMouseEvent lastMouse; ///< The last mouse event which was performed by the user
+	
+	SDL_Rect *rectangle; ///< A rectangle used for drawing chunky pixels
 };
 
 #endif

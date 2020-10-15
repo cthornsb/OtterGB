@@ -47,6 +47,7 @@ void sdlMouseEvent::decode(const SDL_MouseMotionEvent* evt){
 }
 
 sdlWindow::~sdlWindow(){
+	//delete rectangle;
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -62,7 +63,15 @@ void sdlWindow::clear(const sdlColor &color/*=Colors::BLACK*/){
 }
 
 void sdlWindow::drawPixel(const int &x, const int &y){
-	SDL_RenderDrawPoint(renderer, x, y);
+	if(nMult == 1)
+		SDL_RenderDrawPoint(renderer, x, y);
+	else{
+		rectangle->h = nMult;
+		rectangle->w = nMult;
+		rectangle->x = x*nMult;
+		rectangle->y = y*nMult;
+		SDL_RenderDrawRect(renderer, rectangle);
+	}
 }
 
 void sdlWindow::drawPixel(const int *x, const int *y, const size_t &N){
@@ -71,7 +80,7 @@ void sdlWindow::drawPixel(const int *x, const int *y, const size_t &N){
 }
 
 void sdlWindow::drawLine(const int &x1, const int &y1, const int &x2, const int &y2){
-	SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+	SDL_RenderDrawLine(renderer, x1*nMult, y1*nMult, x2*nMult, y2*nMult);
 }
 
 void sdlWindow::drawLine(const int *x, const int *y, const size_t &N){
@@ -116,9 +125,13 @@ bool sdlWindow::status(){
 void sdlWindow::initialize(){
 	if(init) return;
 
+	rectangle = new SDL_Rect;
+
+	std::cout << " HERE! nMult = " << nMult << std::endl;
+
 	// Open the SDL window
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_CreateWindowAndRenderer(W, H, 0, &window, &renderer);
+	SDL_CreateWindowAndRenderer(W*nMult, H*nMult, 0, &window, &renderer);
 	clear();
 	
 	init = true;

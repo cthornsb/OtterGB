@@ -137,8 +137,6 @@ public:
 	
 	void initialize();
 
-	void debug();
-
 	void drawTileMaps();
 
 	void drawNextScanline(SpriteAttHandler *oam);
@@ -146,6 +144,8 @@ public:
 	void render();
 
 	bool getWindowStatus();
+	
+	void setPixelScale(const unsigned int &n);
 
 	virtual bool preWriteAction();
 	

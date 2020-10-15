@@ -131,43 +131,17 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	bgMap0.setData(&mem[0][0x1800]);
 	bgMap1.setData(&mem[0][0x1C00]);
 	
-	window = 0x0;
+	// Create a new SDL window
+	window = new sdlWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
 }
 
 GPU::~GPU(){
-	if(window)
-		delete window;
+	delete window;
 }
 
 void GPU::initialize(){
 	// Setup the window
-	window = new sdlWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
 	window->initialize();
-}
-
-void GPU::debug(){
-	for(unsigned short y = 0; y < 144; y++){ // Scanline (vertical pixel)
-		for(unsigned short x = 0; x < 160; x++){ // Horizontal pixel
-			switch(rand() % 4){
-				case 0: // White
-					window->setDrawColor(Colors::GB_GREEN);
-					break;						
-				case 1: // Light gray
-					window->setDrawColor(Colors::GB_LTGREEN);
-					break;					
-				case 2: // Dark gray
-					window->setDrawColor(Colors::GB_DKGREEN);
-					break;					
-				case 3: // Black
-					window->setDrawColor(Colors::GB_DKSTGREEN);
-					break;
-				default:
-					break;
-			}
-			window->drawPixel(x, y);
-		}
-	}
-	render();
 }
 
 // NOTE: x is tile column, y is pixel scanline
@@ -177,12 +151,8 @@ void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigne
 	unsigned short tileID, bmpLow;
 	unsigned char colorByteHigh, colorByteLow;
 	
-	// Here (ry) is the real vertical coordinate on the background
-	// and (y) is the current scanline.
-	unsigned char ry = y + (*rSCY);
-	
-	tileY = ry / 8; // Current vertical BG tile
-	pixelY = ry % 8; // Vertical pixel in the tile
+	tileY = y / 8; // Current vertical BG tile
+	pixelY = y % 8; // Vertical pixel in the tile
 	
 	// Draw the background tile
 	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
@@ -201,8 +171,8 @@ void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigne
 	// Draw the specified line
 	for(unsigned short dx = x*8; dx < (x+1)*8; dx++){
 		pixelX = 7 - (dx % 8); // Horizontal pixel in the tile
-		frameBuffer[ry][dx] = (colorByteLow & (0x1 << pixelX)) >> pixelX;
-		frameBuffer[ry][dx] += ((colorByteHigh & (0x1 << pixelX)) >> pixelX) << 1;
+		frameBuffer[y][dx] = (colorByteLow & (0x1 << pixelX)) >> pixelX;
+		frameBuffer[y][dx] += ((colorByteHigh & (0x1 << pixelX)) >> pixelX) << 1;
 	}
 }
 
@@ -289,15 +259,23 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			sys->handleLcdInterrupt();
 		}
 	}
+
+	// Here (ry) is the real vertical coordinate on the background
+	// and (rLY) is the current scanline.
+	unsigned char ry = (*rLY) + (*rSCY);
 	
 	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
-		for(unsigned short x = 0; x < 160; x++) // Horizontal pixel
-			frameBuffer[*rLY][x] = 0;
+		for(unsigned short x = (*rSCX); x < (*rSCX+160); x++) // Horizontal pixel
+			frameBuffer[ry][x] = 0;
 		return;
 	}
 
 	// Handle the background and window layer
+#ifdef BACKGROUND_DEBUG
 	for(unsigned short xTile = 0; xTile < 32; xTile++){ // Horizontal tile
+#else
+	for(unsigned short xTile = (*rSCX)/8; xTile < (*rSCX+160)/8; xTile++){ // Horizontal tile
+#endif
 		// Clear the current pixel (set it to white)
 		//frameBuffer[(y)][x] = 0x0;
 	
@@ -307,9 +285,9 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		//}
 
 		if(winDisplayEnable) // Draw the window layer (if enabled)
-			drawTile(xTile, (*rLY), (winTileMapSelect ? 0x1C00 : 0x1800) );
+			drawTile(xTile, ry, (winTileMapSelect ? 0x1C00 : 0x1800) );
 		else // Draw the background layer
-			drawTile(xTile, (*rLY), (bgTileMapSelect ? 0x1C00 : 0x1800) );
+			drawTile(xTile, ry, (bgTileMapSelect ? 0x1C00 : 0x1800) );
 	}
 
 	// Handle the OBJ (sprite) layer
@@ -317,7 +295,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		bool visible = false;
 		while(oam->getNextSprite(visible)){
 			if(visible) // The sprite is on screen
-				drawSprite((*rLY), oam);
+				drawSprite(ry, oam);
 		}
 	}
 }
@@ -404,6 +382,10 @@ void GPU::render(){
 
 bool GPU::getWindowStatus(){
 	return window->status();
+}
+
+void GPU::setPixelScale(const unsigned int &n){
+	window->setScalingFactor(n);
 }
 
 bool GPU::preWriteAction(){

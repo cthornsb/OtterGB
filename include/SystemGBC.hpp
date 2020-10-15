@@ -37,6 +37,8 @@ public:
 
 	LR35902 *getCPU(){ return &cpu; }
 	
+	GPU *getGPU(){ return &gpu; }
+	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 
