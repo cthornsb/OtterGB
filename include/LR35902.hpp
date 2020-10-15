@@ -246,10 +246,10 @@ protected:
 
 	// RLCA | RLCA | RRA | RRCA
 
-	void RLA(){ rl_d8(&A); }
-	void RLCA(){ rlc_d8(&A); }
-	void RRA(){ rr_d8(&A); }
-	void RRCA(){ rrc_d8(&A); }
+	void RLA();
+	void RLCA();
+	void RRA();
+	void RRCA();
 
 	// JR
 

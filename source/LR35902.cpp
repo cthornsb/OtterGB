@@ -153,38 +153,38 @@ unsigned short LR35902::setHL(const unsigned short &val){
 }
 
 void LR35902::rlc_d8(unsigned char *arg){
-	// Left bitshift (arg), copying the 7th bit into the carry 
-	// and into 0th bit of (arg).
-	bool highBit = ((*arg) & 0x80) != 0;
-	if(highBit) (*arg) = ((*arg) << 1) | 0x01;
-	else        (*arg) = ((*arg) << 1) & 0xFE;
+	// Rotate (arg) left, copy old 7th bit into the carry.
+	bool highBit = ((*arg) & 0x80) == 0x80;
+	(*arg) = (*arg) << 1;
+	if(highBit) set_d8(arg, 0);
+	else        res_d8(arg, 0);
 	setFlags((*arg == 0), 0, 0, highBit);
 }
 
 void LR35902::rrc_d8(unsigned char *arg){
-	// Right bitshift (arg), copying the 0th bit into the carry 
-	// and into 7th bit of (arg).
-	bool lowBit = ((*arg) & 0x1) != 0;
-	if(lowBit) (*arg) = ((*arg) >> 1) | 0x80;
-	else       (*arg) = ((*arg) >> 1) & 0x7F;
+	// Rotate (arg) right, copy old 0th bit into the carry.
+	bool lowBit = ((*arg) & 0x1) == 0x1;
+	(*arg) = (*arg) >> 1;
+	if(lowBit) set_d8(arg, 7);
+	else       res_d8(arg, 7);
 	setFlags((*arg == 0), 0, 0, lowBit);
 }
 
 void LR35902::rl_d8(unsigned char *arg){
-	// Left bitshift (arg), copying the 7th bit into the carry 
-	// bit which is copied into 0th bit of (arg).
-	bool highBit = ((*arg) & 0x80) != 0;
-	if(getFlagC()) (*arg) = ((*arg) << 1) | 0x01;
-	else           (*arg) = ((*arg) << 1) & 0xFE;
+	// Rotate (arg) left through carry.
+	bool highBit = ((*arg) & 0x80) == 0x80;
+	(*arg) = (*arg) << 1;
+	if(getFlagC()) set_d8(arg, 0);
+	else           res_d8(arg, 0);
 	setFlags((*arg == 0), 0, 0, highBit);
 }
 
 void LR35902::rr_d8(unsigned char *arg){
-	// Right bitshift (arg), copying the 0th bit into the carry 
-	// bit which is copied into 7th bit of (arg).
-	bool lowBit = ((*arg) & 0x1) != 0;
-	if(getFlagC()) (*arg) = ((*arg) >> 1) | 0x80;
-	else           (*arg) = ((*arg) >> 1) & 0x7F;
+	// Rotate (arg) right through carry.
+	bool lowBit = ((*arg) & 0x1) == 0x1;
+	(*arg) = (*arg) >> 1;
+	if(getFlagC()) set_d8(arg, 7);
+	else           res_d8(arg, 7);
 	setFlags((*arg == 0), 0, 0, lowBit);
 }
 
@@ -196,6 +196,13 @@ void LR35902::res_d8(unsigned char *arg, const unsigned char &bit){
 void LR35902::set_d8(unsigned char *arg, const unsigned char &bit){
 	// Set a bit of (arg).
 	(*arg) |= (0x1 << bit);
+}
+
+void LR35902::bit_d8(unsigned char *arg, const unsigned char &bit){
+	// Copy a bit of (arg) to the zero bit.
+	setFlag(FLAG_Z_BIT, ((*arg) & (0x1 << bit)));
+	setFlag(FLAG_S_BIT, 0);
+	setFlag(FLAG_H_BIT, 1);
 }
 
 void LR35902::inc_d16(unsigned char *addrH, unsigned char *addrL){
@@ -402,7 +409,7 @@ unsigned char LR35902::getCarriesSub(const unsigned char &arg1, const unsigned c
 void LR35902::sla_d8(unsigned char *arg){
 	// Left bitshift (arg), setting its 0th bit to 0 and moving
 	// its 7th bit into the carry bit.
-	bool highBit = ((*arg) & 0xFF) != 0;
+	bool highBit = ((*arg) & 0x80) == 0x80;
 	(*arg) = (*arg) << 1;
 	setFlags((*arg == 0), 0, 0, highBit);
 }
@@ -410,33 +417,27 @@ void LR35902::sla_d8(unsigned char *arg){
 void LR35902::sra_d8(unsigned char *arg){
 	// Right bitshift (arg), its 0th bit is moved to the carry
 	// and its 7th bit retains its original value.
-	bool lowBit = ((*arg) & 0x1) != 0;
-	bool highBit = ((*arg) & 0xFF) != 0;
-	(*arg) = ((*arg) >> 1) | highBit ? 0xFE : 0x1;
+	bool lowBit = ((*arg) & 0x1) == 0x1;
+	bool highBit = ((*arg) & 0x80) == 0x80;
+	(*arg) = (*arg) >> 1;
+	if(highBit)	set_d8(arg, 7);
 	setFlags((*arg == 0), 0, 0, lowBit);
-}
-
-void LR35902::swap_d8(unsigned char *arg){
-	// Swap the low and high nibbles (4-bits) of (arg).
-	char lowNibble = (*arg) & 0xF;
-	char highNibble = (*arg) & 0xF0;
-	(*arg) = (lowNibble << 4) + (highNibble >> 4);
-	setFlags((*arg == 0), 0, 0, 0);
 }
 
 void LR35902::srl_d8(unsigned char *arg){
 	// Right bitshift (arg), setting its 7th bit to 0 and moving
 	// its 0th bit into the carry bit.
-	bool lowBit = ((*arg) & 0x1) != 0;
+	bool lowBit = ((*arg) & 0x1) == 0x1;
 	(*arg) = (*arg) >> 1;
 	setFlags((*arg == 0), 0, 0, lowBit);
 }
 
-void LR35902::bit_d8(unsigned char *arg, const unsigned char &bit){
-	// Copy a bit of (arg) to the zero bit.
-	setFlag(FLAG_Z_BIT, ((*arg) & (0x1 << bit)));
-	setFlag(FLAG_S_BIT, 0);
-	setFlag(FLAG_H_BIT, 1);
+void LR35902::swap_d8(unsigned char *arg){
+	// Swap the low and high nibbles (4-bits) of (arg).
+	unsigned char lowNibble = (*arg) & 0xF;
+	unsigned char highNibble = (*arg) & 0xF0;
+	(*arg) = (lowNibble << 4) + (highNibble >> 4);
+	setFlags((*arg == 0), 0, 0, 0);
 }
 
 void LR35902::callInterruptVector(const unsigned char &offset){
@@ -447,6 +448,28 @@ void LR35902::callInterruptVector(const unsigned char &offset){
 /////////////////////////////////////////////////////////////////////
 // OPCODES
 /////////////////////////////////////////////////////////////////////
+
+// RLCA | RLCA | RRA | RRCA
+
+void LR35902::RLA(){ 
+	rl_d8(&A); 
+	setFlag(FLAG_Z_BIT, 0); // RLA clears Z regardless of result.
+}
+
+void LR35902::RLCA(){ 
+	rlc_d8(&A);
+	setFlag(FLAG_Z_BIT, 0); // RLCA clears Z regardless of result.
+}
+
+void LR35902::RRA(){ 
+	rr_d8(&A); 
+	setFlag(FLAG_Z_BIT, 0); // RRA clears Z regardless of result.
+}
+
+void LR35902::RRCA(){ 
+	rrc_d8(&A); 
+	setFlag(FLAG_Z_BIT, 0); // RRCA clears Z regardless of result.
+}
 
 // INC BC[DE|HL|(HL)]
 
