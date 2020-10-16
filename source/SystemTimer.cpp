@@ -237,21 +237,16 @@ bool SystemTimer::onClockUpdate(const unsigned short &nCycles){
 		(*rDIV)++;
 	}
 	nCyclesSinceLastTick += nCycles;
-	if(nCyclesSinceLastTick >= timerPeriod){
-		// Check the number of times the timer has ticked since we last checked.
-		for(unsigned short i = 0; i < (nCyclesSinceLastTick/timerPeriod); i++){
-			if(++(*rTIMA) == 0x0) // Timer counter has rolled over
-				rollOver();
-		}
+	while(nCyclesSinceLastTick/timerPeriod){ // Handle a timer tick.
+		if(++(*rTIMA) == 0x0) // Timer counter has rolled over
+			rollOver();
 		// Reset the cycle counter.
-		nCyclesSinceLastTick = nCyclesSinceLastTick % timerPeriod;
-		return true;
+		nCyclesSinceLastTick -= timerPeriod;
 	}
-	return false;
+	return true;
 }
 
 void SystemTimer::rollOver(){
-	nCyclesSinceLastTick = nCyclesSinceLastTick % timerPeriod;
 	(*rTIMA) = (*rTMA);
 	sys->handleTimerInterrupt();
 }
