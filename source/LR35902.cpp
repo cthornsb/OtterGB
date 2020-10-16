@@ -103,6 +103,9 @@ unsigned short LR35902::execute(Cartridge *cart){
 		getline(std::cin, dummy);
 	}
 	
+	if(nCycles == 0)
+		std::cout << " HERE!!! op=" << getHex(op) << ", PC=" << getHex(PC) << std::endl;
+	
 	return nCycles;
 }
 
@@ -226,32 +229,32 @@ void LR35902::dec_d8(unsigned char *arg){
 	setFlag(FLAG_H_BIT, halfCarry);
 }
 
-void LR35902::jr_n(unsigned char *n){
-	PC += twosComp(*n);
+void LR35902::jr_n(const unsigned char &n){
+	PC += twosComp(n);
 }
 
-void LR35902::jr_cc_n(unsigned char *n){
+void LR35902::jr_cc_n(const unsigned char &n){
 	nCycles += 4; // Conditional JR takes 4 additional cycles if true (8->12)
 	jr_n(n);
 }
 
-void LR35902::ld_d8(unsigned char *dest, unsigned char *src){
-	(*dest) = (*src);
+void LR35902::ld_d8(unsigned char *dest, const unsigned char &src){
+	(*dest) = src;
 }
 
-void LR35902::ld_SP_d16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::ld_SP_d16(const unsigned char &addrH, const unsigned char &addrL){
 	// Load immediate 16-bit value into the stack pointer, SP.
-	SP = getUShort(*addrH, *addrL);
+	SP = getUShort(addrH, addrL);
 }
 
 void LR35902::add_A_aHL(){
-	add_A_d8(sys->getPtr(getHL()));
+	add_A_d8(sys->getValue(getHL()));
 }
 
-void LR35902::add_HL_d16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::add_HL_d16(const unsigned char &addrH, const unsigned char &addrL){
 	// Add d16 to HL.
 	unsigned short HL = getHL();
-	unsigned short dd = getUShort(*addrH, *addrL);
+	unsigned short dd = getUShort(addrH, addrL);
 	unsigned int result = HL + dd;
 	// Note: (arg1 ^ arg2) ^ result = carry bits
 	halfCarry = (((HL ^ dd) ^ result) & 0x1000) == 0x1000; // Carry from bit 11
@@ -262,65 +265,65 @@ void LR35902::add_HL_d16(unsigned char *addrH, unsigned char *addrL){
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::add_A_d8(unsigned char *arg){
-	A = getCarriesAdd(A, *arg);
+void LR35902::add_A_d8(const unsigned char &arg){
+	A = getCarriesAdd(A, arg);
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::adc_A_d8(unsigned char *arg){
-	A = getCarriesAdd(A, *arg, true); // Add WITH carry
+void LR35902::adc_A_d8(const unsigned char &arg){
+	A = getCarriesAdd(A, arg, true); // Add WITH carry
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::sub_A_d8(unsigned char *arg){
-	A = getCarriesSub(A, *arg);
+void LR35902::sub_A_d8(const unsigned char &arg){
+	A = getCarriesSub(A, arg);
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 1);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::sbc_A_d8(unsigned char *arg){
-	A = getCarriesSub(A, *arg, true); // Subtract WITH carry
+void LR35902::sbc_A_d8(const unsigned char &arg){
+	A = getCarriesSub(A, arg, true); // Subtract WITH carry
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 1);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry);
 }
 
-void LR35902::and_d8(unsigned char *arg){
-	A &= (*arg);
+void LR35902::and_d8(const unsigned char &arg){
+	A &= arg;
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, 1);
 	setFlag(FLAG_C_BIT, 0);		
 }
 
-void LR35902::xor_d8(unsigned char *arg){
-	A ^= (*arg);
+void LR35902::xor_d8(const unsigned char &arg){
+	A ^= arg;
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, 0);
 	setFlag(FLAG_C_BIT, 0);	
 }
 
-void LR35902::or_d8(unsigned char *arg){
-	A |= (*arg);
+void LR35902::or_d8(const unsigned char &arg){
+	A |= arg;
 	setFlag(FLAG_Z_BIT, (A == 0));
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, 0);
 	setFlag(FLAG_C_BIT, 0);
 }
 
-void LR35902::cp_d8(unsigned char *arg){
-	getCarriesSub(A, *arg);
-	setFlag(FLAG_Z_BIT, (A == *arg)); // A == arg
+void LR35902::cp_d8(const unsigned char &arg){
+	getCarriesSub(A, arg);
+	setFlag(FLAG_Z_BIT, (A == arg)); // A == arg
 	setFlag(FLAG_S_BIT, 1);
 	setFlag(FLAG_H_BIT, halfCarry);
 	setFlag(FLAG_C_BIT, fullCarry); // A < arg
@@ -353,27 +356,27 @@ void LR35902::pop_d16(unsigned short *addr){
 	(*addr) = getUShort(addrH, addrL);
 }
 
-void LR35902::jp_d16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::jp_d16(const unsigned char &addrH, const unsigned char &addrL){
 	// Jump to address
-	PC = ((*addrH) << 8) + (*addrL);
+	PC = (addrH << 8) + addrL;
 }
 
-void LR35902::jp_cc_d16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::jp_cc_d16(const unsigned char &addrH, const unsigned char &addrL){
 	nCycles += 4; // Conditional JP takes 4 additional cycles if true (12->16)
 	jp_d16(addrH, addrL);
 }
 
-void LR35902::call_a16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::call_a16(const unsigned char &addrH, const unsigned char &addrL){
 	push_d16(PC); // Push the program counter onto the stack
 	jp_d16(addrH, addrL); // Jump to the called address
 }
 
-void LR35902::call_cc_a16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::call_cc_a16(const unsigned char &addrH, const unsigned char &addrL){
 	nCycles += 12; // Conditional CALL takes 12 additional cycles if true (12->24)
 	call_a16(addrH, addrL);
 }
 
-void LR35902::rst_n(unsigned char n){
+void LR35902::rst_n(const unsigned char &n){
 	push_d16(PC); // Push the program counter onto the stack
 	PC = n & 0x00FF; // Zero the high bits
 }
@@ -666,7 +669,7 @@ void LR35902::LD_aC_A(){
 
 // LD HL,A[B|C|D|E|H|L|d8]
 
-void LR35902::ld_aHL_d8(unsigned char *arg){
+void LR35902::ld_aHL_d8(const unsigned char &arg){
 	// Write d8 into memory location (HL).
 	sys->write(getHL(), arg);
 }
@@ -712,9 +715,9 @@ void LR35902::LD_aDE_A(){
 
 // LD A,A[B|C|D|E|H|L|d8]
 
-void LR35902::ld_A_a16(unsigned char *addrH, unsigned char *addrL){
+void LR35902::ld_A_a16(const unsigned char &addrH, const unsigned char &addrL){
 	// Load memory location (a16) into register A.
-	sys->read(getUShort(*addrH, *addrL), &A);
+	sys->read(getUShort(addrH, addrL), &A);
 }
 
 void LR35902::LD_A_aC(){ 
@@ -725,49 +728,49 @@ void LR35902::LD_A_aC(){
 // ADD (HL)
 
 void LR35902::ADD_A_aHL(){
-	add_A_d8(sys->getPtr(getHL()));
+	add_A_d8(sys->getValue(getHL()));
 }
 
 // ADC (HL)
 
 void LR35902::ADC_A_aHL(){
-	adc_A_d8(sys->getPtr(getHL()));
+	adc_A_d8(sys->getValue(getHL()));
 }
 
 // SUB (HL)
 
 void LR35902::SUB_aHL(){
-	sub_A_d8(sys->getPtr(getHL()));
+	sub_A_d8(sys->getValue(getHL()));
 }
 
 // SBC (HL)
 
 void LR35902::SBC_A_aHL(){
-	sbc_A_d8(sys->getPtr(getHL()));
+	sbc_A_d8(sys->getValue(getHL()));
 }
 
 // AND (HL)
 
 void LR35902::AND_aHL(){
-	and_d8(sys->getPtr(getHL()));
+	and_d8(sys->getValue(getHL()));
 }
 
 // XOR (HL)
 
 void LR35902::XOR_aHL(){
-	xor_d8(sys->getPtr(getHL()));
+	xor_d8(sys->getValue(getHL()));
 }
 
 // OR (HL)
 
 void LR35902::OR_aHL(){
-	or_d8(sys->getPtr(getHL()));
+	or_d8(sys->getValue(getHL()));
 }
 
 // CP (HL)
 
 void LR35902::CP_aHL(){
-	cp_d8(sys->getPtr(getHL()));
+	cp_d8(sys->getValue(getHL()));
 }
 
 // POP AF
@@ -781,7 +784,7 @@ void LR35902::POP_AF(){
 
 void LR35902::JP_aHL(){ 
 	// Jump to memory address (HL).
-	jp_d16(&H, &L);
+	jp_d16(H, L);
 }
 
 // RET NZ[Z|NC|C]

@@ -138,33 +138,33 @@ protected:
 
 	void dec_d8(unsigned char *arg);
 
-	void jr_n(unsigned char *n);
+	void jr_n(const unsigned char &n);
 	
-	void jr_cc_n(unsigned char *n);
+	void jr_cc_n(const unsigned char &n);
 
-	void ld_d8(unsigned char *dest, unsigned char *src);
+	void ld_d8(unsigned char *dest, const unsigned char &src);
 
-	void ld_SP_d16(unsigned char *addrH, unsigned char *addrL);
+	void ld_SP_d16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void add_A_d8(unsigned char *arg);
+	void add_A_d8(const unsigned char &arg);
 
 	void add_A_aHL();
 
-	void add_HL_d16(unsigned char *addrH, unsigned char *addrL);
+	void add_HL_d16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void adc_A_d8(unsigned char *arg);
+	void adc_A_d8(const unsigned char &arg);
 
-	void sub_A_d8(unsigned char *arg);
+	void sub_A_d8(const unsigned char &arg);
 
-	void sbc_A_d8(unsigned char *arg);
+	void sbc_A_d8(const unsigned char &arg);
 
-	void and_d8(unsigned char *arg);
+	void and_d8(const unsigned char &arg);
 
-	void xor_d8(unsigned char *arg);
+	void xor_d8(const unsigned char &arg);
 
-	void or_d8(unsigned char *arg);
+	void or_d8(const unsigned char &arg);
 
-	void cp_d8(unsigned char *arg);
+	void cp_d8(const unsigned char &arg);
 
 	void push_d16(const unsigned char &addrH, const unsigned char &addrL);
 
@@ -174,15 +174,15 @@ protected:
 
 	void pop_d16(unsigned short *addr);
 
-	void jp_d16(unsigned char *addrH, unsigned char *addrL);
+	void jp_d16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void jp_cc_d16(unsigned char *addrH, unsigned char *addrL);
+	void jp_cc_d16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void call_a16(unsigned char *addrH, unsigned char *addrL);
+	void call_a16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void call_cc_a16(unsigned char *addrH, unsigned char *addrL);
+	void call_cc_a16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void rst_n(unsigned char n);
+	void rst_n(const unsigned char &n);
 
 	void ret();
 
@@ -253,11 +253,11 @@ protected:
 
 	// JR
 
-	void JR_r8(){ jr_n(&d8); }
-	void JR_NZ_r8(){ if(!getFlagZ()) jr_cc_n(&d8); }
-	void JR_Z_r8(){ if(getFlagZ()) jr_cc_n(&d8); }
-	void JR_NC_r8(){ if(!getFlagC()) jr_cc_n(&d8); }
-	void JR_C_r8(){ if(getFlagC()) jr_cc_n(&d8); }
+	void JR_r8(){ jr_n(d8); }
+	void JR_NZ_r8(){ if(!getFlagZ()) jr_cc_n(d8); }
+	void JR_Z_r8(){ if(getFlagZ()) jr_cc_n(d8); }
+	void JR_NC_r8(){ if(!getFlagC()) jr_cc_n(d8); }
+	void JR_C_r8(){ if(getFlagC()) jr_cc_n(d8); }
 	
 	// DAA
 
@@ -297,14 +297,14 @@ protected:
 	
 	// LD SP,d16[HL]
 	
-	void LD_SP_d16(){ ld_SP_d16(&d16h, &d16l); }
-	void LD_SP_HL(){ ld_SP_d16(&H, &L); }
+	void LD_SP_d16(){ ld_SP_d16(d16h, d16l); }
+	void LD_SP_HL(){ ld_SP_d16(H, L); }
 
 	// ADD HL,BC[DE|HL|SP]
 	
-	void ADD_HL_BC(){ add_HL_d16(&B, &C); }
-	void ADD_HL_HL(){ add_HL_d16(&H, &L); }
-	void ADD_HL_DE(){ add_HL_d16(&D, &E); }
+	void ADD_HL_BC(){ add_HL_d16(B, C); }
+	void ADD_HL_HL(){ add_HL_d16(H, L); }
+	void ADD_HL_DE(){ add_HL_d16(D, E); }
 	void ADD_HL_SP();
 	
 	// LD HL-,A or LDD HL,A
@@ -341,25 +341,25 @@ protected:
 
 	// LD B,A[B|C|D|E|H|L|d8]
 
-	void LD_B_A(){ ld_d8(&B, &A); }
-	void LD_B_B(){ ld_d8(&B, &B); }
-	void LD_B_C(){ ld_d8(&B, &C); }
-	void LD_B_D(){ ld_d8(&B, &D); }
-	void LD_B_E(){ ld_d8(&B, &E); }
-	void LD_B_H(){ ld_d8(&B, &H); }
-	void LD_B_L(){ ld_d8(&B, &L); }
-	void LD_B_d8(){ ld_d8(&B, &d8); }
+	void LD_B_A(){ ld_d8(&B, A); }
+	void LD_B_B(){ ld_d8(&B, B); }
+	void LD_B_C(){ ld_d8(&B, C); }
+	void LD_B_D(){ ld_d8(&B, D); }
+	void LD_B_E(){ ld_d8(&B, E); }
+	void LD_B_H(){ ld_d8(&B, H); }
+	void LD_B_L(){ ld_d8(&B, L); }
+	void LD_B_d8(){ ld_d8(&B, d8); }
 
 	// LD C,A[B|C|D|E|H|L|d8]
 
-	void LD_C_A(){ ld_d8(&C, &A); }
-	void LD_C_B(){ ld_d8(&C, &B); }
-	void LD_C_C(){ ld_d8(&C, &C); }
-	void LD_C_D(){ ld_d8(&C, &D); }
-	void LD_C_E(){ ld_d8(&C, &E); }
-	void LD_C_H(){ ld_d8(&C, &H); }
-	void LD_C_L(){ ld_d8(&C, &L); }
-	void LD_C_d8(){ ld_d8(&C, &d8); }
+	void LD_C_A(){ ld_d8(&C, A); }
+	void LD_C_B(){ ld_d8(&C, B); }
+	void LD_C_C(){ ld_d8(&C, C); }
+	void LD_C_D(){ ld_d8(&C, D); }
+	void LD_C_E(){ ld_d8(&C, E); }
+	void LD_C_H(){ ld_d8(&C, H); }
+	void LD_C_L(){ ld_d8(&C, L); }
+	void LD_C_d8(){ ld_d8(&C, d8); }
 
 	// LD (C),A
 
@@ -367,60 +367,60 @@ protected:
 
 	// LD D,A[B|C|D|E|H|L|d8]
 
-	void LD_D_A(){ ld_d8(&D, &A); }
-	void LD_D_B(){ ld_d8(&D, &B); }
-	void LD_D_C(){ ld_d8(&D, &C); }
-	void LD_D_D(){ ld_d8(&D, &D); }
-	void LD_D_E(){ ld_d8(&D, &E); }
-	void LD_D_H(){ ld_d8(&D, &H); }
-	void LD_D_L(){ ld_d8(&D, &L); }
-	void LD_D_d8(){ ld_d8(&D, &d8); }
+	void LD_D_A(){ ld_d8(&D, A); }
+	void LD_D_B(){ ld_d8(&D, B); }
+	void LD_D_C(){ ld_d8(&D, C); }
+	void LD_D_D(){ ld_d8(&D, D); }
+	void LD_D_E(){ ld_d8(&D, E); }
+	void LD_D_H(){ ld_d8(&D, H); }
+	void LD_D_L(){ ld_d8(&D, L); }
+	void LD_D_d8(){ ld_d8(&D, d8); }
 
 	// LD E,A[B|C|D|E|H|L|d8]
 
-	void LD_E_A(){ ld_d8(&E, &A); }
-	void LD_E_B(){ ld_d8(&E, &B); }
-	void LD_E_C(){ ld_d8(&E, &C); }
-	void LD_E_D(){ ld_d8(&E, &D); }
-	void LD_E_E(){ ld_d8(&E, &E); }
-	void LD_E_H(){ ld_d8(&E, &H); }
-	void LD_E_L(){ ld_d8(&E, &L); }
-	void LD_E_d8(){ ld_d8(&E, &d8); }
+	void LD_E_A(){ ld_d8(&E, A); }
+	void LD_E_B(){ ld_d8(&E, B); }
+	void LD_E_C(){ ld_d8(&E, C); }
+	void LD_E_D(){ ld_d8(&E, D); }
+	void LD_E_E(){ ld_d8(&E, E); }
+	void LD_E_H(){ ld_d8(&E, H); }
+	void LD_E_L(){ ld_d8(&E, L); }
+	void LD_E_d8(){ ld_d8(&E, d8); }
 
 	// LD H,A[B|C|D|E|H|L|d8]
 
-	void LD_H_A(){ ld_d8(&H, &A); }
-	void LD_H_B(){ ld_d8(&H, &B); }
-	void LD_H_C(){ ld_d8(&H, &C); }
-	void LD_H_D(){ ld_d8(&H, &D); }
-	void LD_H_E(){ ld_d8(&H, &E); }
-	void LD_H_H(){ ld_d8(&H, &H); }
-	void LD_H_L(){ ld_d8(&H, &L); }
-	void LD_H_d8(){ ld_d8(&H, &d8); }
+	void LD_H_A(){ ld_d8(&H, A); }
+	void LD_H_B(){ ld_d8(&H, B); }
+	void LD_H_C(){ ld_d8(&H, C); }
+	void LD_H_D(){ ld_d8(&H, D); }
+	void LD_H_E(){ ld_d8(&H, E); }
+	void LD_H_H(){ ld_d8(&H, H); }
+	void LD_H_L(){ ld_d8(&H, L); }
+	void LD_H_d8(){ ld_d8(&H, d8); }
 
 	// LD L,A[B|C|D|E|H|L|d8]
 
-	void LD_L_A(){ ld_d8(&L, &A); }
-	void LD_L_B(){ ld_d8(&L, &B); }
-	void LD_L_C(){ ld_d8(&L, &C); }
-	void LD_L_D(){ ld_d8(&L, &D); }
-	void LD_L_E(){ ld_d8(&L, &E); }
-	void LD_L_H(){ ld_d8(&L, &H); }
-	void LD_L_L(){ ld_d8(&L, &L); }
-	void LD_L_d8(){ ld_d8(&L, &d8); }
+	void LD_L_A(){ ld_d8(&L, A); }
+	void LD_L_B(){ ld_d8(&L, B); }
+	void LD_L_C(){ ld_d8(&L, C); }
+	void LD_L_D(){ ld_d8(&L, D); }
+	void LD_L_E(){ ld_d8(&L, E); }
+	void LD_L_H(){ ld_d8(&L, H); }
+	void LD_L_L(){ ld_d8(&L, L); }
+	void LD_L_d8(){ ld_d8(&L, d8); }
 
 	// LD HL,A[B|C|D|E|H|L|d8]
 
-	void ld_aHL_d8(unsigned char *arg);
+	void ld_aHL_d8(const unsigned char &arg);
 
-	void LD_aHL_A(){ ld_aHL_d8(&A); }
-	void LD_aHL_B(){ ld_aHL_d8(&B); }
-	void LD_aHL_C(){ ld_aHL_d8(&C); }
-	void LD_aHL_D(){ ld_aHL_d8(&D); }
-	void LD_aHL_E(){ ld_aHL_d8(&E); }
-	void LD_aHL_H(){ ld_aHL_d8(&H); }
-	void LD_aHL_L(){ ld_aHL_d8(&L); }
-	void LD_aHL_d8(){ ld_aHL_d8(&d8); }
+	void LD_aHL_A(){ ld_aHL_d8(A); }
+	void LD_aHL_B(){ ld_aHL_d8(B); }
+	void LD_aHL_C(){ ld_aHL_d8(C); }
+	void LD_aHL_D(){ ld_aHL_d8(D); }
+	void LD_aHL_E(){ ld_aHL_d8(E); }
+	void LD_aHL_H(){ ld_aHL_d8(H); }
+	void LD_aHL_L(){ ld_aHL_d8(L); }
+	void LD_aHL_d8(){ ld_aHL_d8(d8); }
 	void LD_aHL_d16();
 
 	void ld_d8_aHL(unsigned char *arg);
@@ -448,124 +448,124 @@ protected:
 
 	// LD A,A[B|C|D|E|H|L|d8]
 
-	void LD_A_d8(){ ld_d8(&A, &d8); }
-	void LD_A_A(){ ld_d8(&A, &A); }
-	void LD_A_B(){ ld_d8(&A, &B); }
-	void LD_A_C(){ ld_d8(&A, &C); }
-	void LD_A_D(){ ld_d8(&A, &D); }
-	void LD_A_E(){ ld_d8(&A, &E); }
-	void LD_A_H(){ ld_d8(&A, &H); }
-	void LD_A_L(){ ld_d8(&A, &L); }
+	void LD_A_d8(){ ld_d8(&A, d8); }
+	void LD_A_A(){ ld_d8(&A, A); }
+	void LD_A_B(){ ld_d8(&A, B); }
+	void LD_A_C(){ ld_d8(&A, C); }
+	void LD_A_D(){ ld_d8(&A, D); }
+	void LD_A_E(){ ld_d8(&A, E); }
+	void LD_A_H(){ ld_d8(&A, H); }
+	void LD_A_L(){ ld_d8(&A, L); }
 
-	void ld_A_a16(unsigned char *addrH, unsigned char *addrL);
+	void ld_A_a16(const unsigned char &addrH, const unsigned char &addrL);
 
 	void LD_A_aC();
-	void LD_A_aBC(){ ld_A_a16(&B, &C); }
-	void LD_A_aDE(){ ld_A_a16(&D, &E); }
-	void LD_A_aHL(){ ld_A_a16(&H, &L); }
-	void LD_A_a16(){ ld_A_a16(&d16h, &d16l); }
+	void LD_A_aBC(){ ld_A_a16(B, C); }
+	void LD_A_aDE(){ ld_A_a16(D, E); }
+	void LD_A_aHL(){ ld_A_a16(H, L); }
+	void LD_A_a16(){ ld_A_a16(d16h, d16l); }
 
 	// ADD A,A[B|C|D|E|H|L]
 
-	void ADD_A_d8(){ add_A_d8(&d8); }
-	void ADD_A_A(){ add_A_d8(&A); }
-	void ADD_A_B(){ add_A_d8(&B); }
-	void ADD_A_C(){ add_A_d8(&C); }
-	void ADD_A_D(){ add_A_d8(&D); }
-	void ADD_A_E(){ add_A_d8(&E); }
-	void ADD_A_H(){ add_A_d8(&H); }
-	void ADD_A_L(){ add_A_d8(&L); }
+	void ADD_A_d8(){ add_A_d8(d8); }
+	void ADD_A_A(){ add_A_d8(A); }
+	void ADD_A_B(){ add_A_d8(B); }
+	void ADD_A_C(){ add_A_d8(C); }
+	void ADD_A_D(){ add_A_d8(D); }
+	void ADD_A_E(){ add_A_d8(E); }
+	void ADD_A_H(){ add_A_d8(H); }
+	void ADD_A_L(){ add_A_d8(L); }
 
 	void ADD_A_aHL();
 
 	// ADC A,A[B|C|D|E|H|L]
 
-	void ADC_A_d8(){ adc_A_d8(&d8); }
-	void ADC_A_A(){ adc_A_d8(&A); }
-	void ADC_A_B(){ adc_A_d8(&B); }
-	void ADC_A_C(){ adc_A_d8(&C); }
-	void ADC_A_D(){ adc_A_d8(&D); }
-	void ADC_A_E(){ adc_A_d8(&E); }
-	void ADC_A_H(){ adc_A_d8(&H); }
-	void ADC_A_L(){ adc_A_d8(&L); }
+	void ADC_A_d8(){ adc_A_d8(d8); }
+	void ADC_A_A(){ adc_A_d8(A); }
+	void ADC_A_B(){ adc_A_d8(B); }
+	void ADC_A_C(){ adc_A_d8(C); }
+	void ADC_A_D(){ adc_A_d8(D); }
+	void ADC_A_E(){ adc_A_d8(E); }
+	void ADC_A_H(){ adc_A_d8(H); }
+	void ADC_A_L(){ adc_A_d8(L); }
 	
 	void ADC_A_aHL();
 
 	// SUB A[B|C|D|E|H|L]
 
-	void SUB_d8(){ sub_A_d8(&d8); }
-	void SUB_A(){ sub_A_d8(&A); }
-	void SUB_B(){ sub_A_d8(&B); }
-	void SUB_C(){ sub_A_d8(&C); }
-	void SUB_D(){ sub_A_d8(&D); }
-	void SUB_E(){ sub_A_d8(&E); }
-	void SUB_H(){ sub_A_d8(&H); }
-	void SUB_L(){ sub_A_d8(&L); }
+	void SUB_d8(){ sub_A_d8(d8); }
+	void SUB_A(){ sub_A_d8(A); }
+	void SUB_B(){ sub_A_d8(B); }
+	void SUB_C(){ sub_A_d8(C); }
+	void SUB_D(){ sub_A_d8(D); }
+	void SUB_E(){ sub_A_d8(E); }
+	void SUB_H(){ sub_A_d8(H); }
+	void SUB_L(){ sub_A_d8(L); }
 	
 	void SUB_aHL();
 
 	// SBC A,A[B|C|D|E|H|L]
 
-	void SBC_A_d8(){ sbc_A_d8(&d8); }
-	void SBC_A_A(){ sbc_A_d8(&A); }
-	void SBC_A_B(){ sbc_A_d8(&B); }
-	void SBC_A_C(){ sbc_A_d8(&C); }
-	void SBC_A_D(){ sbc_A_d8(&D); }
-	void SBC_A_E(){ sbc_A_d8(&E); }
-	void SBC_A_H(){ sbc_A_d8(&H); }
-	void SBC_A_L(){ sbc_A_d8(&L); }
+	void SBC_A_d8(){ sbc_A_d8(d8); }
+	void SBC_A_A(){ sbc_A_d8(A); }
+	void SBC_A_B(){ sbc_A_d8(B); }
+	void SBC_A_C(){ sbc_A_d8(C); }
+	void SBC_A_D(){ sbc_A_d8(D); }
+	void SBC_A_E(){ sbc_A_d8(E); }
+	void SBC_A_H(){ sbc_A_d8(H); }
+	void SBC_A_L(){ sbc_A_d8(L); }
 	
 	void SBC_A_aHL();
 
 	// AND A[B|C|D|E|H|L]
 
-	void AND_d8(){ and_d8(&d8); }
-	void AND_A(){ and_d8(&A); }
-	void AND_B(){ and_d8(&B); }
-	void AND_C(){ and_d8(&C); }
-	void AND_D(){ and_d8(&D); }
-	void AND_E(){ and_d8(&E); }
-	void AND_H(){ and_d8(&H); }
-	void AND_L(){ and_d8(&L); }
+	void AND_d8(){ and_d8(d8); }
+	void AND_A(){ and_d8(A); }
+	void AND_B(){ and_d8(B); }
+	void AND_C(){ and_d8(C); }
+	void AND_D(){ and_d8(D); }
+	void AND_E(){ and_d8(E); }
+	void AND_H(){ and_d8(H); }
+	void AND_L(){ and_d8(L); }
 	
 	void AND_aHL();
 
 	// XOR A[B|C|D|E|H|L]
 
-	void XOR_d8(){ xor_d8(&d8); }
-	void XOR_A(){ xor_d8(&A); }
-	void XOR_B(){ xor_d8(&B); }
-	void XOR_C(){ xor_d8(&C); }
-	void XOR_D(){ xor_d8(&D); }
-	void XOR_E(){ xor_d8(&E); }
-	void XOR_H(){ xor_d8(&H); }
-	void XOR_L(){ xor_d8(&L); }
+	void XOR_d8(){ xor_d8(d8); }
+	void XOR_A(){ xor_d8(A); }
+	void XOR_B(){ xor_d8(B); }
+	void XOR_C(){ xor_d8(C); }
+	void XOR_D(){ xor_d8(D); }
+	void XOR_E(){ xor_d8(E); }
+	void XOR_H(){ xor_d8(H); }
+	void XOR_L(){ xor_d8(L); }
 	
 	void XOR_aHL();
 
 	// OR A[B|C|D|E|H|L]
 
-	void OR_d8(){ or_d8(&d8); }
-	void OR_A(){ or_d8(&A); }
-	void OR_B(){ or_d8(&B); }
-	void OR_C(){ or_d8(&C); }
-	void OR_D(){ or_d8(&D); }
-	void OR_E(){ or_d8(&E); }
-	void OR_H(){ or_d8(&H); }
-	void OR_L(){ or_d8(&L); }
+	void OR_d8(){ or_d8(d8); }
+	void OR_A(){ or_d8(A); }
+	void OR_B(){ or_d8(B); }
+	void OR_C(){ or_d8(C); }
+	void OR_D(){ or_d8(D); }
+	void OR_E(){ or_d8(E); }
+	void OR_H(){ or_d8(H); }
+	void OR_L(){ or_d8(L); }
 	
 	void OR_aHL();
 
 	// CP A[B|C|D|E|H|L]
 
-	void CP_d8(){ cp_d8(&d8); }
-	void CP_A(){ cp_d8(&A); }
-	void CP_B(){ cp_d8(&B); }
-	void CP_C(){ cp_d8(&C); }
-	void CP_D(){ cp_d8(&D); }
-	void CP_E(){ cp_d8(&E); }
-	void CP_H(){ cp_d8(&H); }
-	void CP_L(){ cp_d8(&L); }
+	void CP_d8(){ cp_d8(d8); }
+	void CP_A(){ cp_d8(A); }
+	void CP_B(){ cp_d8(B); }
+	void CP_C(){ cp_d8(C); }
+	void CP_D(){ cp_d8(D); }
+	void CP_E(){ cp_d8(E); }
+	void CP_H(){ cp_d8(H); }
+	void CP_L(){ cp_d8(L); }
 	
 	void CP_aHL();
 
@@ -585,21 +585,21 @@ protected:
 
 	// JP 
 
-	void JP_d16(){ jp_d16(&d16h, &d16l); }
-	void JP_NZ_d16(){ if(!getFlagZ()) jp_cc_d16(&d16h, &d16l); }
-	void JP_Z_d16(){ if(getFlagZ()) jp_cc_d16(&d16h, &d16l); }
-	void JP_NC_d16(){ if(!getFlagC()) jp_cc_d16(&d16h, &d16l); }
-	void JP_C_d16(){ if(getFlagC()) jp_cc_d16(&d16h, &d16l); }
+	void JP_d16(){ jp_d16(d16h, d16l); }
+	void JP_NZ_d16(){ if(!getFlagZ()) jp_cc_d16(d16h, d16l); }
+	void JP_Z_d16(){ if(getFlagZ()) jp_cc_d16(d16h, d16l); }
+	void JP_NC_d16(){ if(!getFlagC()) jp_cc_d16(d16h, d16l); }
+	void JP_C_d16(){ if(getFlagC()) jp_cc_d16(d16h, d16l); }
 
 	void JP_aHL();
 
 	// CALL
 
-	void CALL_a16(){ call_a16(&d16h, &d16l); }
-	void CALL_NZ_a16(){ if(!getFlagZ()) call_cc_a16(&d16h, &d16l); }
-	void CALL_Z_a16(){ if(getFlagZ()) call_cc_a16(&d16h, &d16l); }
-	void CALL_NC_a16(){ if(!getFlagC()) call_cc_a16(&d16h, &d16l); }
-	void CALL_C_a16(){ if(getFlagC()) call_cc_a16(&d16h, &d16l); }
+	void CALL_a16(){ call_a16(d16h, d16l); }
+	void CALL_NZ_a16(){ if(!getFlagZ()) call_cc_a16(d16h, d16l); }
+	void CALL_Z_a16(){ if(getFlagZ()) call_cc_a16(d16h, d16l); }
+	void CALL_NC_a16(){ if(!getFlagC()) call_cc_a16(d16h, d16l); }
+	void CALL_C_a16(){ if(getFlagC()) call_cc_a16(d16h, d16l); }
 
 	// RST 00[08|10|18|20|28|30|38]H
 
