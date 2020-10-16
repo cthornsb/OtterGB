@@ -470,8 +470,28 @@ unsigned char SystemGBC::getValue(const unsigned short &loc){
 }
 
 unsigned char *SystemGBC::getPtr(const unsigned short &loc){
-	unsigned char *retval;
-	read(loc, retval);
+	// Direct access to ROM banks and system registers is restricted. 
+	// Use write() and read() methods to access instead.
+	unsigned char *retval = 0x0;
+	switch(loc){
+		case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
+			retval = gpu.getPtr(loc);
+			break;
+		case 0xA000 ... 0xBFFF: // External (cartridge) RAM (if available)
+			retval = cart.getRam()->getPtr(loc);
+			break;
+		case 0xC000 ... 0xFDFF: // Work RAM (WRAM) 0-1 and ECHO
+			retval = wram.getPtr(loc);
+			break;
+		case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
+			retval = oam.getPtr(loc);
+			break;
+		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
+			retval = hram.getPtr(loc);
+			break;
+		default:
+			break;
+	}
 	return retval;
 }
 

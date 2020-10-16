@@ -57,6 +57,8 @@ public:
 
 	void print(const unsigned int bytesPerRow=10){ }
 
+	unsigned char *getPtr(const unsigned int &loc){ return &mem[bs][loc-offset]; }
+
 	unsigned char *getPtr(const unsigned int &loc, const unsigned int &b){ return &mem[b][loc-offset]; }
 
 	unsigned char *getPtrToBank(const unsigned int &b){ return (b < nBanks ? mem[b].data() : 0x0); }
