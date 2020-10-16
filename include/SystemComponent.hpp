@@ -57,7 +57,10 @@ public:
 
 	void print(const unsigned int bytesPerRow=10){ }
 
-	virtual unsigned char *getPtr(const unsigned int &loc){ return &mem[bs][loc-offset]; }
+	// Do not allow direct write access if in read-only mode.
+	virtual unsigned char *getPtr(const unsigned int &loc){ return (!readOnly ? &mem[bs][loc-offset] : 0x0); }
+
+	virtual const unsigned char *getConstPtr(const unsigned int &loc){ return (const unsigned char *)&mem[bs][loc-offset]; }
 
 	unsigned char *getPtr(const unsigned int &loc, const unsigned int &b){ return &mem[b][loc-offset]; }
 
