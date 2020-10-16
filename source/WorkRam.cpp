@@ -13,17 +13,35 @@ WorkRam::WorkRam() : SystemComponent(4096, 8) {
 	bs = 1; // Lowest WRAM swap bank is bank 1
 }
 
+unsigned char *WorkRam::getPtr(const unsigned int &loc){
+	if(loc < WRAM_ZERO_LOW || loc >= WRAM_ECHO_HIGH)
+		return 0x0;
+
+	unsigned char *ptr = 0x0;
+	if(loc < WRAM_SWAP_LOW) // Bank 0
+		ptr = &mem[0][loc-offset];
+	else if(loc < WRAM_ECHO_LOW) // Bank 1-7
+		ptr = &mem[bs][loc-offset-4096];
+	else if(loc < WRAM_ECHO_HIGH) // Echo of bank 0
+		ptr = &mem[0][loc-offset-8192];
+		
+	return ptr;
+}
+
 bool WorkRam::preWriteAction(){
-	if(writeLoc >= WRAM_ZERO_LOW && writeLoc < WRAM_SWAP_LOW){ // Bank 0
+	if(writeLoc < WRAM_ZERO_LOW || writeLoc >= WRAM_ECHO_HIGH)
+		return false;
+
+	if(writeLoc < WRAM_SWAP_LOW){ // Bank 0
 		writeBank = 0;
 		return true;
 	}
-	else if(writeLoc >= WRAM_SWAP_LOW && writeLoc < WRAM_ECHO_LOW){ // Bank 1-7
+	else if(writeLoc < WRAM_ECHO_LOW){ // Bank 1-7
 		writeLoc = writeLoc - 4096;
 		writeBank = bs;
 		return true;
 	}
-	else if(writeLoc >= WRAM_ECHO_LOW && writeLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
+	else if(writeLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
 		writeLoc = writeLoc - 8192;
 		writeBank = 0;
 		return true;
@@ -33,16 +51,19 @@ bool WorkRam::preWriteAction(){
 }
 
 bool WorkRam::preReadAction(){
-	if(readLoc >= WRAM_ZERO_LOW && readLoc < WRAM_SWAP_LOW){ // Bank 0
+	if(readLoc < WRAM_ZERO_LOW || readLoc >= WRAM_ECHO_HIGH)
+		return false;
+
+	if(readLoc < WRAM_SWAP_LOW){ // Bank 0
 		readBank = 0;
 		return true;
 	}
-	else if(readLoc >= WRAM_SWAP_LOW && readLoc < WRAM_ECHO_LOW){ // Bank 1-7
+	else if(readLoc < WRAM_ECHO_LOW){ // Bank 1-7
 		readLoc = readLoc - 4096;
 		readBank = bs;
 		return true;
 	}
-	else if(readLoc >= WRAM_ECHO_LOW && readLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
+	else if(readLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
 		readLoc = readLoc - 8192;
 		readBank = 0;
 		return true;

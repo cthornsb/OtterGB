@@ -471,20 +471,18 @@ void LR35902::RRCA(){
 	setFlag(FLAG_Z_BIT, 0); // RRCA clears Z regardless of result.
 }
 
-// INC BC[DE|HL|(HL)]
+// INC (HL)
 
 void LR35902::INC_aHL(){
 	// Incremement memory location (HL).
-	unsigned short HL = getHL();
-	sys->write(HL, sys->getValue(HL)+1);
+	inc_d8(sys->getPtr(getHL()));
 }
 
-// DEC BC[DE|HL|(HL)]
+// DEC (HL)
 
 void LR35902::DEC_aHL(){
 	// Decrement memory location (HL).
-	unsigned short HL = getHL();
-	sys->write(HL, sys->getValue(HL)-1);
+	dec_d8(sys->getPtr(getHL()));
 }
 
 // DAA
@@ -727,49 +725,49 @@ void LR35902::LD_A_aC(){
 	sys->read((0xFF00 + C), &A);
 }
 
-// ADD A,A[B|C|D|E|H|L]
+// ADD (HL)
 
 void LR35902::ADD_A_aHL(){
 	add_A_d8(sys->getPtr(getHL()));
 }
 
-// ADC A,A[B|C|D|E|H|L]
+// ADC (HL)
 
 void LR35902::ADC_A_aHL(){
 	adc_A_d8(sys->getPtr(getHL()));
 }
 
-// SUB A[B|C|D|E|H|L]
+// SUB (HL)
 
 void LR35902::SUB_aHL(){
 	sub_A_d8(sys->getPtr(getHL()));
 }
 
-// SBC A,A[B|C|D|E|H|L]
+// SBC (HL)
 
 void LR35902::SBC_A_aHL(){
 	sbc_A_d8(sys->getPtr(getHL()));
 }
 
-// AND A[B|C|D|E|H|L]
+// AND (HL)
 
 void LR35902::AND_aHL(){
 	and_d8(sys->getPtr(getHL()));
 }
 
-// XOR A[B|C|D|E|H|L]
+// XOR (HL)
 
 void LR35902::XOR_aHL(){
 	xor_d8(sys->getPtr(getHL()));
 }
 
-// OR A[B|C|D|E|H|L]
+// OR (HL)
 
 void LR35902::OR_aHL(){
 	or_d8(sys->getPtr(getHL()));
 }
 
-// CP A[B|C|D|E|H|L]
+// CP (HL)
 
 void LR35902::CP_aHL(){
 	cp_d8(sys->getPtr(getHL()));
@@ -820,55 +818,55 @@ void LR35902::HALT(){
 // CB-PREFIX OPCODES
 /////////////////////////////////////////////////////////////////////
 
-// RLC A[B|C|D|E|H|L]
+// RLC (HL)
 
 void LR35902::RLC_aHL(){
 	rlc_d8(sys->getPtr(getHL()));
 }
 
-// RRC A[B|C|D|E|H|L]
+// RRC (HL)
 
 void LR35902::RRC_aHL(){
 	rrc_d8(sys->getPtr(getHL()));
 }
 
-// RL A[B|C|D|E|H|L]
+// RL (HL)
 
 void LR35902::RL_aHL(){
 	rl_d8(sys->getPtr(getHL()));
 }
 
-// RR A[B|C|D|E|H|L]
+// RR (HL)
 
 void LR35902::RR_aHL(){
 	rr_d8(sys->getPtr(getHL()));
 }
 
-// SLA A[B|C|D|E|H|L]
+// SLA (HL)
 
 void LR35902::SLA_aHL(){
 	sla_d8(sys->getPtr(getHL()));
 }
 
-// SRA A[B|C|D|E|H|L]
+// SRA (HL)
 
 void LR35902::SRA_aHL(){
 	sra_d8(sys->getPtr(getHL()));
 }
 
-// SWAP A[B|C|D|E|H|L]
+// SWAP (HL)
 
 void LR35902::SWAP_aHL(){
 	swap_d8(sys->getPtr(getHL()));
 }
 
-// SRL A[B|C|D|E|H|L]
+// SRL (HL)
 
 void LR35902::SRL_aHL(){
 	srl_d8(sys->getPtr(getHL()));
 }
 
-// BIT 0[1|2|3|4|5|6|7],HL
+// BIT b,(HL)
 
 void LR35902::BIT_0_aHL(){
 	bit_d8(sys->getPtr(getHL()), 0);
@@ -902,7 +900,7 @@ void LR35902::BIT_7_aHL(){
 	bit_d8(sys->getPtr(getHL()), 7);
 }
 
-// RES 0[1|2|3|4|5|6|7],HL
+// RES b,(HL)
 
 void LR35902::RES_0_aHL(){
 	res_d8(sys->getPtr(getHL()), 0);
@@ -936,7 +934,7 @@ void LR35902::RES_7_aHL(){
 	res_d8(sys->getPtr(getHL()), 7);
 }
 
-// SET 0[1|2|3|4|5|6|7],HL
+// SET b,(HL)
 
 void LR35902::SET_0_aHL(){
 	set_d8(sys->getPtr(getHL()), 0);

@@ -7,13 +7,11 @@ class WorkRam : public SystemComponent {
 public:
 	WorkRam();
 
+	virtual unsigned char *getPtr(const unsigned int &loc);
+
 	virtual bool preWriteAction();
 	
 	virtual bool preReadAction();
-
-	virtual void postWriteAction(){ }
-
-	virtual void postReadAction(){ }
 
 private:
 };
