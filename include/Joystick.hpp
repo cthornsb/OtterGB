@@ -3,11 +3,17 @@
 
 #include "SystemComponent.hpp"
 
+class sdlWindow;
+
 class JoystickController : public SystemComponent {
 public:
-	JoystickController() : SystemComponent(128) { }
+	enum BUTTON{START, SELECT, B, A, DOWN, UP, LEFT, RIGHT};
+
+	JoystickController() : SystemComponent(), window(0x0) { }
 	
-	void handleButtonPress(const unsigned char &button);
+	void setWindow(sdlWindow *win){ window = win; }
+	
+	void handleButtonPress(const BUTTON &button);
 	
 	void clearInput();
 	
@@ -21,6 +27,8 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 
+	virtual bool onClockUpdate(const unsigned short &nCycles);
+
 private:
 	bool selectButtonKeys;
 	bool selectDirectionKeys;
@@ -29,6 +37,8 @@ private:
 	bool P12; // Up or Select
 	bool P11; // Left or B
 	bool P10; // Right or A
+	
+	sdlWindow *window; ///< Pointer to the main LCD driver
 };
 
 #endif

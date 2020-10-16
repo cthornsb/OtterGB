@@ -143,6 +143,8 @@ public:
 
 	void render();
 
+	sdlWindow *getWindow(){ return window; }
+
 	bool getWindowStatus();
 	
 	void setPixelScale(const unsigned int &n);

@@ -123,7 +123,6 @@ bool SystemGBC::initialize(const std::string &fname){
 	cart.getRam()->setOffset(CART_RAM_START);
 	wram.setOffset(WRAM_ZERO_START);
 	oam.setOffset(OAM_TABLE_START);
-	joy.setOffset(IO_PORTS_START);
 	hram.setOffset(HIGH_RAM_START);
 
 	// Connect system components to the system bus.
@@ -195,8 +194,10 @@ bool SystemGBC::initialize(const std::string &fname){
 	
 	// Read the ROM into memory
 	bool retval = cart.readRom(fname, verboseMode);
-	if(retval) // Initialize the SDL window
+	if(retval){ // Initialize the SDL window and link it to the joystick controller
 		gpu.initialize();
+		joy.setWindow(gpu.getWindow());
+	}
 	
 	return retval;
 }
@@ -245,6 +246,9 @@ bool SystemGBC::execute(){
 
 		// Update sound processor.
 		sound.onClockUpdate(nCycles);
+
+		// Update joypad handler.
+		joy.onClockUpdate(nCycles);
 
 		// Sync with the GBC system clock.
 		// Wait a certain number of cycles based on the opcode executed		

@@ -100,6 +100,8 @@ bool sdlWindow::status(){
 		switch(event.type){
 			case SDL_KEYDOWN:
 				lastKey.decode(&event.key, true);
+				if(lastKey.key == 0x1B) // Escape
+					return false;
 				break;
 			case SDL_KEYUP:
 				lastKey.decode(&event.key, false);
