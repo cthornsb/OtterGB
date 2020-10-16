@@ -200,7 +200,7 @@ void LR35902::set_d8(unsigned char *arg, const unsigned char &bit){
 
 void LR35902::bit_d8(unsigned char *arg, const unsigned char &bit){
 	// Copy a bit of (arg) to the zero bit.
-	setFlag(FLAG_Z_BIT, ((*arg) & (0x1 << bit)));
+	setFlag(FLAG_Z_BIT, (*arg & (0x1 << bit)) == 0);
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, 1);
 }
