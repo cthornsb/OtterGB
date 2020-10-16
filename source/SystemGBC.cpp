@@ -470,7 +470,7 @@ unsigned char SystemGBC::getValue(const unsigned short &loc){
 }
 
 unsigned char *SystemGBC::getPtr(const unsigned short &loc){
-	// Direct access to ROM banks and system registers is restricted. 
+	// Note: Direct access to ROM banks is restricted. 
 	// Use write() and read() methods to access instead.
 	unsigned char *retval = 0x0;
 	switch(loc){
@@ -485,6 +485,9 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 			break;
 		case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
 			retval = oam.getPtr(loc);
+			break;
+		case 0xFF00 ... 0xFF7F: // System registers
+			retval = &registers[loc-0xFF00];
 			break;
 		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
 			retval = hram.getPtr(loc);

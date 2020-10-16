@@ -60,16 +60,13 @@ unsigned short LR35902::execute(Cartridge *cart){
 			name = opcodeNamesCB[op];
 		nBytes = 1;
 		// All CB prefix opcodes take 8 cycles except for ones which operate
-		// on (HL), which take 16 cycles.
-		nCycles = (((op & 0xF) == 0x6)) || ((op & 0xF) == 0xE) ? 16 : 8;
-		// This section of code gets blargg's instr_timing test to pass, but the
-		// timings disagree with the documentation so I'll comment it out for now.
-		/*if(((op & 0xF) == 0x6) || ((op & 0xF) == 0xE)){
+		// on (HL), which take 12 (BIT) or 16 (SET|RES).
+		if(((op & 0xF) == 0x6) || ((op & 0xF) == 0xE)){
 			unsigned char uppernib = (op & 0xF0) >> 4;
 			nCycles = (uppernib >= 4 && uppernib <= 7) ? nCycles = 12 : 16;
 		}
 		else
-			nCycles = 8;*/
+			nCycles = 8;
 	}
 	
 	d8 = 0x0;
