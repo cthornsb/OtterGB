@@ -39,19 +39,21 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 			else if(reg < 0x4000){ // ROM bank number register (write only)
 				// 5-bit register [0x01, 0x1F] (write only)
 				// Specify lower 5 bits of ROM bank number
-				bs |= (val & 0x1F);
+				bs &= 0xE0; // Clear bits 0-4
+				bs |= (val & 0x1F); // Set bits 0-4
 			}
 			else if(reg < 0x6000){
-				// 2-bit register [0x0, 0x3] (write only)
+				// 2-bit register [0,3] (write only)
 				if(!ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
-					bs |= (val & 0x60);
+					bs &= 0x9F; // Clear bits 5-6
+					bs |= ((val & 0x3) << 5); // Set bits 5-6
 				}
 				else // Specify RAM bank number (if in RAM select mode).
-					ram.setBank((val & 0x60) >> 5);
+					ram.setBank(val & 0x3);
 			}
 			else if(reg < 0x8000){ // ROM/RAM mode select
 				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
-				ramSelect = (val & 0x1) != 0;
+				ramSelect = (val & 0x1) == 0x1;
 			}
 			break;
 		case 0x5 ... 0x6: // MBC2
@@ -152,13 +154,6 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 
 	// Check for Gameboy Color mode flag
 	bGBCMODE = ((gbcFlag & 0x80) != 0);
-	
-	// Get the Memory Bank Controller (MBC) type, if any
-	/*if()      // MBC1
-	else if() // MBC2
-	else if() // MBC3
-	else if() // HuC1	
-	else      // none*/
 	
 	// Initialize ROM storage
 	switch(romSize){
