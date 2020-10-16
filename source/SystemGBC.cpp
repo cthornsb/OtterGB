@@ -212,6 +212,12 @@ bool SystemGBC::execute(){
 		if(!gpu.getWindowStatus())
 			break;
 
+		// Check for interrupt out of HALT
+		if(cpuHalted){
+			if(((*rIE) & (*rIF)) != 0)
+				cpuHalted = false;
+		}
+
 		// Check for pending interrupts.
 		if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
 			if(((*rIF) & 0x1) != 0) // VBlank
@@ -226,12 +232,6 @@ bool SystemGBC::execute(){
 				acknowledgeJoypadInterrupt();
 		}
 		
-		// Check for interrupt out of HALT
-		if(cpuHalted){
-			if(((*rIE) & (*rIF)) != 0)
-				cpuHalted = false;
-		}
-			
 		// Check if the CPU is halted.
 		if(!cpuHalted){
 			// Perform one instruction.
@@ -270,6 +270,16 @@ void SystemGBC::handleSerialInterrupt(){ (*rIF) |= 0x8; }
 void SystemGBC::handleJoypadInterrupt(){ (*rIF) |= 0x10; }
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
+	// Check for memory access watch
+	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
+		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		if(cpu.getLength() == 2)
+			std::cout << "d8=" << getHex(cpu.getd8());
+		else if(cpu.getLength() == 3)
+			std::cout << "d16=" << getHex(cpu.getd16());
+		std::cout << std::endl;
+	}
+
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
@@ -374,20 +384,14 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		}
 	}
 
-	// Check for memory access watch
-	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
-		if(cpu.getLength() == 2)
-			std::cout << "d8=" << getHex(cpu.getd8());
-		else if(cpu.getLength() == 3)
-			std::cout << "d16=" << getHex(cpu.getd16());
-		std::cout << std::endl;
-	}
-	
 	return true; // Successfully wrote to memory location (loc)
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
+	// Check for memory access watch
+	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1])
+		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " [" << getHex(loc) << "]\n";
+
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
@@ -456,10 +460,6 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		}
 	}
 
-	// Check for memory access watch
-	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1])
-		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " [" << getHex(loc) << "] dest=" << getHex(dest) << "\n";
-	
 	return true; // Successfully read from memory location (loc)
 }
 
