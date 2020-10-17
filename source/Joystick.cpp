@@ -39,21 +39,12 @@ bool JoystickController::onClockUpdate(const unsigned short &nCycles){
 	if(!selectButtonKeys && !selectDirectionKeys)
 		return false;
 
-	// P13 - Down or Start
-	// P12 - Up or Select
-	// P11 - Left or B
-	// P10 - Right or A
-	// [0: Pressed, 1: Not pressed]
-
 	// Poll the screen controller to check for button presses.
 	KeypressEvent *keypress = window->getKeypress();
 	if(!keypress->down){ // Button is released
 		clearInput();
 		return false; 
 	}
-	/*else if(keypress->key == keyDown){ // Button is being held, do nothing
-		return false;
-	}*/
 	
 	unsigned char key = keypress->key;
 
