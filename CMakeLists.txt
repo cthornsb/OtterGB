@@ -48,7 +48,7 @@ endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
 #Set the graphics library
 if(NOT GRAPHICS_LIBRARY)
-	set(GRAPHICS_LIBRARY SDL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
+	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
 endif(NOT GRAPHICS_LIBRARY)
 
 #------------------------------------------------------------------------------
