@@ -46,6 +46,11 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
+#Set the graphics library
+if(NOT GRAPHICS_LIBRARY)
+	set(GRAPHICS_LIBRARY SDL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
+endif(NOT GRAPHICS_LIBRARY)
+
 #------------------------------------------------------------------------------
 
 #Install options

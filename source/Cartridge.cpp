@@ -34,6 +34,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		case 0x1 ... 0x3: // MBC1
 			if(reg < 0x2000){ // RAM enable (write only)
 				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+				// Note: Type 0x01 does not have cartridge RAM
 				extRamEnabled = ((val & 0x0F) == 0x0A);
 			}
 			else if(reg < 0x4000){ // ROM bank number register (write only)
@@ -44,7 +45,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 			}
 			else if(reg < 0x6000){
 				// 2-bit register [0,3] (write only)
-				if(!ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
+				if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
 					bs &= 0x9F; // Clear bits 5-6
 					bs |= ((val & 0x3) << 5); // Set bits 5-6
 				}
@@ -53,6 +54,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 			}
 			else if(reg < 0x8000){ // ROM/RAM mode select
 				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
+				// Note: Type 0x01 does not have cartridge RAM
 				ramSelect = (val & 0x1) == 0x1;
 			}
 			break;

@@ -4,7 +4,7 @@
 #include "colors.hpp"
 #include "SystemComponent.hpp"
 
-class sdlWindow;
+class Window;
 
 /////////////////////////////////////////////////////////////////////
 // class Color
@@ -83,14 +83,14 @@ public:
 
 	void updateColors();
 
-	static sdlColor getRGB(const unsigned short &gbcColor);
+	static ColorRGB getRGB(const unsigned short &gbcColor);
 
 private:
 	unsigned char *data; // BGP0...BGP7 [color0...color3]
 	
 	unsigned char index; // Byte index in palette memory [0,63]
 	
-	sdlColor rgb[8]; ///< Real RGB colors
+	ColorRGB rgb[8]; ///< Real RGB colors
 };
 
 // 32x32 tile background maps in VRAM at [9800:9BFF] and [9C00:9FFF]
@@ -143,7 +143,7 @@ public:
 
 	void render();
 
-	sdlWindow *getWindow(){ return window; }
+	Window *getWindow(){ return window; }
 
 	bool getWindowStatus();
 	
@@ -197,7 +197,7 @@ private:
 	TileMap tiles0;
 	TileMap tiles1;
 	
-	sdlWindow *window; ///< Pointer to the main renderer window
+	Window *window; ///< Pointer to the main renderer window
 	
 	// Each pixel has a 2-bit color depth (0-3)
 	// Each of the 256 scanlines will contain 256*2=512 bits i.e. 64 bytes
@@ -208,6 +208,8 @@ private:
 	void drawTile(const unsigned char &x, const unsigned char &y, const unsigned short &offset);
 	
 	void drawSprite(const unsigned char &y, SpriteAttHandler *oam);
+	
+	unsigned char getBitmapPixel(const unsigned char &index, const unsigned char &dx, const unsigned char &dy);
 };
 
 #endif

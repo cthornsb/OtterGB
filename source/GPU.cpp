@@ -5,7 +5,7 @@
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Support.hpp"
-#include "sdlWindow.hpp"
+#include "Graphics.hpp"
 #include "GPU.hpp"
 
 #define VRAM_LOW  0x8000
@@ -13,6 +13,8 @@
 
 #define OAM_TABLE_LOW  0xFE00
 #define OAM_TABLE_HIGH 0xFEA0
+
+#define MAX_SPRITES_PER_LINE 10
 
 #ifdef BACKGROUND_DEBUG
 	#define SCREEN_WIDTH_PIXELS 256
@@ -90,12 +92,12 @@ bool TileMap::getPixelColors(const unsigned short &id, std::vector<unsigned shor
 	return retval;
 }
 
-sdlColor Palette::getRGB(const unsigned short &gbcColor){
+ColorRGB Palette::getRGB(const unsigned short &gbcColor){
 	// 5-bit color components
 	unsigned char red = gbcColor & 0x1F;
 	unsigned char grn = (gbcColor & 0x3E0) >> 5;
 	unsigned char blu = (gbcColor & 0x7C00) >> 5;
-	return sdlColor(red/31.0, grn/31.0, blu/31.0); // 5-bit RGB
+	return ColorRGB(red/31.0, grn/31.0, blu/31.0); // 5-bit RGB
 }
 
 void Palette::updateColors(){
@@ -131,8 +133,12 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	bgMap0.setData(&mem[0][0x1800]);
 	bgMap1.setData(&mem[0][0x1C00]);
 	
-	// Create a new SDL window
-	window = new sdlWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
+	// Create a new window
+	window = new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
+#ifdef USE_OPENGL 
+	// Create a link to the LCD driver
+	window->setGPU(this);
+#endif
 }
 
 GPU::~GPU(){
@@ -176,11 +182,23 @@ void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigne
 	}
 }
 
+/** Retrieve the color of a pixel in a tile bitmap.
+  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
+  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
+  * @param dy    The vertical pixel in the bitmap [0,7] where the top-most pixel is denoted as y=0.
+  * @return      The color of the pixel in the range [0,3]
+  */
+unsigned char GPU::getBitmapPixel(const unsigned char &index, const unsigned char &dx, const unsigned char &dy){
+	 // Retrieve a line of the bitmap at the requested pixel
+	unsigned char pixelColor = (mem[bs][index+2*dy] & (0x1 << dx)) >> dx; // LS bit of the color
+	pixelColor += ((mem[bs][index+2*dy+1] & (0x1 << dx)) >> dx) << 1; // MS bit of the color
+	return pixelColor; // (0,3)
+}
+
 void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	unsigned char xp = oam->xPos-8;
 	unsigned char yp = oam->yPos-16;
 
-	//if(y < (oam->yPos-16) || y > oam->yPos-8)
 	if(y < (yp) || y >= yp+(!objSizeSelect ? 8 : 16))
 		return;
 
@@ -189,58 +207,37 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	unsigned char colorByteHigh, colorByteLow;
 	unsigned char pixelColor;
 	
-	// yPos in (0,160) -> yPos-16 in [0,144)
-	// xPos in (0,168) -> xPos-8 
-	
 	// Vertical pixel in the tile (minus 16)
-	pixelY = (oam->yPos - y) - 8; // or 16?
-	//pixelY = y - (oam->yPos + (!objSizeSelect ? 8 : 16));
+	pixelY = y - yp;
 
-	/*unsigned char yPos; // Y-position of the current sprite (minus 16)
-	unsigned char xPos; // X-position of the current sprite (minus 8)
-	unsigned char tileNum; // Tile index for the current sprite
-	bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
-	bool yFlip; // (0: normal, 1: mirrored vertically)
-	bool xFlip; // (0: normal, 1: mirrored horizontally)
-	bool ngbcPalette; // (0: OBP0, 1: OBP1)
-	bool gbcVramBank; // (0: Bank 0, 1: Bank 1)
-	unsigned char gbcPalette; // (OBP0-7)*/
-
-	// Draw the sprite tile
+	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
-	bmpLow = 16*(!objSizeSelect ? oam->tileNum : (oam->tileNum & 0xFE)); // Retrieve the background tile ID from OAM
-	
-	 // Retrieve a line of the bitmap at the requested pixel
-	colorByteLow = mem[bs][bmpLow+2*pixelY];
-	colorByteHigh = mem[bs][bmpLow+2*pixelY+1];
+	if(objSizeSelect){ // 8x8 pixel sprites
+		bmpLow = 16*oam->tileNum;
+	}
+	else{ // 8x16 pixel sprites
+		if(pixelY <= 7){ // Top half of sprite
+			bmpLow = 16*(oam->tileNum & 0xFE);
+		}
+		else{ // Bottom half of sprite
+			bmpLow = 16*(oam->tileNum | 0x01); 
+			pixelY -= 8;
+		}
+	}
+
+	if(oam->yFlip) // Vertical flip
+		pixelY = 7 - pixelY;
+
+	/*bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
+	bool ngbcPalette; // (0: OBP0, 1: OBP1)     non-GBC only
+	bool gbcVramBank; // (0: Bank 0, 1: Bank 1) GBC only
+	unsigned char gbcPalette; // (OBP0-7)       GBC only*/
 
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
-		pixelColor = (colorByteLow & (0x1 << dx)) >> dx;
-		pixelColor += ((colorByteHigh & (0x1 << dx)) >> dx) << 1;
-		if((pixelColor & 0x3) != 0) // Check for transparent pixel
-			frameBuffer[y][oam->xPos - dx] = pixelColor;
+		if((pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY)) == 0x3) // Check for transparent pixel
+			frameBuffer[y][xp + dx] = pixelColor;
 	}
-	
-	/*for(unsigned short dx = 0; dx < 8; dx++){
-		frameBuffer[y][xp+dx] = 0x3;
-	}*/
-
-	/*if(objSizeSelect){ // 8x16 sprites
-		bmpLow = 16*(oam->tileNum | 0x01); // Retrieve the background tile ID from OAM
-
-		 // Retrieve a line of the bitmap at the requested pixel
-		colorByteLow = mem[bs][bmpLow+2*pixelY];
-		colorByteHigh = mem[bs][bmpLow+2*pixelY+1];
-
-		// Draw the specified line
-		for(unsigned short dx = 0; dx < 8; dx++){
-			pixelColor = (colorByteLow & (0x1 << dx)) >> dx;
-			pixelColor += ((colorByteHigh & (0x1 << dx)) >> dx) << 1;
-			if((pixelColor & 0x3) != 0) // Check for transparent pixel
-				frameBuffer[y][oam->xPos - dx] = pixelColor;
-		}
-	}*/
 }
 
 void GPU::drawTileMaps(){
@@ -285,17 +282,21 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		//}
 
 		if(winDisplayEnable) // Draw the window layer (if enabled)
-			drawTile(xTile, ry, (winTileMapSelect ? 0x1C00 : 0x1800) );
+			drawTile(xTile, (*rLY)+(*rWY), (winTileMapSelect ? 0x1C00 : 0x1800) );
 		else // Draw the background layer
 			drawTile(xTile, ry, (bgTileMapSelect ? 0x1C00 : 0x1800) );
 	}
 
 	// Handle the OBJ (sprite) layer
 	if(objDisplayEnable){
+		int spritesDrawn = 0;
 		bool visible = false;
 		while(oam->getNextSprite(visible)){
-			if(visible) // The sprite is on screen
+			if(visible){ // The sprite is on screen
 				drawSprite(ry, oam);
+				if(++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
+					break;
+			}
 		}
 	}
 }
@@ -345,7 +346,16 @@ void GPU::render(){
 #else
 void GPU::render(){	
 	// Update the screen
+#ifndef USE_OPENGL
 	if(lcdDisplayEnable && window->status()){ // Check for events
+#else
+	if(lcdDisplayEnable && window->status()){ // Check for events
+		// Process window events
+		window->processEvents();		
+#endif
+		// Clear the frame buffer (this prevents flickering)
+		window->clear(); 
+		
 		// These variables will automatically handle screen wrapping
 		unsigned char sy = (*rSCY);
 		unsigned char sx;
@@ -375,7 +385,6 @@ void GPU::render(){
 			sy++;
 		}
 		window->render();
-		window->clear(); // Clear the frame buffer (this prevents flickering)
 	}
 }
 #endif

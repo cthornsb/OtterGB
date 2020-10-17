@@ -3,7 +3,7 @@
 
 #include "SystemComponent.hpp"
 
-class sdlWindow;
+class Window;
 
 class JoystickController : public SystemComponent {
 public:
@@ -11,7 +11,7 @@ public:
 
 	JoystickController() : SystemComponent(), window(0x0) { }
 	
-	void setWindow(sdlWindow *win){ window = win; }
+	void setWindow(Window *win){ window = win; }
 	
 	void handleButtonPress(const BUTTON &button);
 	
@@ -38,7 +38,7 @@ private:
 	bool P11; // Left or B
 	bool P10; // Right or A
 	
-	sdlWindow *window; ///< Pointer to the main LCD driver
+	Window *window; ///< Pointer to the main LCD driver
 };
 
 #endif

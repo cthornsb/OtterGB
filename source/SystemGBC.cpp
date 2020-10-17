@@ -5,6 +5,7 @@
 #include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
+#include "Graphics.hpp"
 
 #define ROM_ZERO_START  0x0000
 #define ROM_SWAP_START  0x4000
@@ -194,7 +195,8 @@ bool SystemGBC::initialize(const std::string &fname){
 	
 	// Read the ROM into memory
 	bool retval = cart.readRom(fname, verboseMode);
-	if(retval){ // Initialize the SDL window and link it to the joystick controller
+	if(retval){ 
+		// Initialize the window and link it to the joystick controller
 		gpu.initialize();
 		joy.setWindow(gpu.getWindow());
 	}
@@ -206,12 +208,13 @@ bool SystemGBC::execute(){
 	// Set the PC to the entry point of the program.
 	cpu.setProgramCounter(cart.getProgramEntryPoint());
 
-	// Run the ROM. Main loop.
 	unsigned short nCycles = 1;
+
+	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
 		if(!gpu.getWindowStatus())
-			break;
+			return false;
 
 		// Check for interrupt out of HALT
 		if(cpuHalted){
@@ -237,7 +240,7 @@ bool SystemGBC::execute(){
 		if(!cpuHalted){
 			// Perform one instruction.
 			if((nCycles = cpu.execute(&cart)) == 0)
-				break;
+				return false;
 		}
 		else nCycles = 4; // NOP
 
@@ -256,6 +259,7 @@ bool SystemGBC::execute(){
 			if(nFrames++ % frameSkip == 0)
 				gpu.render(); // Render the current frame
 	}
+	return true;
 }
 
 void SystemGBC::handleHBlankPeriod(){

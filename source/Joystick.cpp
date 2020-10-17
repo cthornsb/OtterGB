@@ -4,7 +4,7 @@
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Joystick.hpp"
-#include "sdlWindow.hpp"
+#include "Graphics.hpp"
 
 /////////////////////////////////////////////////////////////////////
 // class JoystickController
@@ -86,7 +86,7 @@ bool JoystickController::onClockUpdate(const unsigned short &nCycles){
 	// [0: Pressed, 1: Not pressed]
 
 	// Poll the screen controller to check for button presses.
-	sdlKeyEvent *keypress = window->getKeypress();
+	KeypressEvent *keypress = window->getKeypress();
 	if(!keypress->down){ // Button is released
 		clearInput();
 		return false; 
