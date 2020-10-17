@@ -7,13 +7,9 @@ class Window;
 
 class JoystickController : public SystemComponent {
 public:
-	enum BUTTON{START, SELECT, B, A, DOWN, UP, LEFT, RIGHT};
-
 	JoystickController() : SystemComponent(), window(0x0) { }
 	
 	void setWindow(Window *win){ window = win; }
-	
-	void handleButtonPress(const BUTTON &button);
 	
 	void clearInput();
 	
