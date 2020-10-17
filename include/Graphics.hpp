@@ -3,8 +3,10 @@
 
 #include "colors.hpp"
 
-#define DEFAULT_WINDOW_WIDTH 640
-#define DEFAULT_WINDOW_HEIGHT 480
+// Constants, do not adjust. Adjust the scaling factor instead.
+const unsigned int SCREEN_WIDTH = 160;
+const unsigned int SCREEN_HEIGHT = 144;
+const float ASPECT_RATIO = SCREEN_WIDTH/SCREEN_HEIGHT;
 
 class GPU;
 
@@ -76,11 +78,11 @@ class GPU;
 	public:
 		/** Default constructor
 		  */
-		Window() : renderer(NULL), window(NULL), W(DEFAULT_WINDOW_WIDTH), H(DEFAULT_WINDOW_HEIGHT), nMult(1), init(false) { }
+		Window() : renderer(NULL), window(NULL), W(SCREEN_WIDTH), H(SCREEN_HEIGHT), nMult(2), init(false) { }
 		
 		/** Constructor taking the width and height of the window
 		  */
-		Window(const int &width, const int &height) : renderer(NULL), window(NULL), W(width), H(height), nMult(1), init(false) { }
+		Window(const int &width, const int &height) : renderer(NULL), window(NULL), W(width), H(height), nMult(2), init(false) { }
 
 		/** Destructor
 		  */
@@ -190,11 +192,11 @@ class GPU;
 	public:
 		/** Default constructor
 		  */
-		Window() : W(DEFAULT_WINDOW_WIDTH), H(DEFAULT_WINDOW_HEIGHT), nMult(1), init(false) { }
+		Window() : W(SCREEN_WIDTH), H(SCREEN_HEIGHT), nMult(2), init(false) { }
 		
 		/** Constructor taking the width and height of the window
 		  */
-		Window(const int &width, const int &height) : W(width), H(height), nMult(1), init(false) { }
+		Window(const int &width, const int &height) : W(width), H(height), nMult(2), init(false) { }
 
 		/** Destructor
 		  */

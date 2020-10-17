@@ -19,7 +19,7 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("read-watch", required_argument, NULL, 'R', "<NN|NN1:NN2>", "Watch memory read of memory location NN or in range [NN1,NN2] (base 16)."));
 	handler.add(optionExt("opcode-watch", required_argument, NULL, 'O', "<N>", "Watch for specific opcode calls."));
 	handler.add(optionExt("frame-skip", required_argument, NULL, 's', "<N>", "Render 1 out of every N frames (improves framerate)."));
-	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 1)."));
+	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
 			
 	// Handle user input.
 	if(!handler.setup(argc, argv))
