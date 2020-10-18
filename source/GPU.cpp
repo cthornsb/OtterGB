@@ -228,12 +228,12 @@ unsigned short GPU::drawTile(const unsigned char &x, const unsigned char &y,
 }
 
 /** Draw the current sprite.
-  * @param y The current LCD screen scanline [0,144).
+  * @param y The current LCD screen scanline [0,256).
   * @param oam Pointer to the sprite handler with the currently selected sprite.
   */
 void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
-	unsigned char xp = oam->xPos-8; // Top left
-	unsigned char yp = oam->yPos-16; // Top left
+	unsigned char xp = oam->xPos-8+*rSCX; // Top left
+	unsigned char yp = oam->yPos-16+*rSCY; // Top left
 
 	// Check that the current scanline goes through the sprite
 	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
@@ -245,7 +245,7 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	
 	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
-	if(objSizeSelect) // 8x8 pixel sprites
+	if(!objSizeSelect) // 8x8 pixel sprites
 		bmpLow = 16*oam->tileNum;
 	else if(pixelY <= 7) // Top half of 8x16 pixel sprites
 		bmpLow = 16*(oam->tileNum & 0xFE);
@@ -327,13 +327,13 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 
 	// Handle the OBJ (sprite) layer
 	if(objDisplayEnable){
-		int spritesDrawn = 0;
+		//int spritesDrawn = 0;
 		bool visible = false;
 		while(oam->getNextSprite(visible)){
 			if(visible){ // The sprite is on screen
 				drawSprite(ry, oam);
-				if(++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
-					break;
+				//if(++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
+					//break;
 			}
 		}
 	}
