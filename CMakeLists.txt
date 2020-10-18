@@ -55,6 +55,7 @@ endif(NOT GRAPHICS_LIBRARY)
 
 #Install options
 option(BUILD_TOOLS "Build and install tools." OFF)
+option(BACKGROUND_DEBUG "Display entire background tilemap." OFF)
 
 #------------------------------------------------------------------------------
 

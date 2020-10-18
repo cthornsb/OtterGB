@@ -189,25 +189,34 @@ Window *MAIN_WINDOW = 0x0;
 	void reshapeScene(GLint width, GLint height){
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
+
+#ifndef BACKGROUND_DEBUG
+		const int WIDTH = 160;		
+		const int HEIGHT = 144;
+		const float ASPECT = float(WIDTH)/HEIGHT;
+#else		
+		const int WIDTH = 256;		
+		const int HEIGHT = 256;
+		const float ASPECT = float(WIDTH)/HEIGHT;
+#endif
 		
-		const float ratio = 160.0/144;
 		int wprime = width;
 		int hprime = height;
 
 		if(width > height){
-			wprime = height * ratio; // Adjust width for desired aspect ratio
-			glPointSize(hprime/144.0); // Set chunky pixel size
+			wprime = height * ASPECT; // Adjust width for desired aspect ratio
+			glPointSize(hprime/HEIGHT); // Set chunky pixel size
 		}
 		else{
-			hprime = width / ratio;
-			glPointSize(wprime/160.0); // Set chunky pixel size
+			hprime = width / ASPECT;
+			glPointSize(wprime/WIDTH); // Set chunky pixel size
 		}
 
 		MAIN_WINDOW->setWidth(wprime);
 		MAIN_WINDOW->setHeight(hprime);
 
 		glViewport(0, 0, wprime, hprime); // Update the viewport
-		gluOrtho2D(0, 160, 144, 0);
+		gluOrtho2D(0, WIDTH, HEIGHT, 0);
 		glMatrixMode(GL_MODELVIEW);
 
 		glutPostRedisplay();

@@ -133,6 +133,12 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	bgMap0.setData(&mem[0][0x1800]);
 	bgMap1.setData(&mem[0][0x1C00]);
 	
+	// Set default GB palette
+	ngbcPaletteColor[0] = 0x0;
+	ngbcPaletteColor[1] = 0x1;
+	ngbcPaletteColor[2] = 0x2;
+	ngbcPaletteColor[3] = 0x3;
+	
 	// Create a new window
 	window = new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
 #ifdef USE_OPENGL 
@@ -150,100 +156,129 @@ void GPU::initialize(){
 	window->initialize();
 }
 
-// NOTE: x is tile column, y is pixel scanline
-void GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigned short &offset){
-	unsigned short tileY;
-	unsigned short pixelX, pixelY;
-	unsigned short tileID, bmpLow;
-	unsigned char colorByteHigh, colorByteLow;
-	
-	tileY = y / 8; // Current vertical BG tile
-	pixelY = y % 8; // Vertical pixel in the tile
-	
-	// Draw the background tile
-	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
-	// Background & window tile data selection [0: 8800-97FF, 1: 8000-8FFF]
-	//  -> Indexing for 0:-128,127 1:0,255
-	tileID = mem[bs][offset + 32*tileY + x]; // Retrieve the background tile ID from VRAM
-	
-	 // Retrieve a line of the bitmap at the requested pixel
-	if(bgWinTileDataSelect) // 0x8000-0x8FFF
-		bmpLow = 16*tileID;
-	else // 0x8800-0x97FF
-		bmpLow = (0x1000 + 16*twosComp(tileID));
-	colorByteLow = mem[bs][bmpLow+2*pixelY];
-	colorByteHigh = mem[bs][bmpLow+2*pixelY+1];
-
-	// Draw the specified line
-	for(unsigned short dx = x*8; dx < (x+1)*8; dx++){
-		pixelX = 7 - (dx % 8); // Horizontal pixel in the tile
-		frameBuffer[y][dx] = (colorByteLow & (0x1 << pixelX)) >> pixelX;
-		frameBuffer[y][dx] += ((colorByteHigh & (0x1 << pixelX)) >> pixelX) << 1;
-	}
-}
-
 /** Retrieve the color of a pixel in a tile bitmap.
   * @param index The index of the tile in VRAM [0x8000,0x8FFF].
   * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
   * @param dy    The vertical pixel in the bitmap [0,7] where the top-most pixel is denoted as y=0.
   * @return      The color of the pixel in the range [0,3]
   */
-unsigned char GPU::getBitmapPixel(const unsigned char &index, const unsigned char &dx, const unsigned char &dy){
+unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned char &dx, const unsigned char &dy){
 	 // Retrieve a line of the bitmap at the requested pixel
 	unsigned char pixelColor = (mem[bs][index+2*dy] & (0x1 << dx)) >> dx; // LS bit of the color
 	pixelColor += ((mem[bs][index+2*dy+1] & (0x1 << dx)) >> dx) << 1; // MS bit of the color
-	return pixelColor; // (0,3)
+	return pixelColor; // [0,3]
 }
 
-void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
-	unsigned char xp = oam->xPos-8;
-	unsigned char yp = oam->yPos-16;
+/** Draw a background or window tile.
+  * @param x The current LCD screen horizontal pixel [0,256).
+  * @param y The current LCD screen scanline [0,256).
+  * @param offset The memory offset of the selected tilemap in VRAM.
+  * @return The number of pixels drawn.
+  */
+unsigned short GPU::drawTile(const unsigned char &x, const unsigned char &y, 
+                             const unsigned char &x0, const unsigned char &y0,
+                             const unsigned short &offset){
+	unsigned char tileY, tileX;
+	unsigned char pixelY, pixelX;
+	unsigned char tileID;
+	unsigned char pixelColor;
+	unsigned short bmpLow;
+	
+	if(y0 <= y){
+		tileY = (y-y0) / 8; // Current vertical BG tile [0,32)
+		pixelY = (y-y0) % 8; // Vertical pixel in the tile [0,8)
+	}
+	else{ // Screen wrap
+		tileY = (0xFF-(y0-y)+1) / 8;
+		pixelY = (0xFF-(y0-y)+1) % 8;
+	}
+	if(x0 <= x){
+		tileX = (x-x0) / 8; // Current horizontal BG tile [0,32)
+		pixelX = (x-x0) % 8; // Horizontal pixel in the tile [0,8)
+	}
+	else{ // Screen wrap
+		tileX = (0xFF-(x0-x)+1) / 8;
+		pixelX = (0xFF-(x0-x)+1) % 8;
+	}
+	
+	// Draw the background tile
+	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
+	// Background & window tile data selection [0: 8800-97FF, 1: 8000-8FFF]
+	//  -> Indexing for 0:-128,127 1:0,255
+	tileID = mem[bs][offset + 32*tileY + tileX]; // Retrieve the background tile ID from VRAM
+	
+	 // Retrieve a line of the bitmap at the requested pixel
+	if(bgWinTileDataSelect) // 0x8000-0x8FFF
+		bmpLow = 16*tileID;
+	else // 0x8800-0x97FF
+		bmpLow = (0x1000 + 16*twosComp(tileID));
 
-	if(y < (yp) || y >= yp+(!objSizeSelect ? 8 : 16))
+	// Draw the specified line
+	for(unsigned char dx = 0; dx <= (7-pixelX); dx++){
+		pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
+		if(bGBCMODE){ // Gameboy Color palettes
+		}
+		else{ // Original gameboy palettes
+			frameBuffer[y][x+dx] = ngbcPaletteColor[pixelColor];
+		}
+	}
+	
+	// Return the number of pixels drawn
+	return (7-pixelX)+1;
+}
+
+/** Draw the current sprite.
+  * @param y The current LCD screen scanline [0,144).
+  * @param oam Pointer to the sprite handler with the currently selected sprite.
+  */
+void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
+	unsigned char xp = oam->xPos-8; // Top left
+	unsigned char yp = oam->yPos-16; // Top left
+
+	// Check that the current scanline goes through the sprite
+	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
 		return;
 
-	unsigned short pixelY;
-	unsigned short bmpLow;
-	unsigned char colorByteHigh, colorByteLow;
+	unsigned char pixelY = y - yp; // Vertical pixel in the tile
 	unsigned char pixelColor;
+	unsigned short bmpLow;
 	
-	// Vertical pixel in the tile (minus 16)
-	pixelY = y - yp;
-
 	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
-	if(objSizeSelect){ // 8x8 pixel sprites
+	if(objSizeSelect) // 8x8 pixel sprites
 		bmpLow = 16*oam->tileNum;
-	}
-	else{ // 8x16 pixel sprites
-		if(pixelY <= 7){ // Top half of sprite
-			bmpLow = 16*(oam->tileNum & 0xFE);
-		}
-		else{ // Bottom half of sprite
-			bmpLow = 16*(oam->tileNum | 0x01); 
-			pixelY -= 8;
-		}
+	else if(pixelY <= 7) // Top half of 8x16 pixel sprites
+		bmpLow = 16*(oam->tileNum & 0xFE);
+	else{ // Bottom half of 8x16 pixel sprites
+		bmpLow = 16*(oam->tileNum | 0x01); 
+		pixelY -= 8;
 	}
 
 	if(oam->yFlip) // Vertical flip
 		pixelY = 7 - pixelY;
 
 	/*bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
-	bool ngbcPalette; // (0: OBP0, 1: OBP1)     non-GBC only
 	bool gbcVramBank; // (0: Bank 0, 1: Bank 1) GBC only
 	unsigned char gbcPalette; // (OBP0-7)       GBC only*/
 
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
-		if((pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY)) == 0x3) // Check for transparent pixel
-			frameBuffer[y][xp + dx] = pixelColor;
+		pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
+		if(pixelColor != 0){ // Check for transparent pixel
+			if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
+				//frameBuffer[y][xp + dx] = objPaletteData[8*oam->gbcPalette]; // 2 bytes per color
+			}
+			else{ // Original gameboy sprite palettes (OBP0-1)
+				frameBuffer[y][xp + dx] = (!oam->ngbcPalette ? ngbcObj0PaletteColor[pixelColor] : ngbcObj1PaletteColor[pixelColor]);
+			}
+		}
 	}
 }
 
 void GPU::drawTileMaps(){
 	for(unsigned short y = 0; y < 256; y++) // Scanline (vertical pixel)
 		for(unsigned short x = 0; x < 32; x++) // Horizontal pixel
-			drawTile(x, y, (bgTileMapSelect ? 0x1C00 : 0x1800));
+			drawTile(x, y, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800));
 }
 
 void GPU::drawNextScanline(SpriteAttHandler *oam){
@@ -260,6 +295,8 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = (*rLY) + (*rSCY);
+	unsigned char rwy = (*rWY) + (*rSCY); // Real Y coordinate of the top left corner of the window
+	unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
 	
 	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
 		for(unsigned short x = (*rSCX); x < (*rSCX+160); x++) // Horizontal pixel
@@ -268,23 +305,24 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	}
 
 	// Handle the background and window layer
-#ifdef BACKGROUND_DEBUG
-	for(unsigned short xTile = 0; xTile < 32; xTile++){ // Horizontal tile
+#ifndef BACKGROUND_DEBUG
+	unsigned short rx = (*rSCX);
+	while(rx < (*rSCX + 160)){ // Horizontal screen pixel
 #else
-	for(unsigned short xTile = (*rSCX)/8; xTile < (*rSCX+160)/8; xTile++){ // Horizontal tile
+	unsigned short rx = 0;
+	while(rx < 256){ // Horizontal background map pixel
 #endif
-		// Clear the current pixel (set it to white)
-		//frameBuffer[(y)][x] = 0x0;
-	
 		// Background & window tile attributes
 		//if(bGBCMODE){
 		//	tileAttr = mem[1][32*bgTileY + bgTileX]; // Retrieve the BG tile attributes
 		//}
-
-		if(winDisplayEnable) // Draw the window layer (if enabled)
-			drawTile(xTile, (*rLY)+(*rWY), (winTileMapSelect ? 0x1C00 : 0x1800) );
-		else // Draw the background layer
-			drawTile(xTile, ry, (bgTileMapSelect ? 0x1C00 : 0x1800) );
+		
+		// The window is visible if WX=[0,160) and WY=[0,144)
+		// WX=7, WY=0 locates the window at the upper left of the screen
+		if(winDisplayEnable && ((*rLY) >= (*rWY) && rx >= rwx)) // Draw the window layer (if enabled)
+			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800));
+		else
+			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800));
 	}
 
 	// Handle the OBJ (sprite) layer
@@ -305,6 +343,13 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 void GPU::render(){	
 	// Update the screen
 	if(lcdDisplayEnable && window->status()){ // Check for events
+#ifdef USE_OPENGL
+		// Process window events
+		window->processEvents();		
+#endif
+		// Clear the frame buffer (this prevents flickering)
+		window->clear(); 
+
 		// These variables will automatically handle screen wrapping
 		unsigned char sy = (*rSCY);
 		unsigned char sx;
@@ -340,16 +385,13 @@ void GPU::render(){
 			sy++;
 		}
 		window->render();
-		window->clear(); // Clear the frame buffer (this prevents flickering)
 	}
 }
 #else
 void GPU::render(){	
 	// Update the screen
-#ifndef USE_OPENGL
 	if(lcdDisplayEnable && window->status()){ // Check for events
-#else
-	if(lcdDisplayEnable && window->status()){ // Check for events
+#ifdef USE_OPENGL
 		// Process window events
 		window->processEvents();		
 #endif
@@ -471,31 +513,31 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// 11 : Black
 			(*rBGP) = val;
 			ngbcPaletteColor[0] = (val & 0x3); 
-			ngbcPaletteColor[1] = (val & 0xC); 
-			ngbcPaletteColor[2] = (val & 0x30); 
-			ngbcPaletteColor[3] = (val & 0xC0); 
+			ngbcPaletteColor[1] = (val & 0xC) >> 2; 
+			ngbcPaletteColor[2] = (val & 0x30) >> 4; 
+			ngbcPaletteColor[3] = (val & 0xC0) >> 6; 
 			break;
 		case 0xFF48: // OBP0 (Object palette 0 data, non-gbc mode only)
 			// See BGP above
 			(*rOBP0) = val;
 			ngbcObj0PaletteColor[0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcObj0PaletteColor[1] = (val & 0xC); 
-			ngbcObj0PaletteColor[2] = (val & 0x30); 
-			ngbcObj0PaletteColor[3] = (val & 0xC0); 
+			ngbcObj0PaletteColor[1] = (val & 0xC) >> 2; 
+			ngbcObj0PaletteColor[2] = (val & 0x30) >> 4; 
+			ngbcObj0PaletteColor[3] = (val & 0xC0) >> 6; 
 			break;
 		case 0xFF49: // OBP1 (Object palette 1 data, non-gbc mode only)
 			// See BGP above
 			(*rOBP1) = val;
 			ngbcObj1PaletteColor[0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcObj1PaletteColor[1] = (val & 0xC); 
-			ngbcObj1PaletteColor[2] = (val & 0x30); 
-			ngbcObj1PaletteColor[3] = (val & 0xC0);
+			ngbcObj1PaletteColor[1] = (val & 0xC) >> 2; 
+			ngbcObj1PaletteColor[2] = (val & 0x30) >> 4; 
+			ngbcObj1PaletteColor[3] = (val & 0xC0) >> 6;
 			break;
 		case 0xFF4A: // WY (Window Y Position)
 			(*rWY) = val;
 			break;
 		case 0xFF4B: // WX (Window X Position (minus 7))
-			(*rWX) = val+7;
+			(*rWX) = val;
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
 			(*rVBK) = val;
