@@ -19,7 +19,7 @@ class GPU;
 	class SDL_MouseButtonEvent;
 	class SDL_MouseMotionEvent;
 
-	class KeypressEvent{
+	class KeyStates{
 	public:
 		unsigned char key;
 
@@ -37,7 +37,7 @@ class GPU;
 		bool caps;
 		bool mode;
 
-		KeypressEvent() : key(0x0), 
+		KeyStates() : key(0x0), 
 			            down(false), none(true), 
 			            lshift(false), rshift(false), 
 			            lctrl(false), rctrl(false), 
@@ -46,32 +46,6 @@ class GPU;
 			            num(false), caps(false), mode(false) { }
 		
 		void decode(const SDL_KeyboardEvent* evt, const bool &isDown);
-	};
-
-	class MouseEvent{
-	public:
-		unsigned char clicks;
-		
-		int x;
-		int y;
-		int xrel;
-		int yrel;
-		
-		bool down;
-		bool lclick;
-		bool mclick;
-		bool rclick;
-		bool x1;
-		bool x2;
-		
-		MouseEvent() : clicks(0x0),
-			              x(0), y(0), xrel(0), yrel(0),
-			              down(false), lclick(false), mclick(false), rclick(false),
-			              x1(false), x2(false) { }
-			              
-		void decode(const SDL_MouseButtonEvent* evt, const bool &isDown);
-		
-		void decode(const SDL_MouseMotionEvent* evt);
 	};
 
 	class Window{
@@ -98,12 +72,8 @@ class GPU;
 
 		/** Get a pointer to the last user keypress event
 		  */
-		KeypressEvent* getKeypress(){ return &lastKey; }
+		KeyStates* getKeypress(){ return &lastKey; }
 		
-		/** Get a pointer to the last user mouse event
-		  */
-		MouseEvent* getMouse(){ return &lastMouse; }
-
 		/** Set the width of the window (in pixels)
 		  */
 		void setWidth(const int &width){ W = width; }
@@ -169,8 +139,7 @@ class GPU;
 
 		bool init; ///< Flag indicating that the window has been initialized
 
-		KeypressEvent lastKey; ///< The last key which was pressed by the user
-		MouseEvent lastMouse; ///< The last mouse event which was performed by the user
+		KeyStates lastKey; ///< The last key which was pressed by the user
 		
 		SDL_Rect *rectangle; ///< A rectangle used for drawing chunky pixels
 	};
@@ -179,13 +148,22 @@ class GPU;
 
 	#include "vector3.hpp"
 
-	class KeypressEvent{
+	class KeyStates{
 	public:
-		unsigned char key;
+		KeyStates();
+		
+		bool empty() const { return (count == 0); }
+		
+		bool getKey(const unsigned char &key) const { return states[key]; }
+		
+		void keyDown(const unsigned char &key);
+		
+		void keyUp(const unsigned char &key);
 
-		bool down;
+	private:
+		unsigned short count; ///< Number of standard keyboard keys which are currently pressed
 
-		KeypressEvent() : key(0x0), down(false) { }
+		bool states[256]; ///< States of keyboard keys (true indicates key is down) 
 	};
 
 	class Window{
@@ -218,12 +196,10 @@ class GPU;
 
 		/** Get a pointer to the last user keypress event
 		  */
-		KeypressEvent* getKeypress(){ return &lastKey; }
-		
-		/** Get a pointer to the last user mouse event
-		  */
-		//MouseEvent* getMouse(){ return &lastMouse; }
+		KeyStates* getKeypress(){ return &keys; }
 
+		/** Set pointer to the pixel processor
+		  */
 		void setGPU(GPU *ptr){ gpu = ptr; }
 
 		/** Set the width of the window (in pixels)
@@ -293,10 +269,9 @@ class GPU;
 
 		bool init; ///< Flag indicating that the window has been initialized
 
-		KeypressEvent lastKey; ///< The last key which was pressed by the user
-		//MouseEvent lastMouse; ///< The last mouse event which was performed by the user
-
 		GPU *gpu; ///< Pointer to the graphics processor
+
+		KeyStates keys; ///< The last key which was pressed by the user
 
 		void addVertex(const int &x, const int &y);
 	};

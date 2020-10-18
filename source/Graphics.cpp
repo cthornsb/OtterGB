@@ -143,25 +143,68 @@ Window *MAIN_WINDOW = 0x0;
 #else
 	#include <GL/freeglut.h>
 
-	void display(void){
-	}
-
+	/** Handle OpenGL keyboard presses.
+	  * @param key The keyboard character which was pressed.
+	  * @param x X coordinate of the mouse when the key was pressed (not used).
+	  * @param y Y coordinate of the mouse when the key was pressed (not used).
+	  */
 	void handleKeys(unsigned char key, int x, int y){
 		if(key == 0x1B){ // Escape
 			MAIN_WINDOW->close();
 			return;
 		}
-		MAIN_WINDOW->getKeypress()->key = key;
-		MAIN_WINDOW->getKeypress()->down = true;
+		MAIN_WINDOW->getKeypress()->keyDown(key);
 	}
 
+	/** Handle OpenGL keyboard key releases.
+	  * @param key The keyboard character which was pressed.
+	  * @param x X coordinate of the mouse when the key was released (not used).
+	  * @param y Y coordinate of the mouse when the key was released (not used).
+	  */
 	void handleKeysUp(unsigned char key, int x, int y){
-		MAIN_WINDOW->getKeypress()->down = false;
+		MAIN_WINDOW->getKeypress()->keyUp(key);
 	}
 
-	// Ugh
+	/** Handle OpenGL special key presses.
+	  * Redirect special keys to a more convenient format.
+	  * @param key The special key which was pressed
+	  * @param x X coordinate of the mouse when the key was pressed (not used)
+	  * @param y Y coordinate of the mouse when the key was pressed (not used)
+	  */
 	void handleSpecialKeys(int key, int x, int y){
-		unsigned char ckey;
+		unsigned char ckey = 0x0;
+		switch (key) {
+			case GLUT_KEY_UP:
+				ckey = 0x52;
+				break;
+			case GLUT_KEY_LEFT:
+				ckey = 0x50;
+				break;
+			case GLUT_KEY_DOWN:
+				ckey = 0x51;
+				break;
+			case GLUT_KEY_RIGHT:
+				ckey = 0x4F;
+				break;
+			case GLUT_KEY_F1 ... GLUT_KEY_F12: // Function keys
+				ckey = 0xF0;
+				ckey |= (key & 0x0F);
+				break;
+			default:
+				return;
+		}
+		if(ckey)
+			handleKeys(ckey, x, y);
+	}
+
+	/** Handle OpenGL special key releases.
+	  * Redirect special keys to match the ones used by SDL.
+	  * @param key The special key which was pressed
+	  * @param x X coordinate of the mouse when the key was released (not used)
+	  * @param y Y coordinate of the mouse when the key was released (not used)
+	  */
+	void handleSpecialKeysUp(int key, int x, int y){
+		unsigned char ckey = 0x0;
 		switch (key) {
 			case GLUT_KEY_UP:
 				ckey = 0x52;
@@ -178,14 +221,14 @@ Window *MAIN_WINDOW = 0x0;
 			default:
 				return;
 		}
-		MAIN_WINDOW->getKeypress()->key = ckey;
-		MAIN_WINDOW->getKeypress()->down = true;
+		if(ckey)
+			handleKeysUp(ckey, x, y);
 	}
 
-	void handleSpecialKeysUp(int key, int x, int y){
-		MAIN_WINDOW->getKeypress()->down = false;
-	}
-
+	/** Handle window resizes.
+	  * @param width The new width of the window after the user has resized it.
+	  * @param height The new height of the window after the user has resized it.
+	  */
 	void reshapeScene(GLint width, GLint height){
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
@@ -222,8 +265,32 @@ Window *MAIN_WINDOW = 0x0;
 		glutPostRedisplay();
 	}
 
-	void idleScene(void){
+	/////////////////////////////////////////////////////////////////////
+	// class KeyStates
+	/////////////////////////////////////////////////////////////////////
+
+	KeyStates::KeyStates(){
+		for(int i = 0; i < 256; i++)
+			states[i] = false;
 	}
+
+	void KeyStates::keyDown(const unsigned char &key){
+		if(!states[key]){
+			states[key] = true;
+			count++;
+		}
+	}
+	
+	void KeyStates::keyUp(const unsigned char &key){
+		if(states[key]){
+			states[key] = false;
+			count--;
+		}
+	}
+
+	/////////////////////////////////////////////////////////////////////
+	// class Window
+	/////////////////////////////////////////////////////////////////////
 
 	Window::~Window(){
 		close();
@@ -308,16 +375,19 @@ Window *MAIN_WINDOW = 0x0;
 		// Keyboard up handler
 		glutKeyboardUpFunc(handleKeysUp);
 		glutSpecialUpFunc(handleSpecialKeysUp);
-		
+
 		// Set window size handler
 		glutReshapeFunc(reshapeScene);
 
-		// Set the display function (does nothing)
-	    glutDisplayFunc(display);
+		// Disable the display function
+		//glutDisplayFunc(0);
 
-		// Set the idle function (does nothing)
-		glutIdleFunc(idleScene);
-		
+		// Disable the idle function
+		//glutIdleFunc(0);
+
+		// Disable keyboard repeat
+		glutIgnoreKeyRepeat(1);
+
 		init = true;
 	}
 	
