@@ -59,6 +59,10 @@ public:
 	
 	bool dumpMemory(const char *fname);
 	
+	bool dumpVRAM(const char *fname);
+	
+	bool dumpSRAM(const char *fname);
+	
 	void handleHBlankPeriod();
 	
 	void handleVBlankInterrupt();
@@ -79,6 +83,18 @@ public:
 	
 	void stopCPU(){ cpuStopped = true; }
 	
+	void pause(){ emulationPaused = true; }
+	
+	void resume(){ emulationPaused = false; }
+
+	void screenshot();
+
+	void quicksave();
+	
+	void quickload();
+	
+	void help();
+	
 private:
 	unsigned short nFrames;
 	unsigned short frameSkip;
@@ -88,6 +104,7 @@ private:
 
 	bool cpuStopped; ///< 
 	bool cpuHalted; ///<
+	bool emulationPaused; ///<
 
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)
@@ -127,6 +144,8 @@ private:
 	void acknowledgeSerialInterrupt();
 
 	void acknowledgeJoypadInterrupt();
+	
+	void checkSystemKeys();
 };
 
 #endif

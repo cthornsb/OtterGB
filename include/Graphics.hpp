@@ -62,6 +62,8 @@ class GPU;
 		  */
 		~Window();
 
+		void processEvents(){ }
+
 		/** Get the width of the window (in pixels)
 		  */
 		int getWidth() const { return W; }
@@ -154,7 +156,9 @@ class GPU;
 		
 		bool empty() const { return (count == 0); }
 		
-		bool getKey(const unsigned char &key) const { return states[key]; }
+		bool check(const unsigned char &key) const { return states[key]; }
+		
+		bool poll(const unsigned char &key);
 		
 		void keyDown(const unsigned char &key);
 		

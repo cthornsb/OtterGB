@@ -343,10 +343,6 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 void GPU::render(){	
 	// Update the screen
 	if(lcdDisplayEnable && window->status()){ // Check for events
-#ifdef USE_OPENGL
-		// Process window events
-		window->processEvents();		
-#endif
 		// Clear the frame buffer (this prevents flickering)
 		window->clear(); 
 
@@ -391,10 +387,6 @@ void GPU::render(){
 void GPU::render(){	
 	// Update the screen
 	if(lcdDisplayEnable && window->status()){ // Check for events
-#ifdef USE_OPENGL
-		// Process window events
-		window->processEvents();		
-#endif
 		// Clear the frame buffer (this prevents flickering)
 		window->clear(); 
 		

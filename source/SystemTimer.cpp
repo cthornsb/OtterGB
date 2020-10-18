@@ -87,7 +87,6 @@ bool SystemClock::sync(const unsigned short &nCycles/*=1*/){
 				(*rSTAT) = ((*rSTAT) & 0xFC); // Mode 0 - HBlank period (mode 0)
 				mode0Interrupt();
 			}
-			//std::cout << getHex(lcdDriverMode) << std::endl;
 		}	
 	}
 	
@@ -96,29 +95,33 @@ bool SystemClock::sync(const unsigned short &nCycles/*=1*/){
 	
 	if(cyclesSinceLastVSync >= VERTICAL_SYNC_CYCLES){ // In the next refresh period.
 		cyclesSinceLastVSync = (cyclesSinceLastVSync % VERTICAL_SYNC_CYCLES);
-		static unsigned int frameCount = 0;
-		static double totalRenderTime = 0;
-		const double framePeriod = VERTICAL_SYNC_CYCLES/(SYSTEM_CLOCK_FREQUENCY*frequencyMultiplier); // in seconds
-		double wallTime = std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
-		double timeToSleep = (framePeriod - wallTime)*1E6; // microseconds
-		if(timeToSleep > 0)
-			usleep((int)timeToSleep);
-		totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();;
-		if((++frameCount % 60) == 0){
-			if(displayFramerate)
-				std::cout << " fps=" << frameCount/totalRenderTime << "     \r" << std::flush;
-			totalRenderTime = 0;
-			frameCount = 0;
-		}
-		timeOfLastVSync = sclock::now();
+		waitUntilNextVSync();
 	}
 
 	return vsync;
 }
 
-bool SystemClock::wait(const double &microseconds){
-	unsigned short nCycles = (unsigned short)(SYSTEM_CLOCK_FREQUENCY * (microseconds*1E-6));
-	return sync(nCycles);
+void SystemClock::wait(){
+	cyclesSinceLastVSync = 0;
+	waitUntilNextVSync();
+}
+
+void SystemClock::waitUntilNextVSync(){
+	static unsigned int frameCount = 0;
+	static double totalRenderTime = 0;
+	const double framePeriod = VERTICAL_SYNC_CYCLES/(SYSTEM_CLOCK_FREQUENCY*frequencyMultiplier); // in seconds
+	double wallTime = std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
+	double timeToSleep = (framePeriod - wallTime)*1E6; // microseconds
+	if(timeToSleep > 0)
+		usleep((int)timeToSleep);
+	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();;
+	if((++frameCount % 60) == 0){
+		if(displayFramerate)
+			std::cout << " fps=" << frameCount/totalRenderTime << "     \r" << std::flush;
+		totalRenderTime = 0;
+		frameCount = 0;
+	}
+	timeOfLastVSync = sclock::now();
 }
 
 void SystemClock::mode0Interrupt(){

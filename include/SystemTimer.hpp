@@ -18,7 +18,11 @@ public:
 	
 	bool sync(const unsigned short &nCycles=1);
 
-	bool wait(const double &microseconds);
+	/** Sleep until the start of the next VSync cycle (i.e. wait until the
+	  * start of the next frame). Useful for maintaining desired framerate
+	  * without advancing the system clock.
+	  */
+	void wait();
 
 private:
 	bool displayFramerate;
@@ -32,6 +36,10 @@ private:
 
 	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
+
+	/** Sleep for the required amount of time to maintain the set framerate.
+	  */
+	void waitUntilNextVSync();
 
 	void mode0Interrupt();
 

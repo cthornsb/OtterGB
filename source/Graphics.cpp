@@ -274,6 +274,14 @@ Window *MAIN_WINDOW = 0x0;
 			states[i] = false;
 	}
 
+	bool KeyStates::poll(const unsigned char &key){ 
+		if(states[key]){
+			states[key] = false;
+			return true;
+		}
+		return false;
+	}
+
 	void KeyStates::keyDown(const unsigned char &key){
 		if(!states[key]){
 			states[key] = true;

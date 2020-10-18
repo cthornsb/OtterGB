@@ -112,6 +112,27 @@ bool SystemComponent::readABS(const unsigned int &loc, unsigned char &dest){
 	return false;
 }
 
+void SystemComponent::print(const unsigned int bytesPerRow/*=10*/){
+	
+}
+
+bool SystemComponent::dump(const char *fname){
+	if(!size)
+		return false;
+
+	std::ofstream ofile(fname, std::ios::binary);
+	if(!ofile.good())
+		return false;
+
+	// Write memory contents to the output file.		
+	for(unsigned int i = 0; i < nBanks; i++){
+		ofile.write((char*)&mem[i][0], nBytes);
+	}
+	ofile.close();
+
+	return true;
+}
+
 void SystemComponent::incL(){
 	labs++;
 	if(++lrel >= nBytes){ // Switch to the next bank

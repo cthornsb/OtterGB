@@ -55,7 +55,9 @@ public:
 
 	void setOffset(const unsigned int &off){ offset = off; }
 
-	void print(const unsigned int bytesPerRow=10){ }
+	void print(const unsigned int bytesPerRow=10);
+
+	bool dump(const char *fname);
 
 	// Do not allow direct write access if in read-only mode.
 	virtual unsigned char *getPtr(const unsigned int &loc){ return (!readOnly ? &mem[bs][loc-offset] : 0x0); }

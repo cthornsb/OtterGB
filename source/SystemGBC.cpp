@@ -28,7 +28,7 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 
-SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false),
+SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), emulationPaused(false),
                          masterInterruptEnable(0x1), interruptEnable(0), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -216,54 +216,70 @@ bool SystemGBC::execute(){
 		if(!gpu.getWindowStatus())
 			return false;
 
-		// Check for interrupt out of HALT
-		if(cpuHalted){
-			if(((*rIE) & (*rIF)) != 0)
-				cpuHalted = false;
+		if(!emulationPaused){
+			// Check for interrupt out of HALT
+			if(cpuHalted){
+				if(((*rIE) & (*rIF)) != 0)
+					cpuHalted = false;
+			}
+
+			// Check for pending interrupts.
+			if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
+				if(((*rIF) & 0x1) != 0) // VBlank
+					acknowledgeVBlankInterrupt();
+				if(((*rIF) & 0x2) != 0) // LCDC STAT
+					acknowledgeLcdInterrupt();
+				if(((*rIF) & 0x4) != 0) // Timer
+					acknowledgeTimerInterrupt();
+				if(((*rIF) & 0x8) != 0) // Serial
+					acknowledgeSerialInterrupt();
+				if(((*rIF) & 0x10) != 0) // Joypad
+					acknowledgeJoypadInterrupt();
+			}
+			
+			// Check if the CPU is halted.
+			if(!cpuHalted){
+				// Perform one instruction.
+				if((nCycles = cpu.execute(&cart)) == 0)
+					return false;
+			}
+			else nCycles = 4; // NOP
+
+			// Update system timer.
+			timer.onClockUpdate(nCycles);
+
+			// Update sound processor.
+			sound.onClockUpdate(nCycles);
+
+			// Update joypad handler.
+			joy.onClockUpdate(nCycles);
+
+			// Sync with the GBC system clock.
+			// Wait a certain number of cycles based on the opcode executed		
+			if(clock.sync(nCycles)){
+				// Process window events
+				gpu.getWindow()->processEvents();
+				checkSystemKeys();
+				
+				// Render the current frame
+				if(nFrames++ % frameSkip == 0)
+					gpu.render();
+			}
 		}
+		else{
+			// Process window events
+			gpu.getWindow()->processEvents();
+			checkSystemKeys();
 
-		// Check for pending interrupts.
-		if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
-			if(((*rIF) & 0x1) != 0) // VBlank
-				acknowledgeVBlankInterrupt();
-			if(((*rIF) & 0x2) != 0) // LCDC STAT
-				acknowledgeLcdInterrupt();
-			if(((*rIF) & 0x4) != 0) // Timer
-				acknowledgeTimerInterrupt();
-			if(((*rIF) & 0x8) != 0) // Serial
-				acknowledgeSerialInterrupt();
-			if(((*rIF) & 0x10) != 0) // Joypad
-				acknowledgeJoypadInterrupt();
+			// Maintain framerate but do not advance the system clock.
+			clock.wait();
 		}
-		
-		// Check if the CPU is halted.
-		if(!cpuHalted){
-			// Perform one instruction.
-			if((nCycles = cpu.execute(&cart)) == 0)
-				return false;
-		}
-		else nCycles = 4; // NOP
-
-		// Update system timer.
-		timer.onClockUpdate(nCycles);
-
-		// Update sound processor.
-		sound.onClockUpdate(nCycles);
-
-		// Update joypad handler.
-		joy.onClockUpdate(nCycles);
-
-		// Sync with the GBC system clock.
-		// Wait a certain number of cycles based on the opcode executed		
-		if(clock.sync(nCycles))
-			if(nFrames++ % frameSkip == 0)
-				gpu.render(); // Render the current frame
 	}
 	return true;
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	if(nFrames % frameSkip == 0)
+	if(!emulationPaused && (nFrames % frameSkip == 0))
 		gpu.drawNextScanline(&oam);
 }
 	
@@ -565,22 +581,97 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 }
 
 bool SystemGBC::dumpMemory(const char *fname){
+	std::cout << " Writing system memory to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname, std::ios::binary);
-	if(!ofile.good())
+	if(!ofile.good()){
+		std::cout << "FAILED!\n";
 		return false;
+	}
 		
 	unsigned char byte;
 	for(unsigned int i = 0; i <= 0xFFFF; i++){
 		// Read a byte from memory.
-		if(!read((unsigned short)i, byte)){
-			std::cout << " WARING! Failed to read memory location " << getHex((unsigned short)i) << "!\n";
-			byte = 0x00; // Write an empty byte
+		if(i >= 0xFEA0 && i < 0xFF00) // Not accessible
+			byte = 0x00;
+		else if(!read((unsigned short)i, byte)){
+			if(i >= REGISTER_LOW && i < REGISTER_HIGH) // System registers
+				byte = registers[i-REGISTER_LOW];
+			else{
+				std::cout << " WARNING! Failed to read memory location " << getHex((unsigned short)i) << "!\n";
+				byte = 0x00; // Write an empty byte
+			}
 		}
 		ofile.write((char*)&byte, 1);
 	}
 	ofile.close();
 
+	std::cout << "DONE\n";
+
 	return true;
+}
+
+bool SystemGBC::dumpVRAM(const char *fname){
+	std::cout << " Writing VRAM to file \"" << fname << "\"... ";
+	if(gpu.dump(fname)){
+		std::cout << " DONE\n";
+		return true;
+	}
+	std::cout << " FAILED!\n";
+	return false;
+}
+
+bool SystemGBC::dumpSRAM(const char *fname){
+	if(!cart.getRam()->getSize()){
+		std::cout << " WARNING! Cartridge has no SRAM.\n";
+		return false;
+	}
+	std::cout << " Writing cartridge RAM to file \"" << fname << "\"... ";
+	if(cart.getRam()->dump(fname)){
+		std::cout << " DONE\n";
+		return true;
+	}
+	std::cout << " FAILED!\n";
+	return false;
+}
+
+void SystemGBC::screenshot(){
+	std::cout << " Not implemented\n";
+}
+
+void SystemGBC::quicksave(){
+	std::cout << " Not implemented\n";
+}
+
+void SystemGBC::quickload(){
+	std::cout << " Not implemented\n";
+}
+
+void SystemGBC::help(){
+	std::cout << "HELP: Press escape to exit program.\n\n";
+	
+	std::cout << " Button Map-\n";
+	std::cout << "  Start = Enter\n";
+	std::cout << " Select = Tab\n";
+	std::cout << "      B = j\n";
+	std::cout << "      A = k\n";
+	std::cout << "     Up = w (up)\n";
+	std::cout << "   Down = s (down)\n";
+	std::cout << "   Left = a (left)\n";
+	std::cout << "  Right = d (right)\n\n";
+
+	std::cout << " System Keys-\n";
+	std::cout << "  F1 : Display this help screen\n";
+	std::cout << "  F2 : Pause emulation\n";
+	std::cout << "  F3 : Resume emulation\n";
+	std::cout << "  F4 : Take a screenshot\n";
+	std::cout << "  F5 : Quicksave state\n";
+	std::cout << "  F6 : Dump system memory to \"memory.dat\"\n";
+	std::cout << "  F7 : Dump VRAM to \"vram.dat\"\n";
+	std::cout << "  F8 : Dump cartridge RAM to \"sram.dat\"\n";
+	std::cout << "  F9 : Quickload state\n";
+	std::cout << "   - : Decrease frame skip\n";
+	std::cout << "   + : Increase frame skip\n";
+	std::cout << "   f : Show/hide FPS counter on screen\n";
 }
 
 void SystemGBC::startDmaTransfer(const unsigned short &dest, const unsigned short &src, const unsigned short &N){
@@ -665,4 +756,33 @@ void SystemGBC::acknowledgeJoypadInterrupt(){
 		masterInterruptEnable = 0;
 		cpu.callInterruptVector(0x60);
 	}
+}
+
+void SystemGBC::checkSystemKeys(){
+	KeyStates *keys = gpu.getWindow()->getKeypress();
+	if(keys->empty()) return;
+	
+	// Function keys
+	if(keys->poll(0xF1)) // Help
+		help();	
+	else if(keys->poll(0xF2)) // Pause emulation
+		pause();
+	else if(keys->poll(0xF3)) // Resume emulation
+		resume();
+	else if(keys->poll(0xF4)) // Screenshot
+		screenshot();
+	else if(keys->poll(0xF5)) // Quicksave
+		quicksave();
+	else if(keys->poll(0xF6)) // Dump memory
+		dumpMemory("memory.dat");
+	else if(keys->poll(0xF7)) // Dump VRAM
+		dumpVRAM("vram.dat");
+	else if(keys->poll(0xF8)) // Dump cartridge RAM
+		dumpSRAM("sram.dat");
+	else if(keys->poll(0xF9)) // Quickload
+		quickload();
+	else if(keys->poll(0x2D)) // '-'    Decrease frame skip
+		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
+	else if(keys->poll(0x3D)) // '=(+)' Increase frame skip
+		frameSkip++;
 }
