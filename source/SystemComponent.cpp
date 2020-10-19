@@ -99,13 +99,17 @@ unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
 }
 
 unsigned int SystemComponent::writeSavestate(std::ofstream &f){
+	unsigned int nWritten = 9; // The header is 9 bytes long
 	writeSavestateHeader(f);
-	return writeMemoryToFile(f);
+	nWritten += writeMemoryToFile(f);
+	return nWritten;
 }
 
 unsigned int SystemComponent::readSavestate(std::ifstream &f){
+	unsigned int nRead = 9; // The header is 9 bytes long
 	readSavestateHeader(f);
-	return readMemoryFromFile(f);
+	nRead += readMemoryFromFile(f);
+	return nRead;
 }
 
 void SystemComponent::writeSavestateHeader(std::ofstream &f){

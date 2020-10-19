@@ -651,30 +651,37 @@ bool SystemGBC::quicksave(){
 		return false;
 	}
 
-	// Write the ROM
-	//cart.writeSavestate(ofile);
-	
-	// Write VRAM  (16 kB)
-	gpu.writeSavestate(ofile);
-	
-	// Write cartridge RAM (if present)
-	cart.getRam()->writeSavestate(ofile);
-	
-	// Write Work RAM (8 kB)
-	wram.writeSavestate(ofile);
-	
-	// Write Object Attribute Memory (OAM, 160 B)
-	oam.writeSavestate(ofile);
+	unsigned int nBytesWritten = 0;
+
+	//cart.writeSavestate(ofile); // Write the ROM
+	nBytesWritten += gpu.writeSavestate(ofile); // Write VRAM  (16 kB)
+	nBytesWritten += cart.getRam()->writeSavestate(ofile); // Write cartridge RAM (if present)
+	nBytesWritten += wram.writeSavestate(ofile); // Write Work RAM (8 kB)
+	nBytesWritten += oam.writeSavestate(ofile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
-	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++)
+	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++){
 		ofile.write((char*)&registers[i-REGISTER_LOW], 1);
+		nBytesWritten++;
+	}
 		
 	// Write High RAM (127 B)
-	hram.writeSavestate(ofile);
+	nBytesWritten += hram.writeSavestate(ofile);
+	ofile.write((char*)&bGBCMODE, 1); // Gameboy Color mode flag
+	ofile.write((char*)rIE, 1); // Interrupt enable
+	ofile.write((char*)rIME, 1); // Master interrupt enable
+	ofile.write((char*)&cpuStopped, 1); // STOP flag
+	ofile.write((char*)&cpuHalted, 1); // HALT flag
+	nBytesWritten += 5;
+	
+	nBytesWritten += cpu.writeSavestate(ofile); // CPU registers
+	nBytesWritten += timer.writeSavestate(ofile); // System timer status
+	nBytesWritten += clock.writeSavestate(ofile); // System clock status
+	nBytesWritten += sound.writeSavestate(ofile); // Sound processor
+	nBytesWritten += joy.writeSavestate(ofile); // Joypad controller
 
 	ofile.close();
-	std::cout << "DONE\n";
+	std::cout << "DONE! Wrote " << nBytesWritten << " B\n";
 	
 	return true;
 }
@@ -687,33 +694,37 @@ bool SystemGBC::quickload(){
 		return false;
 	}
 
-	// Write the ROM	
-	//cart.readSavestate(ifile);
-	
-	// Write VRAM (16 kB)
-	gpu.readSavestate(ifile);
-	
-	// Write cartridge RAM (if present)
-	cart.getRam()->readSavestate(ifile);
-	
-	// Write Work RAM (8 kB)
-	wram.readSavestate(ifile);
-	
-	// Write Object Attribute Memory (OAM, 160 B)
-	oam.readSavestate(ifile);
+	unsigned int nBytesRead = 0;
+
+	//cart.readSavestate(ifile); // Write the ROM
+	nBytesRead += gpu.readSavestate(ifile); // Write VRAM  (16 kB)
+	nBytesRead += cart.getRam()->readSavestate(ifile); // Write cartridge RAM (if present)
+	nBytesRead += wram.readSavestate(ifile); // Write Work RAM (8 kB)
+	nBytesRead += oam.readSavestate(ifile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
-	unsigned char reg;
 	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++){
-		ifile.read((char*)&reg, 1);
-		writeRegister(i, reg);
+		ifile.read((char*)&registers[i-REGISTER_LOW], 1);
+		nBytesRead++;
 	}
 		
 	// Write High RAM (127 B)
-	hram.readSavestate(ifile);
+	nBytesRead += hram.readSavestate(ifile);
+	ifile.read((char*)&bGBCMODE, 1); // Gameboy Color mode flag
+	ifile.read((char*)rIE, 1); // Interrupt enable
+	ifile.read((char*)rIME, 1); // Master interrupt enable
+	ifile.read((char*)&cpuStopped, 1); // STOP flag
+	ifile.read((char*)&cpuHalted, 1); // HALT flag
+	nBytesRead += 5;
+	
+	nBytesRead += cpu.readSavestate(ifile); // CPU registers
+	nBytesRead += timer.readSavestate(ifile); // System timer status
+	nBytesRead += clock.readSavestate(ifile); // System clock status
+	nBytesRead += sound.readSavestate(ifile); // Sound processor
+	nBytesRead += joy.readSavestate(ifile); // Joypad controller
 
 	ifile.close();
-	std::cout << "DONE\n";
+	std::cout << "DONE! Read " << nBytesRead << " B\n";
 	
 	return true;
 }
