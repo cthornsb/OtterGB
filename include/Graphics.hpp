@@ -90,7 +90,7 @@ class GPU;
 
 		/** Set the current draw color
 		  */
-		void setDrawColor(const ColorRGB &color, const float &alpha=1);
+		void setDrawColor(ColorRGB *color, const float &alpha=1);
 
 		/** Clear the screen with a given color
 		  */
@@ -217,6 +217,10 @@ class GPU;
 		/** Set the integer pixel scaling multiplier (default = 1)
 		  */
 		void setScalingFactor(const int &scale){ nMult = scale; }
+
+		/** Set the current draw color
+		  */
+		void setDrawColor(ColorRGB *color, const float &alpha=1);
 
 		/** Set the current draw color
 		  */

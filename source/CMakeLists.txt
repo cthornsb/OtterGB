@@ -1,8 +1,8 @@
 set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp)
 
-if(BACKGROUND_DEBUG)
-	add_definitions(-DBACKGROUND_DEBUG)
-endif()
+#if(BACKGROUND_DEBUG)
+#	add_definitions(-DBACKGROUND_DEBUG)
+#endif()
 
 if(GRAPHICS_SOURCES MATCHES "SDL")
 	# To install SDL:

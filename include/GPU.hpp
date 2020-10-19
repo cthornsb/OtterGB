@@ -99,13 +99,14 @@ private:
 	unsigned char bgPaletteData[64]; ///< GBC background palette 0-7
 	unsigned char objPaletteData[64]; ///< GBC sprite palette 0-7
 
+	ColorRGB bgPaletteColors[8][4]; ///< RGB colors for GBC background palettes 0-7
+	ColorRGB objPaletteColors[8][4]; ///< RGB colors for GBC sprite palettes 0-7
+
 	Window *window; ///< Pointer to the main renderer window
 	
-	// Each pixel has a 2-bit color depth (0-3)
-	// Each of the 256 scanlines will contain 256*2=512 bits i.e. 64 bytes
-	// The 0th byte contains colors for the first 4 pixels, where the lowest
-	// significant 2 bits is the color for 
-	unsigned char frameBuffer[256][256]; ///< Frame buffer containing all 256x256 pixel colors of the background.
+	unsigned char frameBuffer[256][256]; ///< Frame buffer containing 256x256 pixel shades
+
+	ColorRGB *currentLineColors[256]; ///< Pointers to the RGB colors for the pixels on the current scanline
 
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The index of the tile in VRAM [0x8000,0x8FFF].

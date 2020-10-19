@@ -16,13 +16,8 @@
 
 #define MAX_SPRITES_PER_LINE 10
 
-#ifdef BACKGROUND_DEBUG
-	#define SCREEN_WIDTH_PIXELS 256
-	#define SCREEN_HEIGHT_PIXELS 256
-#else
-	#define SCREEN_WIDTH_PIXELS 160
-	#define SCREEN_HEIGHT_PIXELS 144
-#endif
+#define SCREEN_WIDTH_PIXELS 160
+#define SCREEN_HEIGHT_PIXELS 144
 
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttHandler
@@ -104,6 +99,13 @@ GPU::~GPU(){
 void GPU::initialize(){
 	// Setup the window
 	window->initialize();
+	window->clear();
+
+	// Set default palette
+	bgPaletteColors[0][0] = Colors::GB_GREEN;
+	bgPaletteColors[0][1] = (Colors::GB_LTGREEN);
+	bgPaletteColors[0][2] = (Colors::GB_DKGREEN);
+	bgPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
 }
 
 /** Retrieve the color of a pixel in a tile bitmap.
@@ -166,11 +168,10 @@ unsigned short GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	// Draw the specified line
 	for(unsigned char dx = 0; dx <= (7-pixelX); dx++){
 		pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-		if(bGBCMODE){ // Gameboy Color palettes
-		}
-		else{ // Original gameboy palettes
+		if(bGBCMODE) // Gameboy Color palettes
+			currentLineColors[x+dx] = &objPaletteColors[0][pixelColor];
+		else // Original gameboy palettes
 			frameBuffer[y][x+dx] = ngbcPaletteColor[pixelColor];
-		}
 	}
 	
 	// Return the number of pixels drawn
@@ -208,19 +209,16 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 		pixelY = 7 - pixelY;
 
 	/*bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
-	bool gbcVramBank; // (0: Bank 0, 1: Bank 1) GBC only
-	unsigned char gbcPalette; // (OBP0-7)       GBC only*/
+	bool gbcVramBank; // (0: Bank 0, 1: Bank 1) GBC only*/
 
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
 		pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
 		if(pixelColor != 0){ // Check for transparent pixel
-			if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
-				//frameBuffer[y][xp + dx] = objPaletteData[8*oam->gbcPalette]; // 2 bytes per color
-			}
-			else{ // Original gameboy sprite palettes (OBP0-1)
+			if(bGBCMODE) // Gameboy Color sprite palettes (OBP0-7)
+				currentLineColors[xp+dx] = &objPaletteColors[oam->gbcPalette][pixelColor];
+			else // Original gameboy sprite palettes (OBP0-1)
 				frameBuffer[y][xp + dx] = (!oam->ngbcPalette ? ngbcObj0PaletteColor[pixelColor] : ngbcObj1PaletteColor[pixelColor]);
-			}
 		}
 	}
 }
@@ -249,19 +247,16 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
 	
 	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
-		for(unsigned short x = (*rSCX); x < (*rSCX+160); x++) // Horizontal pixel
-			frameBuffer[ry][x] = 0;
+		window->setDrawColor(Colors::WHITE);
+		for(unsigned short x = 0; x < 160; x++){ // Horizontal pixel
+			window->drawPixel(x, (*rLY));
+		}
 		return;
 	}
 
 	// Handle the background and window layer
-#ifndef BACKGROUND_DEBUG
 	unsigned short rx = (*rSCX);
 	while(rx < (*rSCX + 160)){ // Horizontal screen pixel
-#else
-	unsigned short rx = 0;
-	while(rx < 256){ // Horizontal background map pixel
-#endif
 		// Background & window tile attributes
 		//if(bGBCMODE){
 		//	tileAttr = mem[1][32*bgTileY + bgTileX]; // Retrieve the BG tile attributes
@@ -287,91 +282,33 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			}
 		}
 	}
+	
+	if(bGBCMODE){ // Render the current scanline
+		// This will automatically handle screen wrapping
+		unsigned char sx = (*rSCX);
+		for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
+			window->setDrawColor(currentLineColors[sx]);
+			window->drawPixel(x, (*rLY));
+			sx++;	
+		}
+	}
+	else{
+		// These variables will automatically handle screen wrapping
+		unsigned char sx = (*rSCX);
+		for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
+			window->setDrawColor(bgPaletteColors[0][frameBuffer[(*rSCY)+(*rLY)][sx]]);
+			window->drawPixel(x, (*rLY));
+			sx++;
+		}
+	}
 }
 
-#ifdef BACKGROUND_DEBUG
 void GPU::render(){	
 	// Update the screen
 	if(lcdDisplayEnable && window->status()){ // Check for events
-		// Clear the frame buffer (this prevents flickering)
-		window->clear(); 
-
-		// These variables will automatically handle screen wrapping
-		unsigned char sy = (*rSCY);
-		unsigned char sx;
-		for(unsigned short y = 0; y < 256; y++){ // Vertical pixel
-			sx = (*rSCX);
-			for(unsigned short x = 0; x < 256; x++){ // Horizontal pixel
-				if((y == 0 || y == 143) && x < 160)
-					window->setDrawColor(Colors::RED);
-				else if((x == 0 || x == 159) && y < 144)
-					window->setDrawColor(Colors::RED);
-				else{
-					// Draw the scanline
-					switch(frameBuffer[sy][sx]){
-						case 0: // White
-							window->setDrawColor(Colors::GB_GREEN);
-							break;						
-						case 1: // Light gray
-							window->setDrawColor(Colors::GB_LTGREEN);
-							break;					
-						case 2: // Dark gray
-							window->setDrawColor(Colors::GB_DKGREEN);
-							break;					
-						case 3: // Black
-							window->setDrawColor(Colors::GB_DKSTGREEN);
-							break;
-						default:
-							break;
-					}
-				}
-				window->drawPixel(sx, sy);
-				sx++;
-			}
-			sy++;
-		}
 		window->render();
 	}
 }
-#else
-void GPU::render(){	
-	// Update the screen
-	if(lcdDisplayEnable && window->status()){ // Check for events
-		// Clear the frame buffer (this prevents flickering)
-		window->clear(); 
-		
-		// These variables will automatically handle screen wrapping
-		unsigned char sy = (*rSCY);
-		unsigned char sx;
-		for(unsigned short y = 0; y < 144; y++){ // Vertical pixel
-			sx = (*rSCX);
-			for(unsigned short x = 0; x < 160; x++){ // Horizontal pixel
-				// Draw the scanline
-				switch(frameBuffer[sy][sx]){
-					case 0: // White
-						window->setDrawColor(Colors::GB_GREEN);
-						break;						
-					case 1: // Light gray
-						window->setDrawColor(Colors::GB_LTGREEN);
-						break;					
-					case 2: // Dark gray
-						window->setDrawColor(Colors::GB_DKGREEN);
-						break;					
-					case 3: // Black
-						window->setDrawColor(Colors::GB_DKSTGREEN);
-						break;
-					default:
-						break;
-				}
-				window->drawPixel(x, y);
-				sx++;
-			}
-			sy++;
-		}
-		window->render();
-	}
-}
-#endif
 
 bool GPU::getWindowStatus(){
 	return window->status();

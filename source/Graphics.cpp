@@ -313,6 +313,10 @@ Window *MAIN_WINDOW = 0x0;
 		glutMainLoopEvent();
 	}
 
+	void Window::setDrawColor(ColorRGB *color, const float &alpha/*=1*/){
+		glColor3f(color->r, color->g, color->b);
+	}
+
 	void Window::setDrawColor(const ColorRGB &color, const float &alpha/*=1*/){
 		glColor3f(color.r, color.g, color.b);
 	}
