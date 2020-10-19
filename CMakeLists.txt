@@ -46,11 +46,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
-#Set the graphics library
-if(NOT GRAPHICS_LIBRARY)
-	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
-endif(NOT GRAPHICS_LIBRARY)
-
 #------------------------------------------------------------------------------
 
 #Install options
@@ -65,6 +60,16 @@ option(BUILD_TOOLS "Build and install tools." OFF)
 #Find SDL install.
 
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+#Set the graphics library
+if(NOT GRAPHICS_LIBRARY)
+	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
+endif(NOT GRAPHICS_LIBRARY)
+
+#Set the Gameboy boot ROM
+if(NOT GAMEBOY_BOOT_ROM)
+	set(GAMEBOY_BOOT_ROM "" CACHE STRING "Gameboy boot program" FORCE)
+endif(NOT GAMEBOY_BOOT_ROM)
 
 #Add the include directory.
 include_directories(include)

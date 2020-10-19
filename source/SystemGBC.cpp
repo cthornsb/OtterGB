@@ -143,73 +143,93 @@ bool SystemGBC::initialize(const std::string &fname){
 	
 	// Disable the system timer.
 	timer.disable();
-	
-	// Initialize the system registers with default values.
-	// Timer registers
-	(*rTIMA)  = 0x00;
-	(*rTMA)   = 0x00;
-	(*rTAC)   = 0x00;
-	
-	// Sound processor registers
-	(*rNR10)  = 0x80;
-	(*rNR11)  = 0xBF;
-	(*rNR12)  = 0xFE;
-	(*rNR14)  = 0xBF;
-	(*rNR21)  = 0x3F;
-	(*rNR22)  = 0x00;
-	(*rNR24)  = 0xBF;
-	(*rNR30)  = 0x7F;
-	(*rNR31)  = 0xFF;
-	(*rNR32)  = 0x9F;
-	(*rNR33)  = 0xBF;
-	(*rNR41)  = 0xFF;
-	(*rNR42)  = 0x00;
-	(*rNR43)  = 0x00;
-	(*rNR44)  = 0xBF;
-	(*rNR50)  = 0x77;
-	(*rNR51)  = 0xF3;
-	(*rNR52)  = 0xF1;
 
-	// GPU registers
-	(*rLCDC)  = 0x91;
-	(*rSCY)   = 0x00;
-	(*rSCX)   = 0x00;
-	(*rLYC)   = 0x00;
-	(*rBGP)   = 0xFC;
-	(*rOBP0)  = 0xFF;
-	(*rOBP1)  = 0xFF;
-	(*rWY)    = 0x00;
-	(*rWX)    = 0x00;
-
-	// Interrupt enable
-	(*rIE)    = 0x00;
-
-	// Undocumented registers (for completeness)
-	(*rFF6C)  = 0xFE;
-	(*rFF72)  = 0x00;
-	(*rFF73)  = 0x00;
-	(*rFF74)  = 0x00;
-	(*rFF75)  = 0x8F;
-	(*rFF76)  = 0x00;
-	(*rFF77)  = 0x00;
-	
 	// Read the ROM into memory
 	bool retval = cart.readRom(fname, verboseMode);
-	if(retval){ 
-		// Initialize the window and link it to the joystick controller
+
+	// Initialize the window and link it to the joystick controller	
+	if(retval){
 		gpu.initialize();
 		joy.setWindow(gpu.getWindow());
 	}
 	
-	return retval;
+	// Check that the ROM is loaded and the window is open
+	if(!retval || !gpu.getWindowStatus())
+		return false;
+
+#ifdef GAMEBOY_BOOT_ROM	
+	// Load the boot ROM
+	std::ifstream bootstrap(GAMEBOY_BOOT_ROM, std::ios::binary);
+	if(bootstrap.good()){
+		bootstrap.read((char*)bootROM, 256); // Write directly to memory
+		bootstrap.close();
+		cpu.setProgramCounter(0);
+		bootSequence = true;
+	}
+	else{ // Initialize the system registers with default values.
+		std::cout << " Warning! Failed to load boot ROM \"" << GAMEBOY_BOOT_ROM << "\"\n";
+#endif
+		// Timer registers
+		(*rTIMA)  = 0x00;
+		(*rTMA)   = 0x00;
+		(*rTAC)   = 0x00;
+		
+		// Sound processor registers
+		(*rNR10)  = 0x80;
+		(*rNR11)  = 0xBF;
+		(*rNR12)  = 0xFE;
+		(*rNR14)  = 0xBF;
+		(*rNR21)  = 0x3F;
+		(*rNR22)  = 0x00;
+		(*rNR24)  = 0xBF;
+		(*rNR30)  = 0x7F;
+		(*rNR31)  = 0xFF;
+		(*rNR32)  = 0x9F;
+		(*rNR33)  = 0xBF;
+		(*rNR41)  = 0xFF;
+		(*rNR42)  = 0x00;
+		(*rNR43)  = 0x00;
+		(*rNR44)  = 0xBF;
+		(*rNR50)  = 0x77;
+		(*rNR51)  = 0xF3;
+		(*rNR52)  = 0xF1;
+
+		// GPU registers
+		(*rLCDC)  = 0x91;
+		(*rSCY)   = 0x00;
+		(*rSCX)   = 0x00;
+		(*rLYC)   = 0x00;
+		(*rBGP)   = 0xFC;
+		(*rOBP0)  = 0xFF;
+		(*rOBP1)  = 0xFF;
+		(*rWY)    = 0x00;
+		(*rWX)    = 0x00;
+
+		// Interrupt enable
+		(*rIE)    = 0x00;
+
+		// Undocumented registers (for completeness)
+		(*rFF6C)  = 0xFE;
+		(*rFF72)  = 0x00;
+		(*rFF73)  = 0x00;
+		(*rFF74)  = 0x00;
+		(*rFF75)  = 0x8F;
+		(*rFF76)  = 0x00;
+		(*rFF77)  = 0x00;
+
+		// Set the PC to the entry point of the program. Skip the boot sequence.
+		cpu.setProgramCounter(cart.getProgramEntryPoint());
+		
+		// Disable the boot sequence
+		bootSequence = false;
+#ifdef GAMEBOY_BOOT_ROM	
+	}
+#endif
+
+	return true;
 }
 
 bool SystemGBC::execute(){
-	// Set the PC to the entry point of the program.
-	cpu.setProgramCounter(cart.getProgramEntryPoint());
-
-	unsigned short nCycles = 1;
-
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
@@ -217,6 +237,8 @@ bool SystemGBC::execute(){
 			return false;
 
 		if(!emulationPaused){
+			unsigned short nCycles = 1;
+		
 			// Check for interrupt out of HALT
 			if(cpuHalted){
 				if(((*rIE) & (*rIF)) != 0)
@@ -240,7 +262,7 @@ bool SystemGBC::execute(){
 			// Check if the CPU is halted.
 			if(!cpuHalted){
 				// Perform one instruction.
-				if((nCycles = cpu.execute(&cart)) == 0)
+				if((nCycles = cpu.execute()) == 0)
 					return false;
 			}
 			else nCycles = 4; // NOP
@@ -334,6 +356,9 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					// go ahead and do it now for simplicity. Also, this should
 					// toggle the clock speed, not just double it.
 					clock.setFrequencyMultiplier(2.0);
+					break;
+				case 0xFF50: // Enable/disable ROM boot sequence
+					bootSequence = false;
 					break;
 				case 0xFF51: // HDMA1 - new DMA source, high byte (GBC only)
 					(*rHDMA1) = src;
@@ -458,7 +483,13 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	}
 	else{ // Attempt to read from memory
 		switch(loc){
-			case 0x0000 ... 0x7FFF: // Cartridge ROM 
+			case 0x0000 ... 0x00FF: // Boot ROM
+				if(!bootSequence)
+					cart.read(loc, dest);
+				else
+					dest = bootROM[loc];
+				break;				
+			case 0x0100 ... 0x7FFF: // Cartridge ROM 
 				cart.read(loc, dest);
 				break;
 			case 0x8000 ... 0x9FFF:

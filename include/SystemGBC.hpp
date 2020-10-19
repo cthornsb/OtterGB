@@ -105,6 +105,7 @@ private:
 	bool cpuStopped; ///< 
 	bool cpuHalted; ///<
 	bool emulationPaused; ///<
+	bool bootSequence; ///< The gameboy boot ROM is still running
 
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)
@@ -117,6 +118,8 @@ private:
 	unsigned short memoryAccessRead[2]; ///< 
 
 	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
+	
+	unsigned char bootROM[256]; ///< 256 B gameboy/gameboy color boot ROM
 	
 	Cartridge cart;
 	GPU gpu;

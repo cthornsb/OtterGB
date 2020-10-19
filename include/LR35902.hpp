@@ -15,9 +15,6 @@ extern const unsigned char FLAG_S_MASK;
 extern const unsigned char FLAG_H_MASK;
 extern const unsigned char FLAG_C_MASK;
 
-// GBC/GB cartridge
-class Cartridge;
-
 class LR35902 : public SystemComponent {
 public:
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
@@ -30,7 +27,7 @@ public:
 	unsigned short execute(const unsigned char &op);
 
 	// Read the next instruction from the cartridge ROM and return the number of clock cycles.
-	unsigned short execute(Cartridge *cart);
+	unsigned short execute();
 
 	unsigned short getProgramCounter() const { return PC; }
 

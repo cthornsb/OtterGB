@@ -5,7 +5,6 @@
 #include "Support.hpp"
 #include "LR35902.hpp"
 #include "SystemGBC.hpp"
-#include "Cartridge.hpp"
 
 #include "Opcodes.hpp"
 #include "OpcodeNames.hpp"
@@ -29,7 +28,7 @@ unsigned short LR35902::execute(const unsigned char &op){
 		(this->*funcPtrCB[op])();
 }
 
-unsigned short LR35902::execute(Cartridge *cart){
+unsigned short LR35902::execute(){
 	// Start reading the rom
 	std::string name;
 	unsigned char op;

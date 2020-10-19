@@ -4,6 +4,10 @@ set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp
 #	add_definitions(-DBACKGROUND_DEBUG)
 #endif()
 
+if(NOT ${GAMEBOY_BOOT_ROM} STREQUAL "")
+	add_definitions(-DGAMEBOY_BOOT_ROM="${GAMEBOY_BOOT_ROM}")
+endif()
+
 if(GRAPHICS_SOURCES MATCHES "SDL")
 	# To install SDL:
 	#sudo apt-get install libsdl2-dev
