@@ -7,23 +7,6 @@
 class Window;
 
 /////////////////////////////////////////////////////////////////////
-// class Color
-/////////////////////////////////////////////////////////////////////
-
-class Color{
-public:
-	unsigned char r, g, b;
-
-	Color() : r(0), g(0), b(0) { }
-	
-	Color(const float &fr, const float &fg, const float &fb){
-		r = (const char)(fr * 255);
-		g = (const char)(fg * 255);
-		b = (const char)(fb * 255);
-	}
-};
-
-/////////////////////////////////////////////////////////////////////
 // class SpriteAttHandler
 /////////////////////////////////////////////////////////////////////
 
@@ -49,80 +32,6 @@ public:
 	
 private:
 	unsigned short index; // Current sprite index [0,40)
-};
-
-/////////////////////////////////////////////////////////////////////
-// class TileMap
-/////////////////////////////////////////////////////////////////////
-
-class TileMap{
-public:
-	TileMap() : data0(0x0), data1(0x0) { }
-
-	TileMap(unsigned char *ptr1, unsigned char *ptr2) : data0(ptr1), data1(ptr2) { }
-
-	void setData(unsigned char *ptr1, unsigned char *ptr2){ data0 = ptr1; data1 = ptr2; }
-	
-	bool getPixelColors(const unsigned short &id, std::vector<unsigned short> &lines);
-	
-private:
-	unsigned char *data0; // Pointer to the 0th tile in the lower tilemap [0x8000-0x9000]
-	unsigned char *data1; // Pointer to the 0th tile in the upper tilemap [0x8800-0x9800]
-};
-
-// Background palette memory contains 64 bytes of color data
-// Each color is represented by two bytes, with a total of 4
-// colors (0-3) for BG palettes 0-7.
-class Palette{
-public:
-	Palette() : data(0x0) { }
-	
-	Palette(unsigned char *ptr) : data(ptr) { }
-
-	void setData(unsigned char *ptr){ data = ptr; }
-
-	void updateColors();
-
-	static ColorRGB getRGB(const unsigned short &gbcColor);
-
-private:
-	unsigned char *data; // BGP0...BGP7 [color0...color3]
-	
-	unsigned char index; // Byte index in palette memory [0,63]
-	
-	ColorRGB rgb[8]; ///< Real RGB colors
-};
-
-// 32x32 tile background maps in VRAM at [9800:9BFF] and [9C00:9FFF]
-// Each map can be used to display background or window layers.
-// Background Tile Map contains 32 rows of 32 Bytes where each byte
-// contains a number of a tile to be displayed. 
-class BackgroundMap{
-public:
-	BackgroundMap(){ }
-	
-	BackgroundMap(unsigned char *ptr) : data(ptr) { }
-
-	void setData(unsigned char *ptr){ data = ptr; }
-
-	class TileAttr{
-	public:
-		TileAttr(){ }
-	
-		unsigned char bgPaletteNum;
-		bool tileBankNum;
-		bool horizontalFlip;
-		bool verticalFlip;
-		bool bgPriority;
-	};
-
-	void getTileAttributes(TileAttr &t);
-
-private:
-	unsigned char *data; // Pointer to the 1st BG/Window tile map data
-	unsigned char *attrData; // Pointer to BG tile map attribute data
-	
-	unsigned char index;
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -190,13 +99,6 @@ private:
 	unsigned char bgPaletteData[64]; ///< GBC background palette 0-7
 	unsigned char objPaletteData[64]; ///< GBC sprite palette 0-7
 
-	BackgroundMap bgMap0;
-	BackgroundMap bgMap1;
-	Palette bgPalette;
-	Palette objPalette;
-	TileMap tiles0;
-	TileMap tiles1;
-	
 	Window *window; ///< Pointer to the main renderer window
 	
 	// Each pixel has a 2-bit color depth (0-3)

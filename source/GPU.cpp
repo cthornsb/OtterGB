@@ -69,70 +69,20 @@ bool SpriteAttHandler::preWriteAction(){
 	return false;
 }
 
-/////////////////////////////////////////////////////////////////////
-// class Tile
-/////////////////////////////////////////////////////////////////////
-
-bool TileMap::getPixelColors(const unsigned short &id, std::vector<unsigned short> &lines){
-	// Translate VRAM tiles into an easier to use format
-	lines.clear();
-	bool retval = false;
-	for(int i = 0; i < 8; i++){
-		unsigned short line = 0x0;
-		for(int j = 0; j < 8; j++){
-			unsigned char pixel = 0x0;
-			if((data0[id*16 + 2*i+1] & (0x1 << j)) != 0) pixel += 0x2;
-			if((data0[id*16 + 2*i] & (0x1 << j)) != 0)   pixel += 0x1;
-			line &= (pixel & 0x00FF) << 8;
-			if(line != 0)
-				retval = true;
-		}
-		lines.push_back(line);
-	}
-	return retval;
-}
-
-ColorRGB Palette::getRGB(const unsigned short &gbcColor){
-	// 5-bit color components
-	unsigned char red = gbcColor & 0x1F;
-	unsigned char grn = (gbcColor & 0x3E0) >> 5;
-	unsigned char blu = (gbcColor & 0x7C00) >> 5;
-	return ColorRGB(red/31.0, grn/31.0, blu/31.0); // 5-bit RGB
-}
-
-void Palette::updateColors(){
-	unsigned short gbcColor;
-	for(unsigned short i = 0; i < 8; i++){
-		gbcColor = getUShort(data[2*i], data[2*i+1]);
-		rgb[i] = getRGB(gbcColor);
-	}
-}
-
-void BackgroundMap::getTileAttributes(TileAttr &t){
+/*void BackgroundMap::getTileAttributes(TileAttr &t){
 	t.bgPaletteNum   = (attrData[index] & 0x7);
 	t.tileBankNum    = (attrData[index] & 0x8) != 0;
 	// Bit 4 not used
 	t.horizontalFlip = (attrData[index] & 0x20) != 0;
 	t.verticalFlip   = (attrData[index] & 0x40) != 0;
-	t.bgPriority     = (attrData[index] & 0x80) != 0; // 0: Use OAM priority, 1: Use BG priority*/
-}
+	t.bgPriority     = (attrData[index] & 0x80) != 0; // 0: Use OAM priority, 1: Use BG priority
+}*/
 
 /////////////////////////////////////////////////////////////////////
 // class GPU
 /////////////////////////////////////////////////////////////////////
 
 GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
-	bgPalette.setData(bgPaletteData);
-	objPalette.setData(objPaletteData);
-
-	// Set pointers to tilemaps in VRAM
-	tiles0.setData(&mem[0][0], &mem[0][0x800]);
-	tiles1.setData(&mem[1][0], &mem[1][0x800]);
-	
-	// Set pointers to background maps data in VRAM
-	bgMap0.setData(&mem[0][0x1800]);
-	bgMap1.setData(&mem[0][0x1C00]);
-	
 	// Set default GB palette
 	ngbcPaletteColor[0] = 0x0;
 	ngbcPaletteColor[1] = 0x1;
