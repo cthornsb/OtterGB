@@ -75,6 +75,10 @@ public:
 	// Should this be public??
 	void callInterruptVector(const unsigned char &offset);
 
+	virtual unsigned int writeSavestate(std::ofstream &f);
+
+	virtual unsigned int readSavestate(std::ifstream &f);
+
 protected:
 	bool halfCarry;
 	bool fullCarry;

@@ -612,12 +612,14 @@ bool SystemGBC::dumpMemory(const char *fname){
 
 bool SystemGBC::dumpVRAM(const char *fname){
 	std::cout << " Writing VRAM to file \"" << fname << "\"... ";
-	if(gpu.dump(fname)){
-		std::cout << " DONE\n";
-		return true;
+	std::ofstream ofile(fname, std::ios::binary);
+	if(!ofile.good() || !gpu.writeMemoryToFile(ofile)){
+		std::cout << "FAILED!\n";
+		return false;
 	}
-	std::cout << " FAILED!\n";
-	return false;
+	ofile.close();
+	std::cout << " DONE\n";
+	return true;
 }
 
 bool SystemGBC::dumpSRAM(const char *fname){
@@ -626,24 +628,94 @@ bool SystemGBC::dumpSRAM(const char *fname){
 		return false;
 	}
 	std::cout << " Writing cartridge RAM to file \"" << fname << "\"... ";
-	if(cart.getRam()->dump(fname)){
-		std::cout << " DONE\n";
-		return true;
+	std::ofstream ofile(fname, std::ios::binary);
+	if(!ofile.good() || !cart.getRam()->writeMemoryToFile(ofile)){
+		std::cout << "FAILED!\n";
+		return false;
 	}
-	std::cout << " FAILED!\n";
+	ofile.close();
+	std::cout << " DONE\n";
+	return true;
+}
+
+bool SystemGBC::screenshot(){
+	std::cout << " Not implemented\n";
 	return false;
 }
 
-void SystemGBC::screenshot(){
-	std::cout << " Not implemented\n";
+bool SystemGBC::quicksave(){
+	std::cout << " Quicksaving... ";
+	std::ofstream ofile("quick.sav", std::ios::binary);
+	if(!ofile.good()){
+		std::cout << "FAILED!\n";
+		return false;
+	}
+
+	// Write the ROM
+	//cart.writeSavestate(ofile);
+	
+	// Write VRAM  (16 kB)
+	gpu.writeSavestate(ofile);
+	
+	// Write cartridge RAM (if present)
+	cart.getRam()->writeSavestate(ofile);
+	
+	// Write Work RAM (8 kB)
+	wram.writeSavestate(ofile);
+	
+	// Write Object Attribute Memory (OAM, 160 B)
+	oam.writeSavestate(ofile);
+	
+	// Write system registers (128 B)
+	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++)
+		ofile.write((char*)&registers[i-REGISTER_LOW], 1);
+		
+	// Write High RAM (127 B)
+	hram.writeSavestate(ofile);
+
+	ofile.close();
+	std::cout << "DONE\n";
+	
+	return true;
 }
 
-void SystemGBC::quicksave(){
-	std::cout << " Not implemented\n";
-}
+bool SystemGBC::quickload(){
+	std::cout << " Loading quicksave... ";
+	std::ifstream ifile("quick.sav", std::ios::binary);
+	if(!ifile.good()){
+		std::cout << "FAILED!\n";
+		return false;
+	}
 
-void SystemGBC::quickload(){
-	std::cout << " Not implemented\n";
+	// Write the ROM	
+	//cart.readSavestate(ifile);
+	
+	// Write VRAM (16 kB)
+	gpu.readSavestate(ifile);
+	
+	// Write cartridge RAM (if present)
+	cart.getRam()->readSavestate(ifile);
+	
+	// Write Work RAM (8 kB)
+	wram.readSavestate(ifile);
+	
+	// Write Object Attribute Memory (OAM, 160 B)
+	oam.readSavestate(ifile);
+	
+	// Write system registers (128 B)
+	unsigned char reg;
+	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++){
+		ifile.read((char*)&reg, 1);
+		writeRegister(i, reg);
+	}
+		
+	// Write High RAM (127 B)
+	hram.readSavestate(ifile);
+
+	ifile.close();
+	std::cout << "DONE\n";
+	
+	return true;
 }
 
 void SystemGBC::help(){

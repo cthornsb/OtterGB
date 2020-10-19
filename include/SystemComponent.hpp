@@ -2,79 +2,70 @@
 #define SYSTEM_COMPONENT_HPP
 
 #include <vector>
+#include <fstream>
 
 class SystemGBC;
 
 class SystemComponent{
 public:
-	SystemComponent() : sys(0x0), readOnly(0), debugMode(false), offset(0), nBytes(0), nBanks(0), bs(0), size(0), labs(0), lrel(0) { }
+	SystemComponent() : sys(0x0), readOnly(0), debugMode(0), offset(0), nBytes(0), nBanks(0), bs(0), size(0) { }
 
-	SystemComponent(const unsigned int &nB, const unsigned int &N=1) : readOnly(0), offset(0), nBytes(nB), nBanks(N), bs(0) {
+	SystemComponent(const unsigned short &nB, const unsigned short &N=1) : sys(0x0), readOnly(0), offset(0), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
 		initialize(nB, N);
 	}
 
-	SystemComponent(const unsigned int &nB, const unsigned int &off, const unsigned int &N) : readOnly(0), offset(off), nBytes(nB), nBanks(N), bs(0) {
+	SystemComponent(const unsigned short &nB, const unsigned short &off, const unsigned short &N) : sys(0x0), readOnly(0), offset(off), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
 		initialize(nB, N);
 	}
 
 	void connectSystemBus(SystemGBC *bus){ sys = bus; }
 	
-	void initialize(const unsigned int &nB, const unsigned int &N=1);
+	void initialize(const unsigned short &nB, const unsigned short &N=1);
 	
 	~SystemComponent();
 	
-	bool write(const unsigned int &loc, unsigned char *src);
+	bool write(const unsigned short &loc, unsigned char *src);
 	
-	bool write(const unsigned int &loc, const unsigned char &src);
+	bool write(const unsigned short &loc, const unsigned char &src);
 
-	bool write(const unsigned int &loc, const unsigned int &bank, const unsigned char *src); 
+	bool write(const unsigned short &loc, const unsigned short &bank, const unsigned char *src); 
 
-	bool write(const unsigned int &loc, const unsigned int &bank, const unsigned char &src);
+	bool write(const unsigned short &loc, const unsigned short &bank, const unsigned char &src);
 
-	void writeNext(unsigned char *src);
-	
-	void writeNext(const unsigned char &src);
+	bool read(const unsigned short &loc, unsigned char *dest);
 
-	bool read(const unsigned int &loc, unsigned char *dest);
+	bool read(const unsigned short &loc, unsigned char &dest);
 
-	bool read(const unsigned int &loc, unsigned char &dest);
+	bool read(const unsigned short &loc, const unsigned short &bank, unsigned char *dest);
 
-	bool read(const unsigned int &loc, const unsigned int &bank, unsigned char *dest);
+	bool read(const unsigned short &loc, const unsigned short &bank, unsigned char &dest);
 
-	bool read(const unsigned int &loc, const unsigned int &bank, unsigned char &dest);
+	void setBank(const unsigned short &b){ bs = (b < nBanks ? b : b-1); }
 
-	void readNext(unsigned char *src);
-	
-	void readNext(unsigned char &src);
+	void setOffset(const unsigned short &off){ offset = off; }
 
-	bool readABS(const unsigned int &loc, unsigned char *dest);
-	
-	bool readABS(const unsigned int &loc, unsigned char &dest);
+	void print(const unsigned short bytesPerRow=10);
 
-	void setBank(const unsigned int &b){ bs = (b < nBanks ? b : b-1); }
+	unsigned int writeMemoryToFile(std::ofstream &f);
 
-	void setOffset(const unsigned int &off){ offset = off; }
+	unsigned int readMemoryFromFile(std::ifstream &f);
 
-	void print(const unsigned int bytesPerRow=10);
+	virtual unsigned int writeSavestate(std::ofstream &f);
 
-	bool dump(const char *fname);
+	virtual unsigned int readSavestate(std::ifstream &f);
 
 	// Do not allow direct write access if in read-only mode.
-	virtual unsigned char *getPtr(const unsigned int &loc){ return (!readOnly ? &mem[bs][loc-offset] : 0x0); }
+	virtual unsigned char *getPtr(const unsigned short &loc){ return (!readOnly ? &mem[bs][loc-offset] : 0x0); }
 
-	virtual const unsigned char *getConstPtr(const unsigned int &loc){ return (const unsigned char *)&mem[bs][loc-offset]; }
+	virtual const unsigned char *getConstPtr(const unsigned short &loc){ return (const unsigned char *)&mem[bs][loc-offset]; }
 
-	unsigned char *getPtr(const unsigned int &loc, const unsigned int &b){ return &mem[b][loc-offset]; }
+	unsigned char *getPtr(const unsigned short &loc, const unsigned short &b){ return &mem[b][loc-offset]; }
 
-	unsigned char *getPtrToBank(const unsigned int &b){ return (b < nBanks ? mem[b].data() : 0x0); }
+	unsigned char *getPtrToBank(const unsigned short &b){ return (b < nBanks ? mem[b].data() : 0x0); }
 
 	unsigned int getSize() const { return size; }
 
 	void setDebugMode(bool state=true){ debugMode = state; }
-
-	void incL();
-
-	void decL();
 
 protected:
 	SystemGBC *sys; // Pointer to the system bus
@@ -82,22 +73,19 @@ protected:
 	bool readOnly; // Read-only flag
 	bool debugMode; // Debug flag
 
-	unsigned int offset; // Memory address offset
-	unsigned int nBytes; // Number of bytes per bank
-	unsigned int nBanks; // Number of banks
-	unsigned int bs; // Bank select
+	unsigned short offset; // Memory address offset
+	unsigned short nBytes; // Number of bytes per bank
+	unsigned short nBanks; // Number of banks
+	unsigned short bs; // Bank select
 
 	unsigned int size; // Total size of memory block
 
-	unsigned int labs; // Current absolute location in memory block
-	unsigned int lrel; // Current location in memory bank
-
-	unsigned int writeLoc; //  Location in memory to be written to
-	unsigned int writeBank; // Bank of memory to be written to
+	unsigned short writeLoc; //  Location in memory to be written to
+	unsigned short writeBank; // Bank of memory to be written to
 	unsigned char writeVal; // Value to be written to location (writeLoc)
 
-	unsigned int readLoc; // Location in memory to be read from
-	unsigned int readBank; // Bank of memory to be read from
+	unsigned short readLoc; // Location in memory to be read from
+	unsigned short readBank; // Bank of memory to be read from
 
 	std::vector<std::vector<unsigned char> > mem; // Memory blocks
 
@@ -118,6 +106,10 @@ protected:
 	
 	// Return true if this component is sensitive to the register (reg)
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val){ return false; }
+
+	void writeSavestateHeader(std::ofstream &f);
+
+	void readSavestateHeader(std::ifstream &f);
 };
 
 #endif

@@ -445,6 +445,34 @@ void LR35902::callInterruptVector(const unsigned char &offset){
 	rst_n(offset);
 }
 
+unsigned int LR35902::writeSavestate(std::ofstream &f){
+	f.write((char*)&A, 1);
+	f.write((char*)&B, 1);
+	f.write((char*)&C, 1);
+	f.write((char*)&D, 1);
+	f.write((char*)&E, 1);
+	f.write((char*)&H, 1);
+	f.write((char*)&L, 1);
+	f.write((char*)&F, 1);
+	f.write((char*)&SP, 2);
+	f.write((char*)&PC, 2);
+	return 12;
+}
+
+unsigned int LR35902::readSavestate(std::ifstream &f){
+	f.read((char*)&A, 1);
+	f.read((char*)&B, 1);
+	f.read((char*)&C, 1);
+	f.read((char*)&D, 1);
+	f.read((char*)&E, 1);
+	f.read((char*)&H, 1);
+	f.read((char*)&L, 1);
+	f.read((char*)&F, 1);
+	f.read((char*)&SP, 2);
+	f.read((char*)&PC, 2);
+	return 12;
+}
+
 /////////////////////////////////////////////////////////////////////
 // OPCODES
 /////////////////////////////////////////////////////////////////////

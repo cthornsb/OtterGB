@@ -1,16 +1,13 @@
 #include <iostream>
-#include <fstream>
 
 #include "Support.hpp"
 #include "SystemComponent.hpp"
 
-void SystemComponent::initialize(const unsigned int &nB, const unsigned int &N/*=1*/){
+void SystemComponent::initialize(const unsigned short &nB, const unsigned short &N/*=1*/){
 	mem = std::vector<std::vector<unsigned char> >(N, std::vector<unsigned char>(nB, 0x0));
 	nBytes = nB;
 	nBanks = N;
 	bs = 0;
-	labs = 0;
-	lrel = 0;
 	size = nB*N;
 }
 
@@ -18,19 +15,19 @@ SystemComponent::~SystemComponent(){
 	mem.clear();
 }
 
-bool SystemComponent::write(const unsigned int &loc, unsigned char *src){ 
+bool SystemComponent::write(const unsigned short &loc, unsigned char *src){ 
 	return write(loc, bs, (*src));
 }
 
-bool SystemComponent::write(const unsigned int &loc, const unsigned char &src){ 
+bool SystemComponent::write(const unsigned short &loc, const unsigned char &src){ 
 	return write(loc, bs, src);
 }
 
-bool SystemComponent::write(const unsigned int &loc, const unsigned int &bank, const unsigned char *src){ 
+bool SystemComponent::write(const unsigned short &loc, const unsigned short &bank, const unsigned char *src){ 
 	return write(loc, bank, (*src));
 }
 
-bool SystemComponent::write(const unsigned int &loc, const unsigned int &bank, const unsigned char &src){ 
+bool SystemComponent::write(const unsigned short &loc, const unsigned short &bank, const unsigned char &src){ 
 	writeLoc = loc; 
 	writeBank = bank;
 	writeVal = src;
@@ -43,34 +40,19 @@ bool SystemComponent::write(const unsigned int &loc, const unsigned int &bank, c
 	return true;		
 }	
 
-void SystemComponent::writeNext(unsigned char *src){
-	writeNext((*src));
-}
-
-void SystemComponent::writeNext(const unsigned char &src){
-	writeLoc = lrel;
-	writeBank = bs;
-	writeVal = src;
-	if(!preWriteAction() || readOnly)
-		return;
-	mem[writeBank][writeLoc] = writeVal;
-	incL();
-	postWriteAction();
-}
-
-bool SystemComponent::read(const unsigned int &loc, unsigned char *dest){
+bool SystemComponent::read(const unsigned short &loc, unsigned char *dest){
 	return read(loc, bs, (*dest));
 }
 
-bool SystemComponent::read(const unsigned int &loc, unsigned char &dest){ 
+bool SystemComponent::read(const unsigned short &loc, unsigned char &dest){ 
 	return read(loc, bs, dest);
 }
 
-bool SystemComponent::read(const unsigned int &loc, const unsigned int &bank, unsigned char *dest){ 
+bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank, unsigned char *dest){ 
 	return read(loc, bank, (*dest));
 }
 
-bool SystemComponent::read(const unsigned int &loc, const unsigned int &bank, unsigned char &dest){ 
+bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank, unsigned char &dest){ 
 	readLoc = loc;
 	readBank = bank;
 	if(!preReadAction())
@@ -82,79 +64,63 @@ bool SystemComponent::read(const unsigned int &loc, const unsigned int &bank, un
 	return true;
 }
 
-void SystemComponent::readNext(unsigned char *src){
-	readNext((*src));
-}
-
-void SystemComponent::readNext(unsigned char &src){
-	readLoc = lrel;
-	readBank = bs;
-	if(!preReadAction())
-		return;
-	src = mem[readBank][readLoc];
-	incL();
-	postReadAction();
-}
-
-bool SystemComponent::readABS(const unsigned int &loc, unsigned char *dest){
-	readABS(loc, (*dest));
-}
-
-bool SystemComponent::readABS(const unsigned int &loc, unsigned char &dest){
-	/*readLoc = lrel;
-	readBank = bs;
-	if(!preReadAction())
-		return false;
-	if(nBytes == 0 || loc >= size) return false;
-	dest = mem[readBank][readLoc-offset];
-	postReadAction();
-	return true;	*/
-	return false;
-}
-
-void SystemComponent::print(const unsigned int bytesPerRow/*=10*/){
+void SystemComponent::print(const unsigned short bytesPerRow/*=10*/){
 	
 }
 
-bool SystemComponent::dump(const char *fname){
+unsigned int SystemComponent::writeMemoryToFile(std::ofstream &f){
 	if(!size)
-		return false;
+		return 0;
 
-	std::ofstream ofile(fname, std::ios::binary);
-	if(!ofile.good())
-		return false;
-
-	// Write memory contents to the output file.		
-	for(unsigned int i = 0; i < nBanks; i++){
-		ofile.write((char*)&mem[i][0], nBytes);
+	// Write memory contents to the output file.	
+	unsigned int nWritten = 0;	
+	for(unsigned short i = 0; i < nBanks; i++){
+		f.write((char*)&mem[i][0], nBytes);
+		nWritten += nBytes;
 	}
-	ofile.close();
 
-	return true;
+	return nWritten;
 }
 
-void SystemComponent::incL(){
-	labs++;
-	if(++lrel >= nBytes){ // Switch to the next bank
-		if(++bs >= nBanks){ // Wrap around to the 0th bank
-			bs = 0;
-			labs = 0;
-		}
-		lrel = 0;
+unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
+	if(!size)
+		return 0;
+
+	// Write memory contents to the output file.
+	unsigned int nRead = 0;	
+	for(unsigned short i = 0; i < nBanks; i++){
+		f.read((char*)&mem[i][0], nBytes);
+		if(f.eof() || !f.good())
+			return nRead;
+		nRead += nBytes;
 	}
+
+	return nRead;
 }
 
-void SystemComponent::decL(){
-	if(lrel == 0){ // Switch to the next bank
-		if(bs == 0){ // Wrap around to the Nth bank
-			bs = nBanks-1;
-			labs = size-1;
-		}
-		else labs--;
-		lrel = nBytes-1;
-	}
-	else{
-		labs--;
-		lrel--;
-	}
+unsigned int SystemComponent::writeSavestate(std::ofstream &f){
+	writeSavestateHeader(f);
+	return writeMemoryToFile(f);
+}
+
+unsigned int SystemComponent::readSavestate(std::ifstream &f){
+	readSavestateHeader(f);
+	return readMemoryFromFile(f);
+}
+
+void SystemComponent::writeSavestateHeader(std::ofstream &f){
+	f.write((char*)&readOnly, 1);
+	f.write((char*)&offset, 2);
+	f.write((char*)&nBytes, 2);
+	f.write((char*)&nBanks, 2);
+	f.write((char*)&bs, 2);
+}
+
+void SystemComponent::readSavestateHeader(std::ifstream &f){
+	f.read((char*)&readOnly, 1);
+	f.read((char*)&offset, 2);
+	f.read((char*)&nBytes, 2);
+	f.read((char*)&nBanks, 2);
+	f.read((char*)&bs, 2);
+	size = nBytes*nBanks;
 }

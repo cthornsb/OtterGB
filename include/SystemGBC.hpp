@@ -87,11 +87,11 @@ public:
 	
 	void resume(){ emulationPaused = false; }
 
-	void screenshot();
+	bool screenshot();
 
-	void quicksave();
+	bool quicksave();
 	
-	void quickload();
+	bool quickload();
 	
 	void help();
 	
