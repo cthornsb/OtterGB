@@ -201,7 +201,7 @@ protected:
 
 	void srl_d8(unsigned char *arg);
 
-	void bit_d8(unsigned char *arg, const unsigned char &bit);
+	void bit_d8(const unsigned char &arg, const unsigned char &bit);
 	
 	/////////////////////////////////////////////////////////////////////
 	// 
@@ -732,76 +732,76 @@ protected:
 
 	// BIT 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L]
 
-	void BIT_0_A(){ bit_d8(&A, 0); }
-	void BIT_0_B(){ bit_d8(&B, 0); }
-	void BIT_0_C(){ bit_d8(&C, 0); }
-	void BIT_0_D(){ bit_d8(&D, 0); }
-	void BIT_0_E(){ bit_d8(&E, 0); }
-	void BIT_0_H(){ bit_d8(&H, 0); }
-	void BIT_0_L(){ bit_d8(&L, 0); }
+	void BIT_0_A(){ bit_d8(A, 0); }
+	void BIT_0_B(){ bit_d8(B, 0); }
+	void BIT_0_C(){ bit_d8(C, 0); }
+	void BIT_0_D(){ bit_d8(D, 0); }
+	void BIT_0_E(){ bit_d8(E, 0); }
+	void BIT_0_H(){ bit_d8(H, 0); }
+	void BIT_0_L(){ bit_d8(L, 0); }
 	void BIT_0_aHL();
 
-	void BIT_1_A(){ bit_d8(&A, 1); }
-	void BIT_1_B(){ bit_d8(&B, 1); }
-	void BIT_1_C(){ bit_d8(&C, 1); }
-	void BIT_1_D(){ bit_d8(&D, 1); }
-	void BIT_1_E(){ bit_d8(&E, 1); }
-	void BIT_1_H(){ bit_d8(&H, 1); }
-	void BIT_1_L(){ bit_d8(&L, 1); }
+	void BIT_1_A(){ bit_d8(A, 1); }
+	void BIT_1_B(){ bit_d8(B, 1); }
+	void BIT_1_C(){ bit_d8(C, 1); }
+	void BIT_1_D(){ bit_d8(D, 1); }
+	void BIT_1_E(){ bit_d8(E, 1); }
+	void BIT_1_H(){ bit_d8(H, 1); }
+	void BIT_1_L(){ bit_d8(L, 1); }
 	void BIT_1_aHL();
 
-	void BIT_2_A(){ bit_d8(&A, 2); }
-	void BIT_2_B(){ bit_d8(&B, 2); }
-	void BIT_2_C(){ bit_d8(&C, 2); }
-	void BIT_2_D(){ bit_d8(&D, 2); }
-	void BIT_2_E(){ bit_d8(&E, 2); }
-	void BIT_2_H(){ bit_d8(&H, 2); }
-	void BIT_2_L(){ bit_d8(&L, 2); }
+	void BIT_2_A(){ bit_d8(A, 2); }
+	void BIT_2_B(){ bit_d8(B, 2); }
+	void BIT_2_C(){ bit_d8(C, 2); }
+	void BIT_2_D(){ bit_d8(D, 2); }
+	void BIT_2_E(){ bit_d8(E, 2); }
+	void BIT_2_H(){ bit_d8(H, 2); }
+	void BIT_2_L(){ bit_d8(L, 2); }
 	void BIT_2_aHL();
 
-	void BIT_3_A(){ bit_d8(&A, 3); }
-	void BIT_3_B(){ bit_d8(&B, 3); }
-	void BIT_3_C(){ bit_d8(&C, 3); }
-	void BIT_3_D(){ bit_d8(&D, 3); }
-	void BIT_3_E(){ bit_d8(&E, 3); }
-	void BIT_3_H(){ bit_d8(&H, 3); }
-	void BIT_3_L(){ bit_d8(&L, 3); }
+	void BIT_3_A(){ bit_d8(A, 3); }
+	void BIT_3_B(){ bit_d8(B, 3); }
+	void BIT_3_C(){ bit_d8(C, 3); }
+	void BIT_3_D(){ bit_d8(D, 3); }
+	void BIT_3_E(){ bit_d8(E, 3); }
+	void BIT_3_H(){ bit_d8(H, 3); }
+	void BIT_3_L(){ bit_d8(L, 3); }
 	void BIT_3_aHL();
 
-	void BIT_4_A(){ bit_d8(&A, 4); }
-	void BIT_4_B(){ bit_d8(&B, 4); }
-	void BIT_4_C(){ bit_d8(&C, 4); }
-	void BIT_4_D(){ bit_d8(&D, 4); }
-	void BIT_4_E(){ bit_d8(&E, 4); }
-	void BIT_4_H(){ bit_d8(&H, 4); }
-	void BIT_4_L(){ bit_d8(&L, 4); }
+	void BIT_4_A(){ bit_d8(A, 4); }
+	void BIT_4_B(){ bit_d8(B, 4); }
+	void BIT_4_C(){ bit_d8(C, 4); }
+	void BIT_4_D(){ bit_d8(D, 4); }
+	void BIT_4_E(){ bit_d8(E, 4); }
+	void BIT_4_H(){ bit_d8(H, 4); }
+	void BIT_4_L(){ bit_d8(L, 4); }
 	void BIT_4_aHL();
 
-	void BIT_5_A(){ bit_d8(&A, 5); }
-	void BIT_5_B(){ bit_d8(&B, 5); }
-	void BIT_5_C(){ bit_d8(&C, 5); }
-	void BIT_5_D(){ bit_d8(&D, 5); }
-	void BIT_5_E(){ bit_d8(&E, 5); }
-	void BIT_5_H(){ bit_d8(&H, 5); }
-	void BIT_5_L(){ bit_d8(&L, 5); }
+	void BIT_5_A(){ bit_d8(A, 5); }
+	void BIT_5_B(){ bit_d8(B, 5); }
+	void BIT_5_C(){ bit_d8(C, 5); }
+	void BIT_5_D(){ bit_d8(D, 5); }
+	void BIT_5_E(){ bit_d8(E, 5); }
+	void BIT_5_H(){ bit_d8(H, 5); }
+	void BIT_5_L(){ bit_d8(L, 5); }
 	void BIT_5_aHL();
 
-	void BIT_6_A(){ bit_d8(&A, 6); }
-	void BIT_6_B(){ bit_d8(&B, 6); }
-	void BIT_6_C(){ bit_d8(&C, 6); }
-	void BIT_6_D(){ bit_d8(&D, 6); }
-	void BIT_6_E(){ bit_d8(&E, 6); }
-	void BIT_6_H(){ bit_d8(&H, 6); }
-	void BIT_6_L(){ bit_d8(&L, 6); }
+	void BIT_6_A(){ bit_d8(A, 6); }
+	void BIT_6_B(){ bit_d8(B, 6); }
+	void BIT_6_C(){ bit_d8(C, 6); }
+	void BIT_6_D(){ bit_d8(D, 6); }
+	void BIT_6_E(){ bit_d8(E, 6); }
+	void BIT_6_H(){ bit_d8(H, 6); }
+	void BIT_6_L(){ bit_d8(L, 6); }
 	void BIT_6_aHL();
 
-	void BIT_7_A(){ bit_d8(&A, 7); }
-	void BIT_7_B(){ bit_d8(&B, 7); }
-	void BIT_7_C(){ bit_d8(&C, 7); }
-	void BIT_7_D(){ bit_d8(&D, 7); }
-	void BIT_7_E(){ bit_d8(&E, 7); }
-	void BIT_7_H(){ bit_d8(&H, 7); }
-	void BIT_7_L(){ bit_d8(&L, 7); }
+	void BIT_7_A(){ bit_d8(A, 7); }
+	void BIT_7_B(){ bit_d8(B, 7); }
+	void BIT_7_C(){ bit_d8(C, 7); }
+	void BIT_7_D(){ bit_d8(D, 7); }
+	void BIT_7_E(){ bit_d8(E, 7); }
+	void BIT_7_H(){ bit_d8(H, 7); }
+	void BIT_7_L(){ bit_d8(L, 7); }
 	void BIT_7_aHL();
 
 	// RES 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L]

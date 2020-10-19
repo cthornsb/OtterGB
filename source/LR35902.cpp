@@ -197,9 +197,9 @@ void LR35902::set_d8(unsigned char *arg, const unsigned char &bit){
 	(*arg) |= (0x1 << bit);
 }
 
-void LR35902::bit_d8(unsigned char *arg, const unsigned char &bit){
+void LR35902::bit_d8(const unsigned char &arg, const unsigned char &bit){
 	// Copy a bit of (arg) to the zero bit.
-	setFlag(FLAG_Z_BIT, (*arg & (0x1 << bit)) == 0);
+	setFlag(FLAG_Z_BIT, (arg & (0x1 << bit)) == 0);
 	setFlag(FLAG_S_BIT, 0);
 	setFlag(FLAG_H_BIT, 1);
 }
@@ -896,35 +896,35 @@ void LR35902::SRL_aHL(){
 // BIT b,(HL)
 
 void LR35902::BIT_0_aHL(){
-	bit_d8(sys->getPtr(getHL()), 0);
+	bit_d8(sys->getValue(getHL()), 0);
 }
 
 void LR35902::BIT_1_aHL(){
-	bit_d8(sys->getPtr(getHL()), 1);
+	bit_d8(sys->getValue(getHL()), 1);
 }
 
 void LR35902::BIT_2_aHL(){
-	bit_d8(sys->getPtr(getHL()), 2);
+	bit_d8(sys->getValue(getHL()), 2);
 }
 
 void LR35902::BIT_3_aHL(){
-	bit_d8(sys->getPtr(getHL()), 3);
+	bit_d8(sys->getValue(getHL()), 3);
 }
 
 void LR35902::BIT_4_aHL(){
-	bit_d8(sys->getPtr(getHL()), 4);
+	bit_d8(sys->getValue(getHL()), 4);
 }
 
 void LR35902::BIT_5_aHL(){
-	bit_d8(sys->getPtr(getHL()), 5);
+	bit_d8(sys->getValue(getHL()), 5);
 }
 
 void LR35902::BIT_6_aHL(){
-	bit_d8(sys->getPtr(getHL()), 6);
+	bit_d8(sys->getValue(getHL()), 6);
 }
 
 void LR35902::BIT_7_aHL(){
-	bit_d8(sys->getPtr(getHL()), 7);
+	bit_d8(sys->getValue(getHL()), 7);
 }
 
 // RES b,(HL)
