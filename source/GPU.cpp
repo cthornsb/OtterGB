@@ -98,7 +98,7 @@ void GPU::initialize(){
 			for(int j = 0; j < 4; j++)
 				bgPaletteColors[i][j] = Colors::WHITE;
 	}
-	else{ // Gameboy palette
+	else{ // Gameboy palettes
 		bgPaletteColors[0][0] = Colors::GB_GREEN;
 		bgPaletteColors[0][1] = (Colors::GB_LTGREEN);
 		bgPaletteColors[0][2] = (Colors::GB_DKGREEN);
@@ -190,7 +190,7 @@ unsigned short GPU::drawTile(const unsigned char &x, const unsigned char &y,
 		}
 		else{ // Original gameboy palettes
 			pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-			currentLineColors[x+dx] = &bgPaletteColors[0][pixelColor];
+			currentLineColors[x+dx] = &bgPaletteColors[0][ngbcPaletteColor[pixelColor]];
 		}
 	}
 	
@@ -232,12 +232,15 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
-		pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
-		if(pixelColor != 0){ // Check for transparent pixel
-			if(bGBCMODE) // Gameboy Color sprite palettes (OBP0-7)
+		if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
+			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
+			if(pixelColor != 0) // Check for transparent pixel
 				currentLineColors[xp+dx] = &objPaletteColors[oam->gbcPalette][pixelColor];
-			else // Original gameboy sprite palettes (OBP0-1)
-				currentLineColors[xp+dx] = &objPaletteColors[0][pixelColor];
+		}
+		else{ // Original gameboy sprite palettes (OBP0-1)
+			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
+			if(pixelColor != 0) // Check for transparent pixel
+				currentLineColors[xp+dx] = &bgPaletteColors[0][(oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor])];
 		}
 	}
 }
