@@ -521,8 +521,10 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	else{ // Attempt to read from memory
 		switch(loc){
 			case 0x0000 ... 0x7FFF: // Cartridge ROM 
-				if(bootSequence && loc < bootLength) // Boot up
+				if(bootSequence && (loc < 0x100 || loc >= 0x200)){ // Startup sequence. 
+					//Ignore bytes between 0x100 and 0x200 where the cartridge header lives.
 					dest = bootROM[loc];
+				}
 				else
 					cart.read(loc, dest);
 				break;
