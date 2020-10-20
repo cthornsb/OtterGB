@@ -104,17 +104,16 @@ private:
 
 	Window *window; ///< Pointer to the main renderer window
 	
-	unsigned char frameBuffer[256][256]; ///< Frame buffer containing 256x256 pixel shades
-
 	ColorRGB *currentLineColors[256]; ///< Pointers to the RGB colors for the pixels on the current scanline
 
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
 	  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
 	  * @param dy    The vertical pixel in the bitmap [0,7] where the top-most pixel is denoted as y=0.
+	  * @param bank  The VRAM bank number [0,1]
 	  * @return      The color of the pixel in the range [0,3]
 	  */
-	unsigned char getBitmapPixel(const unsigned short &index, const unsigned char &dx, const unsigned char &dy);
+	unsigned char getBitmapPixel(const unsigned short &index, const unsigned char &dx, const unsigned char &dy, const unsigned char &bank=0);
 	
 	/** Draw a background tile.
 	  * @param x The current LCD screen horizontal pixel [0,160).
@@ -131,6 +130,22 @@ private:
 	  * @param oam Pointer to the sprite handler with the currently selected sprite.
 	  */	
 	void drawSprite(const unsigned char &y, SpriteAttHandler *oam);
+	
+	/** Get the real RGB values for a 15-bit GBC format color.
+	  * @param low The low byte (RED and lower 3 bits of GREEN) of the GBC color.
+	  * @param high The high byte (upper 2 bits of GREEN and BLUE) of the GBC color.
+	  */
+	ColorRGB getColorRGB(const unsigned char &low, const unsigned char &high);
+	
+	/** Update true RGB background palette by converting GBC format colors.
+	  * The color pointed to by the current bgPaletteIndex (register 0xFF68) will be udpated.
+	  */
+	void updateBackgroundPalette();
+	
+	/** Update true RGB sprite palette by converting GBC format colors.
+	  * The color pointed to by the current objPaletteIndex (register 0xFF6B) will be udpated.
+	  */
+	void updateObjectPalette();
 };
 
 #endif
