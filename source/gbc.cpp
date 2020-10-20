@@ -20,6 +20,7 @@ int main(int argc, char *argv[]){
 	handler.add(optionExt("opcode-watch", required_argument, NULL, 'O', "<N>", "Watch for specific opcode calls."));
 	handler.add(optionExt("frame-skip", required_argument, NULL, 's', "<N>", "Render 1 out of every N frames (improves framerate)."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
+	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
 			
 	// Handle user input.
 	if(!handler.setup(argc, argv))
@@ -78,6 +79,10 @@ int main(int argc, char *argv[]){
 	if(handler.getOption(10)->active) // Set pixel scaling factor
 		gbc.getGPU()->setPixelScale(strtoul(handler.getOption(10)->argument.c_str(), NULL, 10));
 
+	bool forceColor = false;
+	if(handler.getOption(11)->active) // Use GBC mode for original GB games
+		forceColor = true;
+
 	// Check for ROM filename.
 	if(inputFilename.empty()){
 		std::cout << " ERROR! Input gb/gbc ROM file not specified!\n";
@@ -85,7 +90,7 @@ int main(int argc, char *argv[]){
 	}
 
 	// Execute the ROM
-	if(!gbc.initialize(inputFilename)){
+	if(!gbc.initialize(inputFilename, forceColor)){
 		std::cout << " ERROR! Failed to read input ROM file \"" << inputFilename << "\"!\n";
 		return 3;
 	}

@@ -19,7 +19,7 @@ class SystemGBC{
 public:
 	SystemGBC();
 
-	bool initialize(const std::string &fname);
+	bool initialize(const std::string &fname, bool forceColorMode=false);
 
 	bool execute();
 	

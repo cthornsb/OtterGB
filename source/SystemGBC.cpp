@@ -50,7 +50,7 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 	memoryAccessRead[1] = 0;
 }
 
-bool SystemGBC::initialize(const std::string &fname){ 
+bool SystemGBC::initialize(const std::string &fname, bool forceColorMode/*=false*/){ 
 	hram.initialize(127);
 
 	// Set pointers to joypad registers
@@ -169,6 +169,10 @@ bool SystemGBC::initialize(const std::string &fname){
 	// Check that the ROM is loaded and the window is open
 	if(!retval || !gpu.getWindowStatus())
 		return false;
+
+	// Enable GBC features for original GB games.
+	if(forceColorMode)
+		bGBCMODE = true;
 
 	// Load the boot ROM (if available)
 	bool loadBootROM = false;
