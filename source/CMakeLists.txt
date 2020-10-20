@@ -4,8 +4,12 @@ set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp
 #	add_definitions(-DBACKGROUND_DEBUG)
 #endif()
 
-if(NOT ${GAMEBOY_BOOT_ROM} STREQUAL "")
-	add_definitions(-DGAMEBOY_BOOT_ROM="${GAMEBOY_BOOT_ROM}")
+if(NOT ${GB_BOOT_ROM} STREQUAL "")
+	add_definitions(-DGB_BOOT_ROM="${GB_BOOT_ROM}")
+endif()
+
+if(NOT ${GBC_BOOT_ROM} STREQUAL "")
+	add_definitions(-DGBC_BOOT_ROM="${GBC_BOOT_ROM}")
 endif()
 
 if(GRAPHICS_SOURCES MATCHES "SDL")

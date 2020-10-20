@@ -1,6 +1,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <string>
 
 #include "Support.hpp"
 #include "SystemGBC.hpp"
@@ -19,6 +20,18 @@
 #define IO_PORTS_START  0xFF00
 #define HIGH_RAM_START  0xFF80
 #define INTERRUPT_ENABLE 0xFFFF
+
+#ifdef GB_BOOT_ROM
+	const std::string gameboyBootRomPath(GB_BOOT_ROM);
+#else
+	const std::string gameboyBootRomPath("");
+#endif
+
+#ifdef GBC_BOOT_ROM
+	const std::string gameboyColorBootRomPath(GBC_BOOT_ROM);
+#else
+	const std::string gameboyColorBootRomPath("");
+#endif
 
 /** INTERRUPTS:
 	0x40 - VBlank interrupt (triggered at beginning of VBlank period [~59.7 Hz])
@@ -157,18 +170,40 @@ bool SystemGBC::initialize(const std::string &fname){
 	if(!retval || !gpu.getWindowStatus())
 		return false;
 
-#ifdef GAMEBOY_BOOT_ROM	
-	// Load the boot ROM
-	std::ifstream bootstrap(GAMEBOY_BOOT_ROM, std::ios::binary);
-	if(bootstrap.good()){
-		bootstrap.read((char*)bootROM, 256); // Write directly to memory
+	// Load the boot ROM (if available)
+	bool loadBootROM = false;
+	std::ifstream bootstrap;
+	if(bGBCMODE){
+		if(!gameboyColorBootRomPath.empty()){
+			bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrap.good())
+				std::cout << " Warning! Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\".\n";
+			else
+				loadBootROM = true;
+		}
+	}
+	else{
+		if(!gameboyBootRomPath.empty()){
+			bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrap.good())
+				std::cout << " Warning! Failed to load GB boot ROM \"" << gameboyBootRomPath << "\".\n";
+			else
+				loadBootROM = true;
+		}
+	}
+	
+	if(loadBootROM){
+		bootstrap.seekg(0, bootstrap.end);
+		bootLength = bootstrap.tellg();
+		bootstrap.seekg(0);
+		bootROM.reserve(bootLength);
+		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
 		bootstrap.close();
+		std::cout << " Successfully loaded " << bootLength << " B boot ROM.\n";
 		cpu.setProgramCounter(0);
 		bootSequence = true;
 	}
 	else{ // Initialize the system registers with default values.
-		std::cout << " Warning! Failed to load boot ROM \"" << GAMEBOY_BOOT_ROM << "\"\n";
-#endif
 		// Timer registers
 		(*rTIMA)  = 0x00;
 		(*rTMA)   = 0x00;
@@ -222,9 +257,7 @@ bool SystemGBC::initialize(const std::string &fname){
 		
 		// Disable the boot sequence
 		bootSequence = false;
-#ifdef GAMEBOY_BOOT_ROM	
 	}
-#endif
 
 	return true;
 }
@@ -483,14 +516,11 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	}
 	else{ // Attempt to read from memory
 		switch(loc){
-			case 0x0000 ... 0x00FF: // Boot ROM
-				if(!bootSequence)
-					cart.read(loc, dest);
-				else
+			case 0x0000 ... 0x7FFF: // Cartridge ROM 
+				if(bootSequence && loc < bootLength) // Boot up
 					dest = bootROM[loc];
-				break;				
-			case 0x0100 ... 0x7FFF: // Cartridge ROM 
-				cart.read(loc, dest);
+				else
+					cart.read(loc, dest);
 				break;
 			case 0x8000 ... 0x9FFF:
 				gpu.read(loc, dest);

@@ -67,9 +67,14 @@ if(NOT GRAPHICS_LIBRARY)
 endif(NOT GRAPHICS_LIBRARY)
 
 #Set the Gameboy boot ROM
-if(NOT GAMEBOY_BOOT_ROM)
-	set(GAMEBOY_BOOT_ROM "" CACHE STRING "Gameboy boot program" FORCE)
-endif(NOT GAMEBOY_BOOT_ROM)
+if(NOT GB_BOOT_ROM)
+	set(GB_BOOT_ROM "" CACHE STRING "Gameboy boot program" FORCE)
+endif(NOT GB_BOOT_ROM)
+
+#Set the Gameboy Color boot ROM
+if(NOT GBC_BOOT_ROM)
+	set(GBC_BOOT_ROM "" CACHE STRING "Gameboy Color boot program" FORCE)
+endif(NOT GBC_BOOT_ROM)
 
 #Add the include directory.
 include_directories(include)

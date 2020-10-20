@@ -1,6 +1,8 @@
 #ifndef SYSTEM_GBC_HPP
 #define SYSTEM_GBC_HPP
 
+#include <vector>
+
 #include "SystemComponent.hpp"
 #include "Cartridge.hpp"
 #include "GPU.hpp"
@@ -119,7 +121,8 @@ private:
 
 	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
 	
-	unsigned char bootROM[256]; ///< 256 B gameboy/gameboy color boot ROM
+	unsigned short bootLength; ///< Size of the boot ROM
+	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM
 	
 	Cartridge cart;
 	GPU gpu;
