@@ -19,7 +19,7 @@ class SystemGBC{
 public:
 	SystemGBC();
 
-	bool initialize(const std::string &fname, bool forceColorMode=false);
+	bool initialize(const std::string &fname);
 
 	bool execute();
 	
@@ -52,6 +52,9 @@ public:
 
 	// Toggle verbose flag
 	void setVerboseMode(bool state=true);
+	
+	// Force GBC features for original GB games.
+	void setForceColorMode(bool state=true){ forceColor = state; }
 	
 	void setMemoryWriteRegion(const unsigned short &locL, const unsigned short &locH=0);
 	
@@ -108,6 +111,7 @@ private:
 	bool cpuHalted; ///<
 	bool emulationPaused; ///<
 	bool bootSequence; ///< The gameboy boot ROM is still running
+	bool forceColor; 
 
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)

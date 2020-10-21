@@ -79,9 +79,8 @@ int main(int argc, char *argv[]){
 	if(handler.getOption(10)->active) // Set pixel scaling factor
 		gbc.getGPU()->setPixelScale(strtoul(handler.getOption(10)->argument.c_str(), NULL, 10));
 
-	bool forceColor = false;
 	if(handler.getOption(11)->active) // Use GBC mode for original GB games
-		forceColor = true;
+		gbc.setForceColorMode(true);
 
 	// Check for ROM filename.
 	if(inputFilename.empty()){
@@ -90,7 +89,7 @@ int main(int argc, char *argv[]){
 	}
 
 	// Execute the ROM
-	if(!gbc.initialize(inputFilename, forceColor)){
+	if(!gbc.initialize(inputFilename)){
 		std::cout << " ERROR! Failed to read input ROM file \"" << inputFilename << "\"!\n";
 		return 3;
 	}

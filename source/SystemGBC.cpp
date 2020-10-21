@@ -50,7 +50,7 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 	memoryAccessRead[1] = 0;
 }
 
-bool SystemGBC::initialize(const std::string &fname, bool forceColorMode/*=false*/){ 
+bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
 
 	// Set pointers to joypad registers
@@ -171,8 +171,12 @@ bool SystemGBC::initialize(const std::string &fname, bool forceColorMode/*=false
 		return false;
 
 	// Enable GBC features for original GB games.
-	if(forceColorMode)
-		bGBCMODE = true;
+	if(forceColor){
+		if(!bGBCMODE)
+			bGBCMODE = true;
+		else // Disable force color for GBC games
+			forceColor = false;
+	}
 
 	// Load the boot ROM (if available)
 	bool loadBootROM = false;
@@ -383,7 +387,6 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					(*rDMA) = src;
 					srcStart = ((src & 0x00F1) << 8);
 					startDmaTransfer(0xFE00, srcStart, 160);
-					//clock.wait(160);
 					break;
 				case 0xFF4D: // KEY1 (Speed switch register)
 					(*rKEY1) = src;
@@ -396,6 +399,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					break;
 				case 0xFF50: // Enable/disable ROM boot sequence
 					bootSequence = false;
+					if(forceColor) // Disable GBC mode so that original GB games display correctly after boot.
+						bGBCMODE = false;
 					break;
 				case 0xFF51: // HDMA1 - new DMA source, high byte (GBC only)
 					(*rHDMA1) = src;

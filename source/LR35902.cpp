@@ -102,9 +102,6 @@ unsigned short LR35902::execute(){
 		getline(std::cin, dummy);
 	}
 	
-	if(nCycles == 0)
-		std::cout << " HERE!!! op=" << getHex(op) << ", PC=" << getHex(PC) << std::endl;
-	
 	return nCycles;
 }
 
