@@ -42,6 +42,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 				// Specify lower 5 bits of ROM bank number
 				bs &= 0xE0; // Clear bits 0-4
 				bs |= (val & 0x1F); // Set bits 0-4
+				// Note: MBC1 translates a 0x0 here as bank 1
 			}
 			else if(reg < 0x6000){
 				// 2-bit register [0,3] (write only)
@@ -75,6 +76,27 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		case 0x15 ... 0x17: // MBC4
 			break;
 		case 0x19 ... 0x1E: // MBC5
+			if(reg < 0x2000){ // RAM enable (write only)
+				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+				extRamEnabled = ((val & 0x0F) == 0x0A);
+			}
+			else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
+				// 9-bit register [0x01, 0x1FF] (write only)
+				// Specify lower 8 bits of ROM bank number
+				bs &= 0xFF00; // Clear bits 0-7
+				bs |= (val & 0x00FF); // Set bits 0-7
+				std::cout << " bs=" << getHex(bs) << std::endl;
+			}
+			else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
+				// 1-bit register [0,3] (write only)
+				// Specify upper 1 bit of ROM bank number
+				bs &= 0xFEFF; // Clear bit 9;
+				bs |= ((val & 0x0001) << 8); // Set bit 9
+			}
+			else if(reg < 0x6000){ // RAM bank number
+				// Select the RAM bank [0,F]
+				ram.setBank(val & 0x0F);
+			}			
 			break;
 		default:
 			return false;
