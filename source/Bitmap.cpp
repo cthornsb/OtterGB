@@ -48,6 +48,11 @@ CharacterMap::CharacterMap() : window(0x0) {
 	palette[3] = Colors::BLACK;
 }
 
+void CharacterMap::setPaletteColor(unsigned short &index, const ColorRGB &color){
+	if(index <= 3)
+		palette[index] = color;
+}
+
 bool CharacterMap::loadCharacterMap(const std::string &fname){
 	// The character map
 	const unsigned short nVals = 95;
@@ -87,7 +92,7 @@ void CharacterMap::putCharacter(const char &val, const unsigned short &x, const 
 	for(unsigned short dy = 0; dy < 8; dy++){
 		for(unsigned short dx = 0; dx < 8; dx++){
 			pixelColor = cmap[val].get(dx, dy);
-			if(pixelColor == 0) // Transparent
+			if(transparency && pixelColor == 0) // Transparent
 				continue;
 			window->setDrawColor(palette[pixelColor]);
 			window->drawPixel(8*x+dx, 8*y+dy);

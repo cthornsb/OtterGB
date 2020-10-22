@@ -29,6 +29,10 @@ public:
 
 	void setWindow(Window *win){ window = win; }
 
+	void setPaletteColor(unsigned short &index, const ColorRGB &color);
+
+	void setTransparency(bool state=true){ transparency = state; }
+
 	bool loadCharacterMap(const std::string &fname);
 
 	void putCharacter(const char &val, const unsigned short &x, const unsigned short &y);
@@ -37,6 +41,8 @@ public:
 
 private:
 	Window *window;
+	
+	bool transparency;
 	
 	ColorRGB palette[4];
 

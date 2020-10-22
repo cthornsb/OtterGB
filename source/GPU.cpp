@@ -86,6 +86,7 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	// 
 	cmap = new CharacterMap();
 	cmap->setWindow(window);
+	cmap->setTransparency(false);
 }
 
 GPU::~GPU(){
