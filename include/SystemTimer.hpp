@@ -11,10 +11,10 @@ typedef std::chrono::system_clock sclock;
 class SystemClock : public SystemComponent {
 public:
 	SystemClock();
+
+	double getFramerate() const { return framerate; }
 	
 	void setFrequencyMultiplier(const double &mult){ frequencyMultiplier = mult; }
-	
-	void setDisplayFramerate(bool state=true){ displayFramerate = state; }
 	
 	bool sync(const unsigned short &nCycles=1);
 
@@ -25,14 +25,14 @@ public:
 	void wait();
 
 private:
-	bool displayFramerate;
-
 	double frequencyMultiplier;
 	
 	unsigned int cyclesSinceLastVSync; ///< The number of cycles since the last Vertical Sync
 	unsigned int cyclesSinceLastHSync; ///< The number of cycles since the last  Horizontal Sync
 
 	unsigned char lcdDriverMode;
+
+	double framerate;
 
 	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
@@ -72,7 +72,7 @@ protected:
 	unsigned short nCyclesSinceLastTick;
 	unsigned short timerPeriod;
 	unsigned short timerCounter;
-
+	
 	bool timerEnable;
 
 	virtual void rollOver(){ }

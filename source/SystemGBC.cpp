@@ -1,6 +1,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "Support.hpp"
@@ -40,8 +41,9 @@
 	0x58 - Serial interrupt (triggered after sending/receiving 8 bits)
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
-
-SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), emulationPaused(false),
+	
+SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
+                         emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
                          masterInterruptEnable(0x1), interruptEnable(0), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -277,7 +279,7 @@ bool SystemGBC::execute(){
 		if(!gpu.getWindowStatus())
 			return false;
 
-		if(!emulationPaused){
+		if(!emulationPaused && !cpuStopped){
 			unsigned short nCycles = 1;
 		
 			// Check for interrupt out of HALT
@@ -325,11 +327,25 @@ bool SystemGBC::execute(){
 				checkSystemKeys();
 				
 				// Render the current frame
-				if(nFrames++ % frameSkip == 0)
+				if(nFrames++ % frameSkip == 0 && !cpuStopped){
+					if(displayFramerate){
+						std::stringstream stream;
+						stream << clock.getFramerate() << " fps";
+						gpu.print(stream.str(), 0, 17);
+					}
 					gpu.render();
+				}
+				//gpu.drawTileMaps();
+				//gpu.render();
 			}
 		}
 		else{
+			if(cpuStopped){ // STOP
+				std::cout << " Stopped! " << getHex(*rIE) << " " << getHex(*rIF) << std::endl;
+				//if((*rIF) == 0x10)
+					resumeCPU();
+			}
+		
 			// Process window events
 			gpu.getWindow()->processEvents();
 			checkSystemKeys();
@@ -370,7 +386,6 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
-		bool prepareSpeedSwitch;
 		unsigned char wramBank;
 		unsigned short srcStart, destStart;
 		unsigned short transferLength;
@@ -390,12 +405,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					break;
 				case 0xFF4D: // KEY1 (Speed switch register)
 					(*rKEY1) = src;
-					//currentSpeed = (src & 0x80) != 0; // Current speed [0:normal, 1:double] (read-only)
 					prepareSpeedSwitch = (src & 0x1) != 0; // Prepare to switch speed [0:No, 1:Yes]
-					// Technincally we should wait for a STOP command, but we'll
-					// go ahead and do it now for simplicity. Also, this should
-					// toggle the clock speed, not just double it.
-					clock.setFrequencyMultiplier(2.0);
 					break;
 				case 0xFF50: // Enable/disable ROM boot sequence
 					bootSequence = false;
@@ -613,11 +623,6 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 	gpu.setDebugMode(state);
 }
 
-// Toggle framerate output
-void SystemGBC::setDisplayFramerate(bool state/*=true*/){
-	clock.setDisplayFramerate(state);
-}
-
 // Set CPU frequency multiplier
 void SystemGBC::setCpuFrequency(const double &multiplier){
 	clock.setFrequencyMultiplier(multiplier);
@@ -708,6 +713,24 @@ bool SystemGBC::dumpSRAM(const char *fname){
 	ofile.close();
 	std::cout << " DONE\n";
 	return true;
+}
+
+void SystemGBC::resumeCPU(){ 
+	cpuStopped = false;
+	if(prepareSpeedSwitch){
+		if(!currentClockSpeed){ // Normal speed
+			currentClockSpeed = true;
+			clock.setFrequencyMultiplier(2.0);
+		}
+		else{ // Double speed
+			currentClockSpeed = false;
+			clock.setFrequencyMultiplier(1.0);
+		}
+		(*rKEY1) = 0x0; // Zero register bits
+		if(currentClockSpeed)
+			(*rKEY1) |= 0x80;
+		prepareSpeedSwitch = false;
+	}
 }
 
 bool SystemGBC::screenshot(){
@@ -923,7 +946,7 @@ void SystemGBC::checkSystemKeys(){
 	else if(keys->poll(0xF2)) // Pause emulation
 		pause();
 	else if(keys->poll(0xF3)) // Resume emulation
-		resume();
+		unpause();
 	else if(keys->poll(0xF4)) // Screenshot
 		screenshot();
 	else if(keys->poll(0xF5)) // Quicksave
@@ -940,4 +963,6 @@ void SystemGBC::checkSystemKeys(){
 		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
 	else if(keys->poll(0x3D)) // '=(+)' Increase frame skip
 		frameSkip++;
+	else if(keys->poll(0x66)) // 'f' Display framerate
+		displayFramerate = !displayFramerate;
 }

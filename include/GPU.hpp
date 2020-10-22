@@ -1,10 +1,13 @@
 #ifndef GPU_HPP
 #define GPU_HPP
 
+#include <string>
+
 #include "colors.hpp"
 #include "SystemComponent.hpp"
 
 class Window;
+class CharacterMap;
 
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttHandler
@@ -46,7 +49,7 @@ public:
 	
 	void initialize();
 
-	void drawTileMaps();
+	void drawTileMaps(bool map1=false);
 
 	void drawNextScanline(SpriteAttHandler *oam);
 
@@ -57,6 +60,8 @@ public:
 	bool getWindowStatus();
 	
 	void setPixelScale(const unsigned int &n);
+
+	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
 
 	virtual bool preWriteAction();
 	
@@ -104,6 +109,8 @@ private:
 
 	Window *window; ///< Pointer to the main renderer window
 	
+	CharacterMap *cmap;
+	
 	ColorRGB *currentLineColors[256]; ///< Pointers to the RGB colors for the pixels on the current scanline
 
 	/** Retrieve the color of a pixel in a tile bitmap.
@@ -121,9 +128,9 @@ private:
 	  * @param offset The memory offset of the selected tilemap in VRAM.
 	  * @return The number of pixels drawn.
 	  */
-	unsigned short drawTile(const unsigned char &x, const unsigned char &y, 
-	                        const unsigned char &x0, const unsigned char &y0,
-	                        const unsigned short &offset);
+	unsigned char drawTile(const unsigned char &x, const unsigned char &y, 
+	                       const unsigned char &x0, const unsigned char &y0,
+	                       const unsigned short &offset);
 
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).

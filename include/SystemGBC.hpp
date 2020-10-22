@@ -45,7 +45,7 @@ public:
 	void setDebugMode(bool state=true);
 
 	// Toggle framerate output
-	void setDisplayFramerate(bool state=true);
+	void setDisplayFramerate(bool state=true){ displayFramerate = state; }
 
 	// Set CPU frequency multiplier
 	void setCpuFrequency(const double &multiplier);
@@ -88,9 +88,11 @@ public:
 	
 	void stopCPU(){ cpuStopped = true; }
 	
+	void resumeCPU();
+	
 	void pause(){ emulationPaused = true; }
 	
-	void resume(){ emulationPaused = false; }
+	void unpause(){ emulationPaused = false; }
 
 	bool screenshot();
 
@@ -112,6 +114,9 @@ private:
 	bool emulationPaused; ///<
 	bool bootSequence; ///< The gameboy boot ROM is still running
 	bool forceColor; 
+	bool prepareSpeedSwitch;
+	bool currentClockSpeed;
+	bool displayFramerate;
 
 	unsigned char masterInterruptEnable; ///< Master interrupt enable
 	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)

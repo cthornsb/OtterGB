@@ -1,8 +1,10 @@
-set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp)
+set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp Bitmap.cpp)
 
 #if(BACKGROUND_DEBUG)
 #	add_definitions(-DBACKGROUND_DEBUG)
 #endif()
+
+add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
 if(NOT ${GB_BOOT_ROM} STREQUAL "")
 	add_definitions(-DGB_BOOT_ROM="${GB_BOOT_ROM}")

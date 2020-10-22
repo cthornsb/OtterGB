@@ -6,6 +6,7 @@
 #include "SystemGBC.hpp"
 #include "Support.hpp"
 #include "Graphics.hpp"
+#include "Bitmap.hpp"
 #include "GPU.hpp"
 
 #define VRAM_LOW  0x8000
@@ -81,10 +82,15 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	// Create a link to the LCD driver
 	window->setGPU(this);
 #endif
+
+	// 
+	cmap = new CharacterMap();
+	cmap->setWindow(window);
 }
 
 GPU::~GPU(){
 	delete window;
+	delete cmap;
 }
 
 void GPU::initialize(){
@@ -104,6 +110,9 @@ void GPU::initialize(){
 		bgPaletteColors[0][2] = (Colors::GB_DKGREEN);
 		bgPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
 	}
+
+	for(int i = 0; i < 256; i++) // Blank the line buffer
+		currentLineColors[i] = &bgPaletteColors[0][0];
 }
 
 /** Retrieve the color of a pixel in a tile bitmap.
@@ -126,7 +135,7 @@ unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned ch
   * @param offset The memory offset of the selected tilemap in VRAM.
   * @return The number of pixels drawn.
   */
-unsigned short GPU::drawTile(const unsigned char &x, const unsigned char &y, 
+unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, 
                              const unsigned char &x0, const unsigned char &y0,
                              const unsigned short &offset){
 	unsigned char tileY, tileX;
@@ -245,10 +254,33 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	}
 }
 
-void GPU::drawTileMaps(){
-	for(unsigned short y = 0; y < 256; y++) // Scanline (vertical pixel)
-		for(unsigned short x = 0; x < 32; x++) // Horizontal pixel
-			drawTile(x, y, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800));
+void GPU::drawTileMaps(bool map1/*=false*/){
+	unsigned char tileY, tileX;
+	unsigned char pixelY, pixelX;
+	unsigned char pixelColor;
+	unsigned short bmpLow;
+	for(unsigned short y = 0; y < 144; y++){ // Scanline (vertical pixel)
+		for(unsigned short x = 0; x < 20; x++){ // Horizontal pixel
+			tileY = y / 8; // Current vertical BG tile [0,32)
+			pixelY = y % 8; // Vertical pixel in the tile [0,8)
+
+			// Draw the background tile
+			// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
+			// Background & window tile data selection [0: 8800-97FF, 1: 8000-8FFF]
+			//  -> Indexing for 0:-128,127 1:0,255
+			if(!map1) // 0x8000-0x8FFF
+				bmpLow = 16*(tileY*20+x);
+			else // 0x8800-0x97FF
+				bmpLow = 0x0800 + 16*(tileY*20+x);
+			
+			// Draw the specified line
+			for(unsigned char dx = 0; dx <= 7; dx++){
+				pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
+				window->setDrawColor(bgPaletteColors[0][ngbcPaletteColor[pixelColor]]);
+				window->drawPixel(x*8+dx, y);
+			}
+		}
+	}
 }
 
 void GPU::drawNextScanline(SpriteAttHandler *oam){
@@ -277,11 +309,11 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	}
 
 	// Handle the background and window layer
-	unsigned short rx = (*rSCX);
-	while(rx < (*rSCX + 160)){ // Horizontal screen pixel
+	unsigned char rx = (*rSCX); // This will automatically handle screen wrapping
+	for(unsigned short x = 0; x < 20; x++){
 		// The window is visible if WX=[0,160) and WY=[0,144)
 		// WX=7, WY=0 locates the window at the upper left of the screen
-		if(winDisplayEnable && ((*rLY) >= (*rWY) && rx >= rwx)) // Draw the window layer (if enabled)
+		if(winDisplayEnable && ((*rLY) >= (*rWY) && (*rSCX+8*x) >= rwx)) // Draw the window layer (if enabled)
 			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800));
 		else
 			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800));
@@ -303,9 +335,8 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	// Render the current scanline
 	rx = (*rSCX); // This will automatically handle screen wrapping
 	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
-		window->setDrawColor(currentLineColors[rx]);
+		window->setDrawColor(currentLineColors[rx++]);
 		window->drawPixel(x, (*rLY));
-		rx++;
 	}
 }
 
@@ -322,6 +353,10 @@ bool GPU::getWindowStatus(){
 
 void GPU::setPixelScale(const unsigned int &n){
 	window->setScalingFactor(n);
+}
+
+void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
+	cmap->putString(str, x, y);
 }
 
 bool GPU::preWriteAction(){

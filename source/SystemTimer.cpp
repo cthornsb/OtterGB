@@ -17,7 +17,7 @@
 #define VERTICAL_SYNC_CYCLES   70224   // CPU cycles per VSYNC (~59.73 Hz)
 #define HORIZONTAL_SYNC_CYCLES 456     // CPU cycles per HSYNC (per 154 scanlines)
 
-SystemClock::SystemClock() : SystemComponent(), displayFramerate(false), frequencyMultiplier(1.0), cyclesSinceLastVSync(0), lcdDriverMode(2) {
+SystemClock::SystemClock() : SystemComponent(), frequencyMultiplier(1.0), cyclesSinceLastVSync(0), lcdDriverMode(2), framerate(0) {
 	timeOfInitialization = sclock::now();
 	timeOfLastVSync = sclock::now();
 }
@@ -116,8 +116,7 @@ void SystemClock::waitUntilNextVSync(){
 		usleep((int)timeToSleep);
 	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();;
 	if((++frameCount % 60) == 0){
-		if(displayFramerate)
-			std::cout << " fps=" << frameCount/totalRenderTime << "     \r" << std::flush;
+		framerate = frameCount/totalRenderTime;
 		totalRenderTime = 0;
 		frameCount = 0;
 	}
