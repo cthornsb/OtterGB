@@ -17,19 +17,43 @@ extern const unsigned char FLAG_C_MASK;
 
 class LR35902 : public SystemComponent {
 public:
+	class Opcode{
+	public:
+		void (LR35902::*ptr)(); ///< Pointer to the instruction code.
+
+		unsigned short nCycles; ///< Length of clock cycles required.
+		unsigned short nBytes; ///< Length of instruction in bytes.
+
+		bool bReads; ///< Flag indicating this instruction reads from memory.
+		bool bWrites; ///< Flag indicating this instruction writes to memory.
+
+		std::string sName; ///< The instruciton mnemonic.
+
+		Opcode() : ptr(0x0), nCycles(0), nBytes(0), bReads(0), bWrites(0), sName() { }
+		
+		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, bool read, bool write, void (LR35902::*p)()) : ptr(p), nCycles(cycles), nBytes(bytes), bReads(read), bWrites(write), sName(mnemonic) { }
+	};
+
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
-	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), OPM(0xFFFF), nCycles(0) { }
+	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), OPM(0xFFFF), nCyclesRemaining(0) { }
 
 	bool initialize();
 
-	// Execute an instruction and return the number of clock cycles.
-	unsigned short execute(const unsigned char &op);
+	/** Read the next instruction from memory and return the number of clock cycles. 
+	  */
+	unsigned short evaluate();
 
-	// Read the next instruction from the cartridge ROM and return the number of clock cycles.
-	unsigned short execute();
+	/** Perform one CPU (machine) cycle of the current instruction.
+	  * @return True if the current instruction has completed execution (i.e. nCyclesRemaining==0).
+	  */
+	virtual bool onClockUpdate();
+
+	Opcode *getLastOpcode(){ return lastOpcode; }
 
 	unsigned short getProgramCounter() const { return PC; }
+
+	unsigned short getStackPointer() const { return SP; }
 
 	unsigned char getd8() const { return d8; }
 	
@@ -43,17 +67,13 @@ public:
 
 	unsigned short getHL() const ;
 
-	unsigned short getCycles() const { return nCycles; }
+	unsigned short getCyclesRemaining() const { return nCyclesRemaining; }
 	
-	unsigned short getLength() const { return nBytes; }
-
-	bool getPrefixCB() const { return isPrefixCB; }
-
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
 	void setBreakpoint(const unsigned short &breakpoint){ BP = breakpoint; }
 
-	void setOpcode(const unsigned char &op){ OPM = (op & 0x00FF); }
+	void setOpcode(const unsigned char &op){ OPM = op; }
 
 	void setd8(const unsigned char &d){ d8 = d; }
 	
@@ -66,11 +86,6 @@ public:
 	unsigned short setDE(const unsigned short &val);
 
 	unsigned short setHL(const unsigned short &val);
-
-	void setPrefixCB(bool state){ isPrefixCB = state; }
-
-	// Should this be public??
-	void callInterruptVector(const unsigned char &offset);
 
 	virtual unsigned int writeSavestate(std::ofstream &f);
 
@@ -99,13 +114,24 @@ protected:
 	unsigned short BP; ///< User specified program counter breakpoint
 	unsigned short OPM; ///< User specified opcode monitor
 	
-	unsigned short nCycles; ///< Length of last instruction in clock cycles
-	unsigned short nBytes; ///< Length of last instruction in bytes
+	Opcode *lastOpcode; ///< Pointer to the last read opcode.
+	unsigned short nCyclesRemaining; ///< Number of clock cycles remaining for last instruction
+	unsigned short nExtraCyclesRemaining; ///< Number of extra clock cycles remaining for conditional statements
 
-	bool isPrefixCB; ///< Flag indicating that the last instruction had a CB prefix
+	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
+	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
 
-	void (LR35902::*funcPtr[256])(); ///< Opcode functions for LR35902 processor
-	void (LR35902::*funcPtrCB[256])(); ///< CB-Prefix opcode functions for LR35902 processor
+	void acknowledgeVBlankInterrupt();
+
+	void acknowledgeLcdInterrupt();
+
+	void acknowledgeTimerInterrupt();
+
+	void acknowledgeSerialInterrupt();
+
+	void acknowledgeJoypadInterrupt();
+
+	void callInterruptVector(const unsigned char &offset);
 
 	bool getFlagZ() const { return ((F & FLAG_Z_MASK) != 0); }
 	

@@ -8,6 +8,7 @@
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
+#include "LR35902.hpp"
 
 #define ROM_ZERO_START  0x0000
 #define ROM_SWAP_START  0x4000
@@ -280,8 +281,6 @@ bool SystemGBC::execute(){
 			return false;
 
 		if(!emulationPaused && !cpuStopped){
-			unsigned short nCycles = 1;
-		
 			// Check for interrupt out of HALT
 			if(cpuHalted){
 				if(((*rIE) & (*rIF)) != 0)
@@ -289,7 +288,7 @@ bool SystemGBC::execute(){
 			}
 
 			// Check for pending interrupts.
-			if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
+			/*if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
 				if(((*rIF) & 0x1) != 0) // VBlank
 					acknowledgeVBlankInterrupt();
 				if(((*rIF) & 0x2) != 0) // LCDC STAT
@@ -300,49 +299,44 @@ bool SystemGBC::execute(){
 					acknowledgeSerialInterrupt();
 				if(((*rIF) & 0x10) != 0) // Joypad
 					acknowledgeJoypadInterrupt();
-			}
+			}*/
 			
 			// Check if the CPU is halted.
 			if(!cpuHalted){
 				// Perform one instruction.
-				nCycles = cpu.execute()/4;
-				if(nCycles == 0)
-					return false;
+				cpu.onClockUpdate();
 			}
-			else nCycles = 1; // NOP
 
-			for(unsigned short i = 0; i < nCycles; i++){
-				// Update system timer.
-				timer.onClockUpdate();
+			// Update system timer.
+			timer.onClockUpdate();
 
-				// Update sound processor.
-				sound.onClockUpdate();
+			// Update sound processor.
+			sound.onClockUpdate();
 
-				// Update joypad handler.
-				joy.onClockUpdate();
+			// Update joypad handler.
+			joy.onClockUpdate();
 
-				// Tick the system clock.
-				clock.onClockUpdate();
+			// Tick the system clock.
+			clock.onClockUpdate();
 
-				// Sync with the GBC system clock.
-				// Wait a certain number of cycles based on the opcode executed		
-				if(clock.pollVSync()){
-					// Process window events
-					gpu.getWindow()->processEvents();
-					checkSystemKeys();
-					
-					// Render the current frame
-					if(nFrames++ % frameSkip == 0 && !cpuStopped){
-						if(displayFramerate){
-							std::stringstream stream;
-							stream << clock.getFramerate() << " fps";
-							gpu.print(stream.str(), 0, 17);
-						}
-						gpu.render();
+			// Sync with the GBC system clock.
+			// Wait a certain number of cycles based on the opcode executed		
+			if(clock.pollVSync()){
+				// Process window events
+				gpu.getWindow()->processEvents();
+				checkSystemKeys();
+				
+				// Render the current frame
+				if(nFrames++ % frameSkip == 0 && !cpuStopped){
+					if(displayFramerate){
+						std::stringstream stream;
+						stream << clock.getFramerate() << " fps";
+						gpu.print(stream.str(), 0, 17);
 					}
-					//gpu.drawTileMaps();
-					//gpu.render();
+					gpu.render();
 				}
+				//gpu.drawTileMaps();
+				//gpu.render();
 			}
 		}
 		else{
@@ -381,10 +375,11 @@ void SystemGBC::handleJoypadInterrupt(){ (*rIF) |= 0x10; }
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
 	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
-		if(cpu.getLength() == 2)
+		LR35902::Opcode *op = cpu.getLastOpcode();
+		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		if(op->nBytes == 2)
 			std::cout << "d8=" << getHex(cpu.getd8());
-		else if(cpu.getLength() == 3)
+		else if(op->nBytes == 3)
 			std::cout << "d16=" << getHex(cpu.getd16());
 		std::cout << std::endl;
 	}
@@ -496,8 +491,10 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	// Check for memory access watch
-	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1])
-		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-cpu.getLength())) << " [" << getHex(loc) << "]\n";
+	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
+		LR35902::Opcode *op = cpu.getLastOpcode();
+		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " [" << getHex(loc) << "]\n";
+	}
 
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
@@ -900,46 +897,6 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 	}
 	
 	return false; // Failed to read register
-}
-
-void SystemGBC::acknowledgeVBlankInterrupt(){
-	(*rIF) &= 0xFE;
-	if((interruptEnable & 0x1) != 0){ // Execute interrupt
-		masterInterruptEnable = 0;
-		cpu.callInterruptVector(0x40);
-	}
-}
-
-void SystemGBC::acknowledgeLcdInterrupt(){
-	(*rIF) &= 0xFD;
-	if((interruptEnable & 0x2) != 0){ // Execute interrupt
-		masterInterruptEnable = 0;
-		cpu.callInterruptVector(0x48);
-	}
-}
-
-void SystemGBC::acknowledgeTimerInterrupt(){
-	(*rIF) &= 0xFB;
-	if((interruptEnable & 0x4) != 0){ // Execute interrupt
-		masterInterruptEnable = 0;
-		cpu.callInterruptVector(0x50);
-	}
-}
-
-void SystemGBC::acknowledgeSerialInterrupt(){
-	(*rIF) &= 0xF7;
-	if((interruptEnable & 0x8) != 0){ // Execute interrupt
-		masterInterruptEnable = 0;
-		cpu.callInterruptVector(0x58);
-	}
-}
-
-void SystemGBC::acknowledgeJoypadInterrupt(){
-	(*rIF) &= 0xEF;
-	if((interruptEnable & 0x10) != 0){ // Execute interrupt
-		masterInterruptEnable = 0;
-		cpu.callInterruptVector(0x60);
-	}
 }
 
 void SystemGBC::checkSystemKeys(){

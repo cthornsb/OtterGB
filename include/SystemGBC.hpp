@@ -150,16 +150,6 @@ private:
 	
 	bool readRegister(const unsigned short &reg, unsigned char &val);
 	
-	void acknowledgeVBlankInterrupt();
-
-	void acknowledgeLcdInterrupt();
-
-	void acknowledgeTimerInterrupt();
-
-	void acknowledgeSerialInterrupt();
-
-	void acknowledgeJoypadInterrupt();
-	
 	void checkSystemKeys();
 };
 
