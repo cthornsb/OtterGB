@@ -5,21 +5,18 @@
 #include "Support.hpp"
 #include "Sound.hpp"
 
-bool FrameSequencer::onClockUpdate(const unsigned short &nCycles){
-	bool retval = false;
-	for(unsigned short i = 0; i < nCycles; i++){
-		if(nCyclesSinceLastTick % 2 == 0) // Length Counter (256 Hz)
-			triggerLengthCounter();
-		if(nCyclesSinceLastTick % 4 == 2) // Sweep Timer (128 Hz)
-			triggerSweepTimer();
-		if(nCyclesSinceLastTick % 8 == 7) // Volume Envelope (64 Hz)
-			triggerVolumeEnvelope();
-		if(++nCyclesSinceLastTick >= timerPeriod){
-			nCyclesSinceLastTick = 0;
-			retval = true;
-		}
+bool FrameSequencer::onClockUpdate(){
+	if(nCyclesSinceLastTick % 2 == 0) // Length Counter (256 Hz)
+		triggerLengthCounter();
+	if(nCyclesSinceLastTick % 4 == 2) // Sweep Timer (128 Hz)
+		triggerSweepTimer();
+	if(nCyclesSinceLastTick % 8 == 7) // Volume Envelope (64 Hz)
+		triggerVolumeEnvelope();
+	if(++nCyclesSinceLastTick >= timerPeriod){
+		nCyclesSinceLastTick = 0;
+		return true;
 	}
-	return retval;
+	return false;
 }
 
 // ~44.1 kHz
@@ -264,6 +261,6 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 	return true;
 }
 
-bool SoundProcessor::onClockUpdate(const unsigned short &nCycles){
-	sequencer.onClockUpdate(nCycles);
+bool SoundProcessor::onClockUpdate(){
+	sequencer.onClockUpdate();
 }

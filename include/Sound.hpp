@@ -10,7 +10,7 @@ class FrameSequencer : public ComponentTimer {
 public:
 	FrameSequencer() : ComponentTimer(512) { }
 	
-	virtual bool onClockUpdate(const unsigned short &nCycles);
+	virtual bool onClockUpdate();
 		
 private:
 	std::queue<int> events; ///< Sound event FIFO buffer
@@ -36,7 +36,7 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 
-	virtual bool onClockUpdate(const unsigned short &nCycles);
+	virtual bool onClockUpdate();
 
 private:
 	// Channel 1 registers

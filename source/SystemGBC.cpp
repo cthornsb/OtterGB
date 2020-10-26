@@ -305,38 +305,44 @@ bool SystemGBC::execute(){
 			// Check if the CPU is halted.
 			if(!cpuHalted){
 				// Perform one instruction.
-				if((nCycles = cpu.execute()) == 0)
+				nCycles = cpu.execute()/4;
+				if(nCycles == 0)
 					return false;
 			}
-			else nCycles = 4; // NOP
+			else nCycles = 1; // NOP
 
-			// Update system timer.
-			timer.onClockUpdate(nCycles);
+			for(unsigned short i = 0; i < nCycles; i++){
+				// Update system timer.
+				timer.onClockUpdate();
 
-			// Update sound processor.
-			sound.onClockUpdate(nCycles);
+				// Update sound processor.
+				sound.onClockUpdate();
 
-			// Update joypad handler.
-			joy.onClockUpdate(nCycles);
+				// Update joypad handler.
+				joy.onClockUpdate();
 
-			// Sync with the GBC system clock.
-			// Wait a certain number of cycles based on the opcode executed		
-			if(clock.sync(nCycles)){
-				// Process window events
-				gpu.getWindow()->processEvents();
-				checkSystemKeys();
-				
-				// Render the current frame
-				if(nFrames++ % frameSkip == 0 && !cpuStopped){
-					if(displayFramerate){
-						std::stringstream stream;
-						stream << clock.getFramerate() << " fps";
-						gpu.print(stream.str(), 0, 17);
+				// Tick the system clock.
+				clock.onClockUpdate();
+
+				// Sync with the GBC system clock.
+				// Wait a certain number of cycles based on the opcode executed		
+				if(clock.pollVSync()){
+					// Process window events
+					gpu.getWindow()->processEvents();
+					checkSystemKeys();
+					
+					// Render the current frame
+					if(nFrames++ % frameSkip == 0 && !cpuStopped){
+						if(displayFramerate){
+							std::stringstream stream;
+							stream << clock.getFramerate() << " fps";
+							gpu.print(stream.str(), 0, 17);
+						}
+						gpu.render();
 					}
-					gpu.render();
+					//gpu.drawTileMaps();
+					//gpu.render();
 				}
-				//gpu.drawTileMaps();
-				//gpu.render();
 			}
 		}
 		else{

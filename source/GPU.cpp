@@ -285,16 +285,6 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 }
 
 void GPU::drawNextScanline(SpriteAttHandler *oam){
-	// Check for LYC coincidence interrupts
-	if(lycCoincIntEnable){
-		if((*rLY) != (*rLYC))
-			(*rSTAT) &= 0xFB; // Reset bit 2 of STAT (coincidence flag)
-		else{ // LY == LYC
-			(*rSTAT) |= 0x4; // Set bit 2 of STAT (coincidence flag)
-			sys->handleLcdInterrupt();
-		}
-	}
-
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = (*rLY) + (*rSCY);

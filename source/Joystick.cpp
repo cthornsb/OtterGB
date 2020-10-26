@@ -52,7 +52,7 @@ bool JoystickController::readRegister(const unsigned short &reg, unsigned char &
 	return false;
 }
 
-bool JoystickController::onClockUpdate(const unsigned short &nCycles){
+bool JoystickController::onClockUpdate(){
 	if(!window) return false;
 
 	if(!selectButtonKeys && !selectDirectionKeys)

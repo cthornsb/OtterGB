@@ -16,8 +16,15 @@ public:
 	
 	void setFrequencyMultiplier(const double &mult){ frequencyMultiplier = mult; }
 	
-	bool sync(const unsigned short &nCycles=1);
-
+	/** Poll the VSync (VBlank) flag and reset it.
+	  */
+	bool pollVSync(){ return (vsync ? !(vsync = false) : false); }
+	
+	/** Perform one clock tick.
+	  * @return True if the system has entered VBlank, and false otherwise.
+	  */
+	virtual bool onClockUpdate();
+	
 	/** Sleep until the start of the next VSync cycle (i.e. wait until the
 	  * start of the next frame). Useful for maintaining desired framerate
 	  * without advancing the system clock.
@@ -25,6 +32,8 @@ public:
 	void wait();
 
 private:
+	bool vsync;
+
 	double frequencyMultiplier;
 	
 	unsigned int cyclesSinceLastVSync; ///< The number of cycles since the last Vertical Sync
@@ -36,6 +45,11 @@ private:
 
 	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
+
+	/** Increment the current scanline (register LY).
+	  * @return True if there is coincidence with register LYC, and return false otherwise.
+	  */
+	bool incrementScanline();
 
 	/** Sleep for the required amount of time to maintain the set framerate.
 	  */
@@ -65,8 +79,6 @@ public:
 	unsigned short getTimerCounter() const { return timerCounter; }
 
 	void reset(){ nCyclesSinceLastTick = 0; }
-	
-	virtual bool onClockUpdate(const unsigned short &nCycles);
 
 protected:
 	unsigned short nCyclesSinceLastTick;
@@ -92,7 +104,7 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 	
-	virtual bool onClockUpdate(const unsigned short &nCycles);
+	virtual bool onClockUpdate();
 	
 private:
 	unsigned short nDividerCycles;

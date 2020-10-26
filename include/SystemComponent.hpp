@@ -18,11 +18,15 @@ public:
 		initialize(nB, N);
 	}
 
+	~SystemComponent();
+
+	virtual void onExit(){ }
+
+	virtual bool onClockUpdate(){ return false; }
+
 	void connectSystemBus(SystemGBC *bus){ sys = bus; }
 	
 	void initialize(const unsigned short &nB, const unsigned short &N=1);
-	
-	~SystemComponent();
 	
 	bool write(const unsigned short &loc, unsigned char *src);
 	

@@ -23,7 +23,7 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 
-	virtual bool onClockUpdate(const unsigned short &nCycles);
+	virtual bool onClockUpdate();
 
 private:
 	bool selectButtonKeys;
