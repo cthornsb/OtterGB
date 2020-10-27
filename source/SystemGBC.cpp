@@ -348,13 +348,8 @@ bool SystemGBC::execute(){
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	if(!emulationPaused){
-		if(nFrames % frameSkip == 0)
-			gpu.drawNextScanline(&oam);
-		/*if(dma.active() && transferMode){ // Transfer 0x10 bytes per HBlank
-			
-		}*/
-	}
+	if(!emulationPaused && (nFrames % frameSkip) == 0)
+		gpu.drawNextScanline(&oam);
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ (*rIF) |= 0x1; }
@@ -383,21 +378,14 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
 		unsigned char wramBank;
-		unsigned short srcStart, destStart;
-		unsigned short transferLength;
-		bool transferMode;
 		if(!writeRegister(loc, src)){
 			switch(loc){
 				case 0xFF0F: // IF (Interrupt Flag)
 					(*rIF) = src;
 					break;
 				case 0xFF46: // DMA transfer from ROM/RAM to OAM
-					// Source:      XX00-XX9F with XX in range [00,F1]
-					// Destination: FE00-FE9F
-					// DMA transfer takes 160 us (80 us in double speed) and CPU may only access HRAM during this interval
 					(*rDMA) = src;
-					srcStart = ((src & 0x00F1) << 8);
-					dma.startTransfer(0xFE00, srcStart, 160, 1);
+					dma.startTransferOAM();
 					break;
 				case 0xFF4D: // KEY1 (Speed switch register)
 					(*rKEY1) = src;
@@ -410,33 +398,20 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					break;
 				case 0xFF51: // HDMA1 - new DMA source, high byte (GBC only)
 					(*rHDMA1) = src;
-					dmaSourceH = src;
 					break;
 				case 0xFF52: // HDMA2 - new DMA source, low byte (GBC only)
 					(*rHDMA2) = src;
-					dmaSourceL = (src & 0xF0); // Bits (4-7) of LSB of source address
 					break;
 				case 0xFF53: // HDMA3 - new DMA destination, high byte (GBC only)
 					(*rHDMA3) = src;
-					dmaDestinationH = (src & 0x1F); // Bits (0-4) of MSB of destination address
 					break;
 				case 0xFF54: // HDMA4 - new DMA destination, low byte (GBC only)
 					(*rHDMA4) = src;
-					dmaDestinationL = (src & 0xF0); // Bits (4-7) of LSB of destination address
 					break;
 				case 0xFF55: // HDMA5 - new DMA source, length/mode/start (GBC only)
 					// Start a VRAM DMA transfer
 					(*rHDMA5) = src;
-					srcStart = ((dmaSourceH & 0x00FF) << 8) + dmaSourceL;
-					destStart = ((dmaDestinationH & 0x00FF) << 8) + dmaDestinationL;
-					transferLength = ((src & 0x7F) * + 1) * 0x10; // Specifies the number of bytes to transfer
-					transferMode = (src & 0x80) != 0; // 0: General DMA, 1: H-Blank DMA
-					// source:      0000-7FF0 or A000-DFF0
-					// destination: 8000-9FF0 (VRAM)
-					// DMA takes ~1 us per two bytes transferred
-					if(((srcStart >= 0x000 && srcStart <= 0x7FF0) || (srcStart >= 0xA000 && srcStart <= 0xDFF0)) && (destStart >= 0x8000 && destStart <= 0x9FF0)){
-						dma.startTransfer(destStart, srcStart, transferLength, 2);
-					}
+					dma.startTransferVRAM();
 					break;
 				case 0xFF56: // RP (Infrared comms port (not used))
 					(*rRP) = src;

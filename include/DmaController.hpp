@@ -5,11 +5,13 @@
 
 class DmaController : public SystemComponent {
 public:
-	DmaController() : SystemComponent(), nCyclesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
+	DmaController() : SystemComponent(), transferMode(0), nCyclesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
 
 	bool active() const { return (nCyclesRemaining != 0); }
 
-	void startTransfer(const unsigned short &dest, const unsigned short &src, const unsigned short &N, const unsigned short &n=1);
+	void startTransferOAM();
+	
+	void startTransferVRAM();
 
 	// The system timer has no associated RAM, so return false.
 	virtual bool preWriteAction(){ return false; }
@@ -18,8 +20,12 @@ public:
 	virtual bool preReadAction(){ return false; }
 	
 	virtual bool onClockUpdate();
+	
+	void onHBlank();
 
 private:
+	bool transferMode; ///< 0: General DMA, 1: H-Blank DMA
+	
 	unsigned short nCyclesRemaining; ///< The number of system clock cycles remaining.
 	unsigned short index; ///< Current index in system memory.
 	unsigned short nBytes; ///< The number of bytes transferred per cycle.
