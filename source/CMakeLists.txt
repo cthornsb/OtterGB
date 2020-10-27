@@ -1,4 +1,4 @@
-set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp Bitmap.cpp)
+set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp DmaController.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp Bitmap.cpp)
 
 #if(BACKGROUND_DEBUG)
 #	add_definitions(-DBACKGROUND_DEBUG)

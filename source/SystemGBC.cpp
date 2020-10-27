@@ -8,7 +8,6 @@
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
-#include "LR35902.hpp"
 
 #define ROM_ZERO_START  0x0000
 #define ROM_SWAP_START  0x4000
@@ -153,6 +152,7 @@ bool SystemGBC::initialize(const std::string &fname){
 	sound.connectSystemBus(this);
 	gpu.connectSystemBus(this);
 	cart.connectSystemBus(this);
+	dma.connectSystemBus(this);
 	
 	// Must connect the system bus BEFORE initializing the CPU.
 	cpu.initialize();
@@ -287,20 +287,6 @@ bool SystemGBC::execute(){
 					cpuHalted = false;
 			}
 
-			// Check for pending interrupts.
-			/*if(masterInterruptEnable && ((*rIE) & (*rIF)) != 0){
-				if(((*rIF) & 0x1) != 0) // VBlank
-					acknowledgeVBlankInterrupt();
-				if(((*rIF) & 0x2) != 0) // LCDC STAT
-					acknowledgeLcdInterrupt();
-				if(((*rIF) & 0x4) != 0) // Timer
-					acknowledgeTimerInterrupt();
-				if(((*rIF) & 0x8) != 0) // Serial
-					acknowledgeSerialInterrupt();
-				if(((*rIF) & 0x10) != 0) // Joypad
-					acknowledgeJoypadInterrupt();
-			}*/
-			
 			// Check if the CPU is halted.
 			if(!cpuHalted){
 				// Perform one instruction.
@@ -315,6 +301,9 @@ bool SystemGBC::execute(){
 
 			// Update joypad handler.
 			joy.onClockUpdate();
+
+			// Update DMA controller.
+			dma.onClockUpdate();
 
 			// Tick the system clock.
 			clock.onClockUpdate();
@@ -333,6 +322,7 @@ bool SystemGBC::execute(){
 						stream << clock.getFramerate() << " fps";
 						gpu.print(stream.str(), 0, 17);
 					}
+					gpu.print(getHex(cpu.getStackPointer())+" "+getHex(cpu.getProgramCounter()), 9, 0);
 					gpu.render();
 				}
 				//gpu.drawTileMaps();
@@ -358,8 +348,13 @@ bool SystemGBC::execute(){
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	if(!emulationPaused && (nFrames % frameSkip == 0))
-		gpu.drawNextScanline(&oam);
+	if(!emulationPaused){
+		if(nFrames % frameSkip == 0)
+			gpu.drawNextScanline(&oam);
+		/*if(dma.active() && transferMode){ // Transfer 0x10 bytes per HBlank
+			
+		}*/
+	}
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ (*rIF) |= 0x1; }
@@ -402,7 +397,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					// DMA transfer takes 160 us (80 us in double speed) and CPU may only access HRAM during this interval
 					(*rDMA) = src;
 					srcStart = ((src & 0x00F1) << 8);
-					startDmaTransfer(0xFE00, srcStart, 160);
+					dma.startTransfer(0xFE00, srcStart, 160, 1);
 					break;
 				case 0xFF4D: // KEY1 (Speed switch register)
 					(*rKEY1) = src;
@@ -440,8 +435,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					// destination: 8000-9FF0 (VRAM)
 					// DMA takes ~1 us per two bytes transferred
 					if(((srcStart >= 0x000 && srcStart <= 0x7FF0) || (srcStart >= 0xA000 && srcStart <= 0xDFF0)) && (destStart >= 0x8000 && destStart <= 0x9FF0)){
-						startDmaTransfer(destStart, srcStart, transferLength);		
-						//clock.wait(transferLength/2);
+						dma.startTransfer(destStart, srcStart, transferLength, 2);
 					}
 					break;
 				case 0xFF56: // RP (Infrared comms port (not used))
@@ -601,6 +595,8 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
 			retval = hram.getPtr(loc);
 			break;
+		case 0xFFFF:
+			retval = rIE;
 		default:
 			break;
 	}
@@ -853,16 +849,6 @@ void SystemGBC::help(){
 	std::cout << "   - : Decrease frame skip\n";
 	std::cout << "   + : Increase frame skip\n";
 	std::cout << "   f : Show/hide FPS counter on screen\n";
-}
-
-void SystemGBC::startDmaTransfer(const unsigned short &dest, const unsigned short &src, const unsigned short &N){
-	unsigned char byte;
-	for(unsigned short i = 0; i < N; i++){
-		// Read a byte from memory.
-		this->read(src+i, byte);
-		// Write it to a different location.
-		this->write(dest+i, byte);
-	}
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){

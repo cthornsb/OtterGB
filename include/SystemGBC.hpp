@@ -11,6 +11,7 @@
 #include "Joystick.hpp"
 #include "LR35902.hpp"
 #include "WorkRam.hpp"
+#include "DmaController.hpp"
 
 #define REGISTER_LOW  0xFF00
 #define REGISTER_HIGH 0xFF80
@@ -132,7 +133,8 @@ private:
 	
 	unsigned short bootLength; ///< Size of the boot ROM
 	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM
-	
+
+	DmaController dma;
 	Cartridge cart;
 	GPU gpu;
 	SoundProcessor sound;
@@ -143,8 +145,6 @@ private:
 	SystemClock clock;
 	SystemTimer timer;
 	LR35902 cpu;
-	
-	void startDmaTransfer(const unsigned short &dest, const unsigned short &src, const unsigned short &N);
 
 	bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	

@@ -85,7 +85,6 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 				// Specify lower 8 bits of ROM bank number
 				bs &= 0xFF00; // Clear bits 0-7
 				bs |= (val & 0x00FF); // Set bits 0-7
-				std::cout << " bs=" << getHex(bs) << std::endl;
 			}
 			else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
 				// 1-bit register [0,3] (write only)
