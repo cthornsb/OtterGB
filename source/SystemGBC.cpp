@@ -288,7 +288,7 @@ bool SystemGBC::execute(){
 			}
 
 			// Check if the CPU is halted.
-			if(!cpuHalted){
+			if(!cpuHalted && !dma.onClockUpdate()){
 				// Perform one instruction.
 				cpu.onClockUpdate();
 			}
@@ -303,13 +303,12 @@ bool SystemGBC::execute(){
 			joy.onClockUpdate();
 
 			// Update DMA controller.
-			dma.onClockUpdate();
+			//dma.onClockUpdate();
 
 			// Tick the system clock.
 			clock.onClockUpdate();
 
-			// Sync with the GBC system clock.
-			// Wait a certain number of cycles based on the opcode executed		
+			// Sync with the framerate.	
 			if(clock.pollVSync()){
 				// Process window events
 				gpu.getWindow()->processEvents();
@@ -325,7 +324,7 @@ bool SystemGBC::execute(){
 					gpu.print(getHex(cpu.getStackPointer())+" "+getHex(cpu.getProgramCounter()), 9, 0);
 					gpu.render();
 				}
-				//gpu.drawTileMaps();
+				//gpu.drawTileMaps((nFrames++/60) % 2 == 0);
 				//gpu.render();
 			}
 		}
@@ -348,8 +347,11 @@ bool SystemGBC::execute(){
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	if(!emulationPaused && (nFrames % frameSkip) == 0)
-		gpu.drawNextScanline(&oam);
+	if(!emulationPaused){
+		if(nFrames % frameSkip == 0)
+			gpu.drawNextScanline(&oam);
+		dma.onHBlank();
+	}
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ (*rIF) |= 0x1; }
@@ -385,7 +387,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					break;
 				case 0xFF46: // DMA transfer from ROM/RAM to OAM
 					(*rDMA) = src;
-					dma.startTransferOAM();
+					if(!dma.active())
+						dma.startTransferOAM();
 					break;
 				case 0xFF4D: // KEY1 (Speed switch register)
 					(*rKEY1) = src;
@@ -410,8 +413,14 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 					break;
 				case 0xFF55: // HDMA5 - new DMA source, length/mode/start (GBC only)
 					// Start a VRAM DMA transfer
-					(*rHDMA5) = src;
-					dma.startTransferVRAM();
+					if(dma.active() && (*rHDMA5 & 0x80) == 0){
+						(*rHDMA5) |= 0x80; // ???
+						dma.terminateTransfer();
+					}
+					else{ // Start a transfer
+						(*rHDMA5) = src;
+						dma.startTransferVRAM();
+					}
 					break;
 				case 0xFF56: // RP (Infrared comms port (not used))
 					(*rRP) = src;

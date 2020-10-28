@@ -5,13 +5,18 @@
 
 class DmaController : public SystemComponent {
 public:
-	DmaController() : SystemComponent(), transferMode(0), nCyclesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
+	DmaController() : SystemComponent(), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
 
-	bool active() const { return (nCyclesRemaining != 0); }
+	bool active() const { return (nBytesRemaining != 0); }
 
 	void startTransferOAM();
 	
 	void startTransferVRAM();
+	
+	/** Stop a DMA transfer which is in progress.
+	  * Only applies to HBlank DMA (transferMode==1).
+	  */
+	void terminateTransfer();
 
 	// The system timer has no associated RAM, so return false.
 	virtual bool preWriteAction(){ return false; }
@@ -25,7 +30,9 @@ public:
 
 private:
 	bool transferMode; ///< 0: General DMA, 1: H-Blank DMA
+	bool oldDMA; ///< 0: Old DMA (OAM), 1: New DMA (VRAM)
 	
+	unsigned short nBytesRemaining; ///< Remaining number of bytes to transfer
 	unsigned short nCyclesRemaining; ///< The number of system clock cycles remaining.
 	unsigned short index; ///< Current index in system memory.
 	unsigned short nBytes; ///< The number of bytes transferred per cycle.

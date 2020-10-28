@@ -14,6 +14,9 @@ void DmaController::startTransferOAM(){
 	srcStart = (((*rDMA) & 0x00F1) << 8);
 	nBytes = 1;
 	nCyclesRemaining = 160;
+	nBytesRemaining = 160;
+	transferMode = false;
+	oldDMA = true;
 }
 
 void DmaController::startTransferVRAM(){
@@ -30,37 +33,62 @@ void DmaController::startTransferVRAM(){
 	srcStart = ((dmaSourceH & 0x00FF) << 8) + dmaSourceL;
 	nBytes = 2; // VRAM DMA takes ~1 us per two bytes transferred
 
-	unsigned short transferLength = (((*rHDMA5) & 0x7F) * + 1) * 0x10; // Specifies the number of bytes to transfer
-	nCyclesRemaining = transferLength / nBytes;
+	// Number of bytes to transfer.
+	nBytesRemaining = (((*rHDMA5) & 0x7F) * + 1) * 0x10;
+	nCyclesRemaining = nBytesRemaining / nBytes;
 	
 	// Transfer mode:
 	// 0: Transfer all bytes at once
-	// 1: Transfer 0x10 bytes per HBlank
+	// 1: Transfer 16 bytes per HBlank
 	transferMode = ((*rHDMA5) & 0x80) == 0x80; // 0: General DMA, 1: H-Blank DMA
+	if(transferMode)
+		nCyclesRemaining = 0; // Only transfer after an HBlank
+
+	oldDMA = false;
+}
+
+void DmaController::terminateTransfer(){
+	// Only HBlank transfer is allowed to be terminated
+	if(!nBytesRemaining || oldDMA || !transferMode) 
+		return;
+	nBytesRemaining = 0;
+	nCyclesRemaining = 0;
+	(*rHDMA5) = 0xFF;
 }
 
 bool DmaController::onClockUpdate(){
-	if(transferMode || !nCyclesRemaining)
+	if(!nCyclesRemaining)
 		return false;
 	transferByte();
 	nCyclesRemaining--;
-	return true;
+	if(!oldDMA){ // Update registers
+		if(nBytesRemaining){
+			// Number of bytes remaining
+			(*rHDMA5) = nBytesRemaining/16 - 1;
+			(*rHDMA5) |= 0x80; // Set bit 7, indicating transfer still active
+		}
+		else
+			(*rHDMA5) = 0xFF; // Transfer complete
+		return true;
+	}
+	return false;
 }
 
 void DmaController::onHBlank(){
-	if(transferMode && nCyclesRemaining){
-		transferByte();
-		nCyclesRemaining--;
-	}
+	if(transferMode && nBytesRemaining) // Transfer 16 bytes per HBlank
+		nCyclesRemaining = (nBytesRemaining >= 16) ? 8 : (nBytesRemaining+1)/2;
 }
 
 void DmaController::transferByte(){
 	unsigned char byte;
 	for(unsigned short i = 0; i < nBytes; i++){
+		if(!nBytesRemaining)
+			break;
 		// Read a byte from memory.
 		sys->read(srcStart + index, byte);
 		// Write it to a different location.
 		sys->write(destStart + index, byte);
+		nBytesRemaining--;
 		index++;
 	}
 }
