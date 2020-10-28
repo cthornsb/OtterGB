@@ -30,6 +30,10 @@ public:
 	  * without advancing the system clock.
 	  */
 	void wait();
+	
+	/** Reset cycle counters.
+	  */
+	void resetScanline();
 
 private:
 	bool vsync;

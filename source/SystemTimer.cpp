@@ -82,29 +82,40 @@ bool SystemClock::onClockUpdate(){
 		}	
 	}
 	else{ // Start the next frame
-		lcdDriverMode = 2;
 		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2;
-		mode2Interrupt();
-		vsync = false; // VBlank period has ended, next frame started
-		(*rLY) = 0;
-		cyclesSinceLastVSync = 0;
-		cyclesSinceLastHSync = 0;
+		resetScanline(); // VBlank period has ended, next frame started
 		waitUntilNextVSync();	
+		mode2Interrupt();
 	}
 	
 	return vsync;
 }
 
 void SystemClock::wait(){
-	cyclesSinceLastVSync = 0;
 	waitUntilNextVSync();
+}
+
+void SystemClock::resetScanline(){
+	vsync = false;
+	cyclesSinceLastVSync -= (*rLY) * HORIZONTAL_SYNC_CYCLES;
+	cyclesSinceLastHSync = 0;	
+	if((*rLCDC) & 0x80){ // LCD enabled
+		lcdDriverMode = 2;
+		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2; // Mode 2
+	}
+	else{ // LCD disabled
+		lcdDriverMode = 1;
+		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x1; // Mode 1
+	}
+	(*rLY) = 0;
 }
 
 /** Increment the current scanline (register LY).
   * @return True if there is coincidence with register LYC, and return false otherwise.
   */
 bool SystemClock::incrementScanline(){
-	(*rLY)++; // Increment scanline
+	if(++(*rLY) >= 154) // Increment scanline
+		(*rLY) = 0;
 	if((*rSTAT & 0x40) == 0x40){ // Check for LYC coincidence interrupts
 		if((*rLY) != (*rLYC))
 			(*rSTAT) &= 0xFB; // Reset bit 2 of STAT (coincidence flag)
@@ -132,6 +143,8 @@ void SystemClock::waitUntilNextVSync(){
 		frameCount = 0;
 	}
 	timeOfLastVSync = sclock::now();
+	cyclesSinceLastVSync = 0;
+	vsync = false;
 }
 
 void SystemClock::mode0Interrupt(){

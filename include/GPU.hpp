@@ -81,16 +81,8 @@ private:
 	bool winTileMapSelect;
 	bool lcdDisplayEnable;
 
-	bool coincidenceFlag;
-	bool mode0IntEnable;
-	bool mode1IntEnable;
-	bool mode2IntEnable;
-	bool lycCoincIntEnable;
-
 	bool bgPaletteIndexAutoInc;
 	bool objPaletteIndexAutoInc;
-
-	unsigned char lcdcStatusFlag;
 
 	// Gameboy colors
 	unsigned char ngbcPaletteColor[4]; ///< Original GB background palette

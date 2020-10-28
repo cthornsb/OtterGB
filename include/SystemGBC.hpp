@@ -42,6 +42,8 @@ public:
 	
 	GPU *getGPU(){ return &gpu; }
 	
+	SystemClock *getClock(){ return &clock; }
+	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 

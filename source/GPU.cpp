@@ -261,7 +261,7 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 	unsigned char pixelColor;
 	unsigned short bmpLow;
 	for(unsigned short y = 0; y < 144; y++){ // Scanline (vertical pixel)
-		for(unsigned short x = 0; x < 20; x++){ // Horizontal pixel
+		for(unsigned short x = 0; x < 20; x++){ // Horizontal tile
 			tileY = y / 8; // Current vertical BG tile [0,32)
 			pixelY = y % 8; // Vertical pixel in the tile [0,8)
 
@@ -383,20 +383,13 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			winDisplayEnable   = (val & 0x20) != 0; // (0:off, 1:on)
 			winTileMapSelect   = (val & 0x40) != 0; // (0:[9800,9BFF], 1-[9C00,9FFF])
 			lcdDisplayEnable   = (val & 0x80) != 0; // (0:off, 1:on);
+			if(!lcdDisplayEnable){
+				//(*rLY) = 0x0;
+				sys->getClock()->resetScanline();
+			}
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
-			(*rSTAT) = val;
-			lcdcStatusFlag      = (val & 0x3);      // Mode flag (see below) [read-only]
-			coincidenceFlag     = (val & 0x4) != 0; // (0:LYC!=LY, 1:LYC==LY) [read-only]
-			mode0IntEnable      = (val & 0x8) != 0; // (0:Disabled, 1:Enabled)
-			mode1IntEnable      = (val & 0x10) != 0; // (0:Disabled, 1:Enabled)
-			mode2IntEnable      = (val & 0x20) != 0; // (0:Disabled, 1:Enabled)
-			lycCoincIntEnable   = (val & 0x40) != 0; // (0:Disabled, 1:Enabled)
-			// STAT register mode flags:
-			// 00 : The LCD controller is in the H-Blanking interval (OAM/RAM may be accessed)
-			// 01 : The LCD controller is in the V-Blanking interval or display disabled (OAM/RAM may be accessed)
-			// 10 : The LCD controller is reading from OAM memory (OAM may not be accessed)
-			// 11 : The LCD controller is reading from both OAM and VRAM (OAM/RAM may not be accessed);
+			(*rSTAT) = (val & 0x78);
 			break;
 		case 0xFF42: // SCY (Scroll Y)
 			(*rSCY) = val;
@@ -408,7 +401,8 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// Represents the current vertical scanline being drawn in range [0,153].
 			// The values 144-153 indicate the v-blank period. Writing to this register
 			// will reset it.
-			(*rLY) = 0x0;
+			//(*rLY) = 0x0;
+			sys->getClock()->resetScanline();
 			break;
 		case 0xFF45: // LYC (LY Compare)
 			// Sets the LY comparison value. When the LY and LYC registers are equal,
@@ -452,7 +446,7 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
 			(*rVBK) = val;
-			bs = ((val & 0x1) != 0) ? 0x1 : 0x0;
+			bs = ((val & 0x1) == 0x1) ? 1 : 0;
 			break;
 		case 0xFF68: // BCPS/BGPI (Background palette index, gbc mode)
 			(*rBGPI) = val;
