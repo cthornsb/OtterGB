@@ -101,9 +101,11 @@ private:
 
 	Window *window; ///< Pointer to the main renderer window
 	
-	CharacterMap *cmap;
+	CharacterMap *cmap; ///< Pointer to the character map used for printing text.
 	
-	ColorRGB *currentLineColors[256]; ///< Pointers to the RGB colors for the pixels on the current scanline
+	ColorGBC currentLineSprite[256];
+	ColorGBC currentLineWindow[256];
+	ColorGBC currentLineBackground[256];
 
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
@@ -118,11 +120,12 @@ private:
 	  * @param x The current LCD screen horizontal pixel [0,160).
 	  * @param y The vertical pixel row of the tile to draw.
 	  * @param offset The memory offset of the selected tilemap in VRAM.
+	  * @param line Array of all pixels for the currnt scanline.
 	  * @return The number of pixels drawn.
 	  */
 	unsigned char drawTile(const unsigned char &x, const unsigned char &y, 
 	                       const unsigned char &x0, const unsigned char &y0,
-	                       const unsigned short &offset);
+	                       const unsigned short &offset, ColorGBC *line);
 
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).

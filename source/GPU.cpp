@@ -20,6 +20,8 @@
 #define SCREEN_WIDTH_PIXELS 160
 #define SCREEN_HEIGHT_PIXELS 144
 
+const ColorGBC GBC_WHITE;
+
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttHandler
 /////////////////////////////////////////////////////////////////////
@@ -112,8 +114,8 @@ void GPU::initialize(){
 		bgPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
 	}
 
-	for(int i = 0; i < 256; i++) // Blank the line buffer
-		currentLineColors[i] = &bgPaletteColors[0][0];
+	//for(int i = 0; i < 256; i++) // Blank the line buffer
+		//currentLineColors[i] = &bgPaletteColors[0][0];
 }
 
 /** Retrieve the color of a pixel in a tile bitmap.
@@ -138,7 +140,7 @@ unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned ch
   */
 unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, 
                              const unsigned char &x0, const unsigned char &y0,
-                             const unsigned short &offset){
+                             const unsigned short &offset, ColorGBC *line){
 	unsigned char tileY, tileX;
 	unsigned char pixelY, pixelX;
 	unsigned char tileID;
@@ -196,11 +198,11 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	for(unsigned char dx = 0; dx <= (7-pixelX); dx++){
 		if(bGBCMODE){ // Gameboy Color palettes
 			pixelColor = getBitmapPixel(bmpLow, (!bgHorizontalFlip ? (7-dx) : dx), pixelY, (bgBankNumber ? 1 : 0));
-			currentLineColors[x+dx] = &bgPaletteColors[bgPaletteNumber][pixelColor];
+			line[x+dx].setColorBG(pixelColor, bgPaletteNumber, bgPriority);
 		}
 		else{ // Original gameboy palettes
 			pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-			currentLineColors[x+dx] = &bgPaletteColors[0][ngbcPaletteColor[pixelColor]];
+			line[x+dx].setColorBG(ngbcPaletteColor[pixelColor], 0);
 		}
 	}
 	
@@ -244,13 +246,15 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
-			if(pixelColor != 0) // Check for transparent pixel
-				currentLineColors[xp+dx] = &objPaletteColors[oam->gbcPalette][pixelColor];
+			if(pixelColor != 0){ // Check for transparent pixel
+				currentLineSprite[xp+dx].setColorOBJ(pixelColor, oam->gbcPalette, oam->objPriority);
+			}
 		}
 		else{ // Original gameboy sprite palettes (OBP0-1)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
-			if(pixelColor != 0) // Check for transparent pixel
-				currentLineColors[xp+dx] = &bgPaletteColors[0][(oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor])];
+			if(pixelColor != 0){ // Check for transparent pixel
+				currentLineSprite[xp+dx].setColorOBJ((oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor]), 0, oam->objPriority);
+			}
 		}
 	}
 }
@@ -288,8 +292,6 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = (*rLY) + (*rSCY);
-	unsigned char rwy = (*rWY) + (*rSCY); // Real Y coordinate of the top left corner of the window
-	unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
 	
 	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
 		window->setDrawColor(Colors::WHITE);
@@ -299,15 +301,29 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		return;
 	}
 
-	// Handle the background and window layer
+	for(unsigned short x = 0; x < 256; x++){
+		currentLineBackground[x].reset();
+		currentLineWindow[x].reset();
+		currentLineSprite[x].reset();
+	}
+
+	// Handle the background layer
 	unsigned char rx = (*rSCX); // This will automatically handle screen wrapping
-	for(unsigned short x = 0; x < 20; x++){
-		// The window is visible if WX=[0,160) and WY=[0,144)
-		// WX=7, WY=0 locates the window at the upper left of the screen
-		if(winDisplayEnable && ((*rLY) >= (*rWY) && (*rSCX+8*x) >= rwx)) // Draw the window layer (if enabled)
-			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800));
-		else
-			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800));
+	for(unsigned short x = 0; x <= 20; x++){
+		// Draw the background layer
+		rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+	}
+
+	// Handle the window layer
+	if(winDisplayEnable && ((*rLY) >= (*rWY))){
+		unsigned char rwy = (*rWY) + (*rSCY); // Real Y coordinate of the top left corner of the window
+		unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
+		rx = rwx;
+		for(unsigned short x = 0; x <= 20; x++){
+			// The window is visible if WX=[0,160) and WY=[0,144)
+			// WX=7, WY=0 locates the window at the upper left of the screen
+			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+		}
 	}
 
 	// Handle the OBJ (sprite) layer
@@ -318,16 +334,65 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			if(visible){ // The sprite is on screen
 				drawSprite(ry, oam);
 				//if(++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
-					//break;
+				//	break;
 			}
 		}
 	}
 	
 	// Render the current scanline
 	rx = (*rSCX); // This will automatically handle screen wrapping
+	ColorGBC *currentPixel;
+	ColorRGB *currentPixelRGB; // Real RGB color of the current pixel
+	
+	whatever.setColorBG(0, 0);
 	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
-		window->setDrawColor(currentLineColors[rx++]);
+		// Determine what layer should be drawn
+		// CGB:
+		//  Tile attr priority bit - 0=Use OAM priority bit, 1=BG Priority
+		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
+		//  LCDC bit 0 - 0=Sprites always on top of BG/WIN, 1=BG/WIN have priority
+		// DMG:
+		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
+		//  LCDC bit 0 - 0=Off (white), 1=On
+		//     
+		if(bGBCMODE){
+			if(bgDisplayEnable){ // BG/WIN priority
+				if(currentLineWindow[rx].visible())
+					currentPixel = &currentLineWindow[rx];
+				else
+					currentPixel = &currentLineBackground[rx];
+			}
+			else{ // Sprites always on top (default)
+				if(currentLineSprite[rx].visible() && (!currentLineSprite[rx].getPriority() || currentLineBackground[rx].getColor() == 0))
+					currentPixel = &currentLineSprite[rx];
+				else if(currentLineWindow[rx].visible())
+					currentPixel = &currentLineWindow[rx];
+				else
+					currentPixel = &currentLineBackground[rx];	
+			}
+		}
+		else{
+			if(bgDisplayEnable){ // BG on
+				if(currentLineSprite[rx].visible() && (!currentLineSprite[rx].getPriority() || currentLineBackground[rx].getColor() == 0))
+					currentPixel = &currentLineSprite[rx];
+				else if(currentLineWindow[rx].visible())
+					currentPixel = &currentLineWindow[rx];
+				else
+					currentPixel = &currentLineBackground[rx];
+			}
+			else{ // BG off
+				if(currentLineSprite[rx].visible())
+					currentPixel = &currentLineSprite[rx];
+				else if(currentLineWindow[rx].visible())
+					currentPixel = &currentLineWindow[rx];
+				else // White
+					currentPixel = &GBC_WHITE
+			}
+		}
+		currentPixelRGB = &bgPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
+		window->setDrawColor(currentPixelRGB);
 		window->drawPixel(x, (*rLY));
+		rx++;
 	}
 }
 
@@ -383,10 +448,8 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			winDisplayEnable   = (val & 0x20) != 0; // (0:off, 1:on)
 			winTileMapSelect   = (val & 0x40) != 0; // (0:[9800,9BFF], 1-[9C00,9FFF])
 			lcdDisplayEnable   = (val & 0x80) != 0; // (0:off, 1:on);
-			if(!lcdDisplayEnable){
-				//(*rLY) = 0x0;
+			if(!lcdDisplayEnable) // LY is reset if LCD goes from on to off
 				sys->getClock()->resetScanline();
-			}
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
 			(*rSTAT) = (val & 0x78);
@@ -401,7 +464,6 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// Represents the current vertical scanline being drawn in range [0,153].
 			// The values 144-153 indicate the v-blank period. Writing to this register
 			// will reset it.
-			//(*rLY) = 0x0;
 			sys->getClock()->resetScanline();
 			break;
 		case 0xFF45: // LYC (LY Compare)
