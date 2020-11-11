@@ -11,7 +11,7 @@ void DmaController::startTransferOAM(){
 	// DMA transfer takes 160 us (80 us in double speed) and CPU may only access HRAM during this interval
 	index = 0;
 	destStart = 0xFE00;
-	srcStart = (((*rDMA) & 0x00F1) << 8);
+	srcStart = (*rDMA) << 8;
 	nBytes = 1;
 	nCyclesRemaining = 160;
 	nBytesRemaining = 160;
