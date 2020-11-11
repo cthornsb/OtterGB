@@ -113,9 +113,6 @@ void GPU::initialize(){
 		bgPaletteColors[0][2] = (Colors::GB_DKGREEN);
 		bgPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
 	}
-
-	//for(int i = 0; i < 256; i++) // Blank the line buffer
-		//currentLineColors[i] = &bgPaletteColors[0][0];
 }
 
 /** Retrieve the color of a pixel in a tile bitmap.
@@ -195,15 +192,17 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	}
 	
 	// Draw the specified line
+	unsigned char rx = x;
 	for(unsigned char dx = 0; dx <= (7-pixelX); dx++){
 		if(bGBCMODE){ // Gameboy Color palettes
 			pixelColor = getBitmapPixel(bmpLow, (!bgHorizontalFlip ? (7-dx) : dx), pixelY, (bgBankNumber ? 1 : 0));
-			line[x+dx].setColorBG(pixelColor, bgPaletteNumber, bgPriority);
+			line[rx].setColorBG(pixelColor, bgPaletteNumber, bgPriority);
 		}
 		else{ // Original gameboy palettes
 			pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-			line[x+dx].setColorBG(ngbcPaletteColor[pixelColor], 0);
+			line[rx].setColorBG(ngbcPaletteColor[pixelColor], 0);
 		}
+		rx++;
 	}
 	
 	// Return the number of pixels drawn
@@ -213,14 +212,15 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 /** Draw the current sprite.
   * @param y The current LCD screen scanline [0,256).
   * @param oam Pointer to the sprite handler with the currently selected sprite.
+  * @return Returns true if the current scanline passes through the sprite and return false otherwise.
   */
-void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
+bool GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	unsigned char xp = oam->xPos-8+*rSCX; // Top left
 	unsigned char yp = oam->yPos-16+*rSCY; // Top left
 
 	// Check that the current scanline goes through the sprite
 	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
-		return;
+		return false;
 
 	unsigned char pixelY = y - yp; // Vertical pixel in the tile
 	unsigned char pixelColor;
@@ -240,23 +240,24 @@ void GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	if(oam->yFlip) // Vertical flip
 		pixelY = 7 - pixelY;
 
-	/*bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))*/
-
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
 			if(pixelColor != 0){ // Check for transparent pixel
-				currentLineSprite[xp+dx].setColorOBJ(pixelColor, oam->gbcPalette, oam->objPriority);
+				currentLineSprite[xp].setColorOBJ(pixelColor, oam->gbcPalette, oam->objPriority);
 			}
 		}
 		else{ // Original gameboy sprite palettes (OBP0-1)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
 			if(pixelColor != 0){ // Check for transparent pixel
-				currentLineSprite[xp+dx].setColorOBJ((oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor]), 0, oam->objPriority);
+				currentLineSprite[xp].setColorOBJ((oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor]), 0, oam->objPriority);
 			}
 		}
+		xp++;
 	}
+	
+	return true;
 }
 
 void GPU::drawTileMaps(bool map1/*=false*/){
@@ -265,7 +266,7 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 	unsigned char pixelColor;
 	unsigned short bmpLow;
 	for(unsigned short y = 0; y < 144; y++){ // Scanline (vertical pixel)
-		for(unsigned short x = 0; x < 20; x++){ // Horizontal tile
+		for(unsigned short x = 0; x <= 20; x++){ // Horizontal tile
 			tileY = y / 8; // Current vertical BG tile [0,32)
 			pixelY = y % 8; // Vertical pixel in the tile [0,8)
 
@@ -294,48 +295,54 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	unsigned char ry = (*rLY) + (*rSCY);
 	
 	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
-		window->setDrawColor(Colors::WHITE);
-		for(unsigned short x = 0; x < 160; x++){ // Horizontal pixel
-			window->drawPixel(x, (*rLY));
-		}
+		if(bGBCMODE)
+			window->setDrawColor(Colors::WHITE);
+		else
+			window->setDrawColor(bgPaletteColors[0][0]);
+		window->drawLine(0, (*rLY), 159, (*rLY));
 		return;
 	}
 
-	for(unsigned short x = 0; x < 256; x++){
-		currentLineBackground[x].reset();
-		currentLineWindow[x].reset();
-		currentLineSprite[x].reset();
-	}
+	unsigned char rx = (*rSCX); // This will automatically handle screen wrapping
+	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
+		currentLineSprite[rx++].reset();
 
 	// Handle the background layer
-	unsigned char rx = (*rSCX); // This will automatically handle screen wrapping
-	for(unsigned short x = 0; x <= 20; x++){
-		// Draw the background layer
-		rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+	rx = (*rSCX);
+	if(bGBCMODE || bgDisplayEnable){ // Background enabled
+		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
+			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+	}
+	else{ // Background disabled (white)
+		for(unsigned short x = 0; x < 160; x++) // Draw a "white" line
+			currentLineBackground[rx++].reset();
 	}
 
 	// Handle the window layer
+	bool windowVisible = false; // Is the window visible on this line?
 	if(winDisplayEnable && ((*rLY) >= (*rWY))){
 		unsigned char rwy = (*rWY) + (*rSCY); // Real Y coordinate of the top left corner of the window
 		unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
 		rx = rwx;
 		for(unsigned short x = 0; x <= 20; x++){
-			// The window is visible if WX=[0,160) and WY=[0,144)
+			// The window is visible if WX=[0,167) and WY=[0,144)
 			// WX=7, WY=0 locates the window at the upper left of the screen
 			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
 		}
+		windowVisible = true;
 	}
 
 	// Handle the OBJ (sprite) layer
 	if(objDisplayEnable){
-		//int spritesDrawn = 0;
+		int spritesDrawn = 0;
 		bool visible = false;
+		oam->reset();
 		while(oam->getNextSprite(visible)){
 			if(visible){ // The sprite is on screen
-				drawSprite(ry, oam);
-				//if(++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
-				//	break;
+				if(drawSprite(ry, oam) && ++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
+					break;
 			}
+			else break;
 		}
 	}
 	
@@ -343,51 +350,75 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	rx = (*rSCX); // This will automatically handle screen wrapping
 	ColorGBC *currentPixel;
 	ColorRGB *currentPixelRGB; // Real RGB color of the current pixel
-	
-	whatever.setColorBG(0, 0);
+	unsigned char layerSelect = 0;
 	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
 		// Determine what layer should be drawn
 		// CGB:
+		//  LCDC bit 0 - 0=Sprites always on top of BG/WIN, 1=BG/WIN have priority
 		//  Tile attr priority bit - 0=Use OAM priority bit, 1=BG Priority
 		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
-		//  LCDC bit 0 - 0=Sprites always on top of BG/WIN, 1=BG/WIN have priority
 		// DMG:
-		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
 		//  LCDC bit 0 - 0=Off (white), 1=On
-		//     
+		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
+		// 
 		if(bGBCMODE){
 			if(bgDisplayEnable){ // BG/WIN priority
-				if(currentLineWindow[rx].visible())
-					currentPixel = &currentLineWindow[rx];
-				else
-					currentPixel = &currentLineBackground[rx];
+				if(windowVisible && x >= (*rWX)-7) // Draw window
+					layerSelect = 1;
+				else // Draw background
+					layerSelect = 0;
 			}
-			else{ // Sprites always on top (default)
-				if(currentLineSprite[rx].visible() && (!currentLineSprite[rx].getPriority() || currentLineBackground[rx].getColor() == 0))
-					currentPixel = &currentLineSprite[rx];
-				else if(currentLineWindow[rx].visible())
-					currentPixel = &currentLineWindow[rx];
-				else
-					currentPixel = &currentLineBackground[rx];	
+			else{ // Sprites on top
+				if(currentLineBackground[rx].getPriority()){ // BG priority (tile attributes)
+					layerSelect = 0;
+				}
+				else if(currentLineSprite[rx].visible()){ // Use OAM priority bit
+					if(currentLineSprite[rx].getPriority()){ // OBJ behind BG color 1-3
+						if(currentLineBackground[rx].getColor() == 0) // Draw background
+							layerSelect = 2;
+						else // Draw background
+							layerSelect = 0;
+					}
+					else // OBJ above BG (except for color 0 which is always transparent)
+						layerSelect = 2;
+				}
+				else{ // Draw background
+					layerSelect = 0;
+				}
 			}
 		}
 		else{
-			if(bgDisplayEnable){ // BG on
-				if(currentLineSprite[rx].visible() && (!currentLineSprite[rx].getPriority() || currentLineBackground[rx].getColor() == 0))
-					currentPixel = &currentLineSprite[rx];
-				else if(currentLineWindow[rx].visible())
-					currentPixel = &currentLineWindow[rx];
-				else
-					currentPixel = &currentLineBackground[rx];
+			if(currentLineSprite[rx].visible()){ // Use OAM priority bit
+				if(currentLineSprite[rx].getPriority()){ // OBJ behind BG color 1-3
+					if(currentLineBackground[rx].getColor() == 0) // Draw sprite
+						layerSelect = 2;
+					else{ // Draw background (or window)
+						if(windowVisible && x >= (*rWX)-7) // Draw window
+							layerSelect = 1;
+						else // Draw background
+							layerSelect = 0;
+					}
+				}
+				else // OBJ above BG (except for color 0 which is always transparent)
+					layerSelect = 2;
 			}
-			else{ // BG off
-				if(currentLineSprite[rx].visible())
-					currentPixel = &currentLineSprite[rx];
-				else if(currentLineWindow[rx].visible())
-					currentPixel = &currentLineWindow[rx];
-				else // White
-					currentPixel = &GBC_WHITE
-			}
+			else if(windowVisible && x >= (*rWX)-7) // Draw window
+				layerSelect = 1;
+			else // Draw background
+				layerSelect = 0;
+		}
+		switch(layerSelect){
+			case 0: // Draw background
+				currentPixel = &currentLineBackground[rx];
+				break;
+			case 1: // Draw window
+				currentPixel = &currentLineWindow[rx];
+				break;
+			case 2: // Draw sprite
+				currentPixel = &currentLineSprite[rx];
+				break;
+			default:
+				break;
 		}
 		currentPixelRGB = &bgPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
 		window->setDrawColor(currentPixelRGB);

@@ -33,6 +33,8 @@ public:
 	
 	bool getNextSprite(bool &visible);
 	
+	void reset(){ index = 0; }
+	
 private:
 	unsigned short index; // Current sprite index [0,40)
 };
@@ -130,8 +132,9 @@ private:
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).
 	  * @param oam Pointer to the sprite handler with the currently selected sprite.
+	  * @return Returns true if the current scanline passes through the sprite and return false otherwise.
 	  */	
-	void drawSprite(const unsigned char &y, SpriteAttHandler *oam);
+	bool drawSprite(const unsigned char &y, SpriteAttHandler *oam);
 	
 	/** Get the real RGB values for a 15-bit GBC format color.
 	  * @param low The low byte (RED and lower 3 bits of GREEN) of the GBC color.
