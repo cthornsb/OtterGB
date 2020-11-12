@@ -72,11 +72,13 @@ bool SpriteAttHandler::preWriteAction(){
 /////////////////////////////////////////////////////////////////////
 
 GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
-	// Set default GB palette
-	ngbcPaletteColor[0] = 0x0;
-	ngbcPaletteColor[1] = 0x1;
-	ngbcPaletteColor[2] = 0x2;
-	ngbcPaletteColor[3] = 0x3;
+	// Set default GB palettes
+	for(unsigned short i = 0; i < 3; i++){
+		ngbcPaletteColor[i][0] = 0x0;
+		ngbcPaletteColor[i][1] = 0x1;
+		ngbcPaletteColor[i][2] = 0x2;
+		ngbcPaletteColor[i][3] = 0x3;
+	}
 	
 	// Create a new window
 	window = new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
@@ -103,15 +105,15 @@ void GPU::initialize(){
 
 	// Set default palettes
 	if(bGBCMODE){ // Gameboy Color palettes (all white at startup)
-		for(int i = 0; i < 8; i++)
+		for(int i = 0; i < 16; i++)
 			for(int j = 0; j < 4; j++)
-				bgPaletteColors[i][j] = Colors::WHITE;
+				gbcPaletteColors[i][j] = Colors::WHITE;
 	}
 	else{ // Gameboy palettes
-		bgPaletteColors[0][0] = Colors::GB_GREEN;
-		bgPaletteColors[0][1] = (Colors::GB_LTGREEN);
-		bgPaletteColors[0][2] = (Colors::GB_DKGREEN);
-		bgPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
+		gbcPaletteColors[0][0] = Colors::GB_GREEN;
+		gbcPaletteColors[0][1] = (Colors::GB_LTGREEN);
+		gbcPaletteColors[0][2] = (Colors::GB_DKGREEN);
+		gbcPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
 	}
 }
 
@@ -200,7 +202,7 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 		}
 		else{ // Original gameboy palettes
 			pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-			line[rx].setColorBG(ngbcPaletteColor[pixelColor], 0);
+			line[rx].setColorBG(pixelColor, 0);
 		}
 		rx++;
 	}
@@ -244,15 +246,11 @@ bool GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
-			if(pixelColor != 0){ // Check for transparent pixel
-				currentLineSprite[xp].setColorOBJ(pixelColor, oam->gbcPalette, oam->objPriority);
-			}
+			currentLineSprite[xp].setColorOBJ(pixelColor, oam->gbcPalette+8, oam->objPriority);
 		}
 		else{ // Original gameboy sprite palettes (OBP0-1)
 			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
-			if(pixelColor != 0){ // Check for transparent pixel
-				currentLineSprite[xp].setColorOBJ((oam->ngbcPalette ? ngbcObj1PaletteColor[pixelColor] : ngbcObj0PaletteColor[pixelColor]), 0, oam->objPriority);
-			}
+			currentLineSprite[xp].setColorOBJ(pixelColor, (oam->ngbcPalette ? 2 : 1), oam->objPriority);
 		}
 		xp++;
 	}
@@ -282,7 +280,7 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 			// Draw the specified line
 			for(unsigned char dx = 0; dx <= 7; dx++){
 				pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
-				window->setDrawColor(bgPaletteColors[0][ngbcPaletteColor[pixelColor]]);
+				window->setDrawColor(gbcPaletteColors[0][pixelColor]);
 				window->drawPixel(x*8+dx, y);
 			}
 		}
@@ -298,7 +296,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		if(bGBCMODE)
 			window->setDrawColor(Colors::WHITE);
 		else
-			window->setDrawColor(bgPaletteColors[0][0]);
+			window->setDrawColor(gbcPaletteColors[0][0]);
 		window->drawLine(0, (*rLY), 159, (*rLY));
 		return;
 	}
@@ -342,7 +340,6 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 				if(drawSprite(ry, oam) && ++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
 					break;
 			}
-			else break;
 		}
 	}
 	
@@ -363,41 +360,45 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		// 
 		if(bGBCMODE){
 			if(bgDisplayEnable){ // BG/WIN priority
-				if(windowVisible && x >= (*rWX)-7) // Draw window
-					layerSelect = 1;
-				else // Draw background
-					layerSelect = 0;
-			}
-			else{ // Sprites on top
 				if(currentLineBackground[rx].getPriority()){ // BG priority (tile attributes)
-					layerSelect = 0;
+					if(windowVisible && x >= (*rWX)-7) // Draw window
+						layerSelect = 1;
+					else // Draw background
+						layerSelect = 0;
 				}
 				else if(currentLineSprite[rx].visible()){ // Use OAM priority bit
-					if(currentLineSprite[rx].getPriority()){ // OBJ behind BG color 1-3
-						if(currentLineBackground[rx].getColor() == 0) // Draw background
-							layerSelect = 2;
-						else // Draw background
-							layerSelect = 0;
+					if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
+						if(windowVisible && x >= (*rWX)-7) // Draw window
+								layerSelect = 1;
+							else // Draw background
+								layerSelect = 0;
 					}
 					else // OBJ above BG (except for color 0 which is always transparent)
 						layerSelect = 2;
 				}
-				else{ // Draw background
-					layerSelect = 0;
+				else{ // Draw background or window
+					if(windowVisible && x >= (*rWX)-7) // Draw window
+						layerSelect = 1;
+					else // Draw background
+						layerSelect = 0;
 				}
+			}
+			else{ // Sprites always on top (if visible)
+				if(currentLineSprite[rx].visible()) // Draw sprite
+					layerSelect = 2;
+				else if(windowVisible && x >= (*rWX)-7) // Draw window
+					layerSelect = 1;
+				else // Draw background
+					layerSelect = 0;
 			}
 		}
 		else{
 			if(currentLineSprite[rx].visible()){ // Use OAM priority bit
-				if(currentLineSprite[rx].getPriority()){ // OBJ behind BG color 1-3
-					if(currentLineBackground[rx].getColor() == 0) // Draw sprite
-						layerSelect = 2;
-					else{ // Draw background (or window)
-						if(windowVisible && x >= (*rWX)-7) // Draw window
+				if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
+					if(windowVisible && x >= (*rWX)-7) // Draw window
 							layerSelect = 1;
 						else // Draw background
 							layerSelect = 0;
-					}
 				}
 				else // OBJ above BG (except for color 0 which is always transparent)
 					layerSelect = 2;
@@ -420,7 +421,10 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			default:
 				break;
 		}
-		currentPixelRGB = &bgPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
+		if(bGBCMODE)
+			currentPixelRGB = &gbcPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
+		else
+			currentPixelRGB = &gbcPaletteColors[0][ngbcPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
 		window->setDrawColor(currentPixelRGB);
 		window->drawPixel(x, (*rLY));
 		rx++;
@@ -510,26 +514,26 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// 10 : Dark Gray
 			// 11 : Black
 			(*rBGP) = val;
-			ngbcPaletteColor[0] = (val & 0x3); 
-			ngbcPaletteColor[1] = (val & 0xC) >> 2; 
-			ngbcPaletteColor[2] = (val & 0x30) >> 4; 
-			ngbcPaletteColor[3] = (val & 0xC0) >> 6; 
+			ngbcPaletteColor[0][0] = (val & 0x3); 
+			ngbcPaletteColor[0][1] = (val & 0xC) >> 2; 
+			ngbcPaletteColor[0][2] = (val & 0x30) >> 4; 
+			ngbcPaletteColor[0][3] = (val & 0xC0) >> 6; 
 			break;
 		case 0xFF48: // OBP0 (Object palette 0 data, non-gbc mode only)
 			// See BGP above
 			(*rOBP0) = val;
-			ngbcObj0PaletteColor[0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcObj0PaletteColor[1] = (val & 0xC) >> 2; 
-			ngbcObj0PaletteColor[2] = (val & 0x30) >> 4; 
-			ngbcObj0PaletteColor[3] = (val & 0xC0) >> 6; 
+			ngbcPaletteColor[1][0] = 0x0; // Lower 2 bits not used, transparent for sprites
+			ngbcPaletteColor[1][1] = (val & 0xC) >> 2; 
+			ngbcPaletteColor[1][2] = (val & 0x30) >> 4; 
+			ngbcPaletteColor[1][3] = (val & 0xC0) >> 6; 
 			break;
 		case 0xFF49: // OBP1 (Object palette 1 data, non-gbc mode only)
 			// See BGP above
 			(*rOBP1) = val;
-			ngbcObj1PaletteColor[0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcObj1PaletteColor[1] = (val & 0xC) >> 2; 
-			ngbcObj1PaletteColor[2] = (val & 0x30) >> 4; 
-			ngbcObj1PaletteColor[3] = (val & 0xC0) >> 6;
+			ngbcPaletteColor[2][0] = 0x0; // Lower 2 bits not used, transparent for sprites
+			ngbcPaletteColor[2][1] = (val & 0xC) >> 2; 
+			ngbcPaletteColor[2][2] = (val & 0x30) >> 4; 
+			ngbcPaletteColor[2][3] = (val & 0xC0) >> 6;
 			break;
 		case 0xFF4A: // WY (Window Y Position)
 			(*rWY) = val;
@@ -658,7 +662,7 @@ void GPU::updateBackgroundPalette(){
 		lowByte = bgPaletteData[bgPaletteIndex];
 		highByte = bgPaletteData[bgPaletteIndex+1];
 	}
-	bgPaletteColors[bgPaletteIndex/8][(bgPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
+	gbcPaletteColors[bgPaletteIndex/8][(bgPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
 }
 
 /** Update true RGB sprite palette by converting GBC format colors.
@@ -674,5 +678,5 @@ void GPU::updateObjectPalette(){
 		lowByte = objPaletteData[objPaletteIndex];
 		highByte = objPaletteData[objPaletteIndex+1];	
 	}
-	objPaletteColors[objPaletteIndex/8][(objPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
+	gbcPaletteColors[objPaletteIndex/8+8][(objPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
 }

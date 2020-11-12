@@ -100,7 +100,7 @@ void ColorGBC::setColorOBJ(const unsigned char &color, const unsigned char &pale
 	nColor = color;
 	nPalette = palette;
 	bPriority = priority;
-	bVisible = true;
+	bVisible = (color != 0); // Color 0 is always transparent
 }
 
 void ColorGBC::setColorBG(const unsigned char &color, const unsigned char &palette, bool priority/*=true*/){

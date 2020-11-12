@@ -87,9 +87,7 @@ private:
 	bool objPaletteIndexAutoInc;
 
 	// Gameboy colors
-	unsigned char ngbcPaletteColor[4]; ///< Original GB background palette
-	unsigned char ngbcObj0PaletteColor[4]; ///< Original GB sprite palette 0
-	unsigned char ngbcObj1PaletteColor[4]; ///< Original GB sprite palette 1
+	unsigned char ngbcPaletteColor[3][4]; ///< Original GB background palettes
 
 	unsigned char bgPaletteIndex;
 	unsigned char objPaletteIndex;
@@ -98,8 +96,7 @@ private:
 	unsigned char bgPaletteData[64]; ///< GBC background palette 0-7
 	unsigned char objPaletteData[64]; ///< GBC sprite palette 0-7
 
-	ColorRGB bgPaletteColors[8][4]; ///< RGB colors for GBC background palettes 0-7
-	ColorRGB objPaletteColors[8][4]; ///< RGB colors for GBC sprite palettes 0-7
+	ColorRGB gbcPaletteColors[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
 
 	Window *window; ///< Pointer to the main renderer window
 	
