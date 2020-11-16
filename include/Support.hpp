@@ -19,4 +19,10 @@ std::string getBinary(const unsigned short &input, const int &startBit=0);
 
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 
+bool bitTest(const unsigned char &input, const unsigned char &bit);
+
+void bitSet(unsigned char &input, const unsigned char &bit);
+
+void bitReset(unsigned char &input, const unsigned char &bit);
+
 #endif

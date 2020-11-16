@@ -57,4 +57,18 @@ std::string getBinary(const unsigned short &input, const int &startBit/*=0*/){
 	return stream.str();
 }
 
-unsigned short getUShort(const unsigned char &h, const unsigned char &l){ return (((0xFFFF & h) << 8) + l); }
+unsigned short getUShort(const unsigned char &h, const unsigned char &l){ 
+	return (((0xFFFF & h) << 8) + l); 
+}
+
+bool bitTest(const unsigned char &input, const unsigned char &bit){
+	return ((input & (0x1 << bit)) == (0x1 << bit));
+}
+
+void bitSet(unsigned char &input, const unsigned char &bit){
+	input |= (0x1 << bit);
+}
+
+void bitReset(unsigned char &input, const unsigned char &bit){
+	input &= ~(0x1 << bit);
+}

@@ -44,27 +44,26 @@ bool SystemClock::onClockUpdate(){
 	//  10 scanlines of overscan takes 4560 cycles (VBlank) (lines 144-153)
 	//  The mode progression is 2->3->0->2->3->0 ... ->2->3->0->1->2 ...	
 	if(cyclesSinceLastVSync <= MODE1_START){ // Visible scanlines (0-143)
-		/*0 to 80 : mode2
-		80 to 252 : mode3
-		252 to 456 : mode0
-		...
-		65664 to 70224 : mode1*/
-		if(cyclesSinceLastHSync == MODE3_START){ // Mode 2->3 (Reading from OAM/VRAM)
+		// 0 to 20   : mode2 - OAM sprite search (20 cycles)
+		// 20 to 63  : mode3 - Drawing pixels (43+X cycles)
+		// 63 to 114 : mode0 - HBlank (51-X cycles)
+		// ...
+		// 16416 to 17556 : mode1 - VBlank
+		if(cyclesSinceLastHSync == MODE3_START){ // Mode 2->3 (Drawing the scanline)
 			lcdDriverMode = 3;
 			(*rSTAT) = ((*rSTAT) & 0xFC) | 0x3;
+			sys->handleHBlankPeriod(); // Start drawing the scanline
 		}		
 		else if(cyclesSinceLastHSync == MODE0_START){ // Mode 3->0 (HBlank)
 			lcdDriverMode = 0;
 			(*rSTAT) = ((*rSTAT) & 0xFC);
 			mode0Interrupt();
-			sys->handleHBlankPeriod(); // Draw the scanline
 		}		
 		else if(cyclesSinceLastHSync == HORIZONTAL_SYNC_CYCLES){ // Mode 0->2(1)
-			cyclesSinceLastHSync = 0; // Reset HSync cycle count
+			incrementScanline(); // Increment the scanline
 			if(cyclesSinceLastVSync != MODE1_START){ // Mode 0->2 (Reading from OAM)
 				lcdDriverMode = 2;
 				(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2;
-				incrementScanline();
 				mode2Interrupt();
 			}
 			else{ // Mode 0->1 (VBlank, overscan)
@@ -77,14 +76,13 @@ bool SystemClock::onClockUpdate(){
 	}
 	else if(cyclesSinceLastVSync <= VERTICAL_SYNC_CYCLES){ // Mode 1 - Overscan (144-153)
 		if(cyclesSinceLastHSync == HORIZONTAL_SYNC_CYCLES){
-			cyclesSinceLastHSync = 0; // Reset HSync cycle count
 			incrementScanline();
-		}	
+		}
 	}
-	else{ // Start the next frame
+	else{ // Start the next frame (Mode 1->2)
 		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2;
-		resetScanline(); // VBlank period has ended, next frame started
 		waitUntilNextVSync();	
+		resetScanline(); // VBlank period has ended, next frame started
 		mode2Interrupt();
 	}
 	
@@ -97,7 +95,8 @@ void SystemClock::wait(){
 
 void SystemClock::resetScanline(){
 	vsync = false;
-	cyclesSinceLastVSync -= (*rLY) * HORIZONTAL_SYNC_CYCLES;
+	//cyclesSinceLastVSync -= (*rLY) * HORIZONTAL_SYNC_CYCLES;
+	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;	
 	if((*rLCDC) & 0x80){ // LCD enabled
 		lcdDriverMode = 2;
@@ -114,16 +113,15 @@ void SystemClock::resetScanline(){
   * @return True if there is coincidence with register LYC, and return false otherwise.
   */
 bool SystemClock::incrementScanline(){
-	if(++(*rLY) >= 154) // Increment scanline
-		(*rLY) = 0;
-	if((*rSTAT & 0x40) == 0x40){ // Check for LYC coincidence interrupts
-		if((*rLY) != (*rLYC))
-			(*rSTAT) &= 0xFB; // Reset bit 2 of STAT (coincidence flag)
-		else{ // LY == LYC
-			(*rSTAT) |= 0x4; // Set bit 2 of STAT (coincidence flag)
+	cyclesSinceLastHSync = 0; // Reset HSync cycle count
+	(*rLY)++; // Increment LY register
+	if((*rLY) != (*rLYC)) // LY != LYC
+		(*rSTAT) &= 0xFB; // Reset bit 2 of STAT (coincidence flag)
+	else{ // LY == LYC
+		(*rSTAT) |= 0x4; // Set bit 2 of STAT (coincidence flag)
+		if(bitTest(*rSTAT, 6)) // Issue LCD STAT interrupt
 			sys->handleLcdInterrupt();
-			return true;
-		}
+		return true;
 	}
 	return false;
 }
@@ -131,12 +129,13 @@ bool SystemClock::incrementScanline(){
 void SystemClock::waitUntilNextVSync(){
 	static unsigned int frameCount = 0;
 	static double totalRenderTime = 0;
-	const double framePeriod = VERTICAL_SYNC_CYCLES/(SYSTEM_CLOCK_FREQUENCY*frequencyMultiplier); // in seconds
-	double wallTime = std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
-	double timeToSleep = (framePeriod - wallTime)*1E6; // microseconds
+	const double framePeriod = 1E6*VERTICAL_SYNC_CYCLES/SYSTEM_CLOCK_FREQUENCY; // in microseconds
+	std::chrono::duration<double, std::micro> wallTime = sclock::now() - timeOfLastVSync;
+	//std::cout << framePeriod << "\t" << wallTime.count() << std::endl;
+	double timeToSleep = framePeriod - wallTime.count(); // microseconds
 	if(timeToSleep > 0)
 		usleep((int)timeToSleep);
-	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();;
+	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
 	if((++frameCount % 60) == 0){
 		framerate = frameCount/totalRenderTime;
 		totalRenderTime = 0;
@@ -148,19 +147,18 @@ void SystemClock::waitUntilNextVSync(){
 }
 
 void SystemClock::mode0Interrupt(){
-	if((*rSTAT) & 0x8 != 0) // Request LCD STAT interrupt (INT 48)
+	if(bitTest(*rSTAT, 3)) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
 }
 
 void SystemClock::mode1Interrupt(){
-	if((*rSTAT) & 0x10 != 0){ // Request VBlank and LCD STAT interrupt (INT 48)
-		sys->handleVBlankInterrupt();
+	sys->handleVBlankInterrupt(); // Request VBlank interrupt (INT 40)
+	if(bitTest(*rSTAT, 4)) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
-	}
 }
 
 void SystemClock::mode2Interrupt(){
-	if((*rSTAT) & 0x20 != 0) // Request LCD STAT interrupt (INT 48)
+	if(bitTest(*rSTAT, 5)) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
 }
 

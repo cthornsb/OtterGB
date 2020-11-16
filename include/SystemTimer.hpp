@@ -6,7 +6,7 @@
 #include "SystemComponent.hpp"
 
 // Make a typedef for clarity when working with chrono.
-typedef std::chrono::system_clock sclock;
+typedef std::chrono::high_resolution_clock sclock;
 
 class SystemClock : public SystemComponent {
 public:
