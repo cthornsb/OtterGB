@@ -1,6 +1,49 @@
 #ifndef SYSTEM_REGISTERS_HPP
 #define SYSTEM_REGISTERS_HPP
 
+class Register{
+public:
+	Register() : value(0), readBits(0), writeBits(0), sName() { }
+
+	Register(const std::string &name, const unsigned char &rb, const unsigned char &wb) : value(0), readBits(rb), writeBits(wb), sName(name) { }
+
+	Register(const std::string &name, const std::string &bits);
+
+	bool operator == (const unsigned char &other) const { return (value == other); }
+
+	unsigned char operator () () const { return (value & readBits); }
+
+	void read(unsigned char &output) const { output = (value & readBits); }
+	
+	unsigned char read() const { return (value & readBits); }
+	
+	void write(const unsigned char &input){ value = (input & writeBits); }
+
+	bool getBits(const unsigned short &bit){ return ((value & (0x1 << bit)) == (0x1 << bit)); }
+
+	unsigned char getBits(const unsigned short &lowBit, const unsigned short &highBit) const ;
+
+	unsigned char getValue() const { return value; }
+
+	const unsigned char *getConstPtr() const { return (const unsigned char *)&value; }
+
+	void setBit(const unsigned char &bit);
+	
+	void resetBit(const unsigned char &bit);
+	
+	void setValue(const unsigned char &val){ value = val; }
+	
+	void clear(){ value = 0x0; }
+
+private:
+	unsigned char value;
+
+	unsigned char readBits;
+	unsigned char writeBits;
+	
+	std::string sName;
+};
+
 // Set pointers to joypad registers
 extern unsigned char *rJOYP; // JOYP (Joypad register)
 

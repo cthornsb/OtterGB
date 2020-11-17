@@ -1,26 +1,10 @@
 #ifndef SOUND_HPP
 #define SOUND_HPP
 
-#include <queue>
-
 #include "SystemComponent.hpp"
 #include "SystemTimer.hpp"
 
-class FrameSequencer : public ComponentTimer {
-public:
-	FrameSequencer() : ComponentTimer(512) { }
-	
-	virtual bool onClockUpdate();
-		
-private:
-	std::queue<int> events; ///< Sound event FIFO buffer
-	
-	void triggerLengthCounter(){ }
-	
-	void triggerVolumeEnvelope(){ }
-		
-	void triggerSweepTimer(){ }
-};
+#include "SystemRegisters.hpp"
 
 class SoundProcessor : public SystemComponent, public ComponentTimer {
 public:
@@ -37,6 +21,8 @@ public:
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 
 	virtual bool onClockUpdate();
+	
+	virtual void defineRegisters();
 
 private:
 	// Channel 1 registers
@@ -46,8 +32,8 @@ private:
 	unsigned char ch1SoundLengthData;
 	unsigned char ch1InitialVolumeEnv; 
 	unsigned char ch1NumberSweepEnv; 
-	unsigned char ch1FrequencyLow;
-	unsigned char ch1FrequencyHigh;
+	float ch1Frequency0; ///< Initial 11-bit frequency
+	float ch1Frequency; ///< Current 11-bit frequency
 	bool ch1SweepIncDec;
 	bool ch1DirectionEnv;
 	bool ch1Restart;
@@ -60,8 +46,8 @@ private:
 	unsigned char ch2SoundLengthData;
 	unsigned char ch2InitialVolumeEnv; 
 	unsigned char ch2NumberSweepEnv; 
-	unsigned char ch2FrequencyLow;
-	unsigned char ch2FrequencyHigh;
+	float ch2Frequency0; ///< Initial 11-bit frequency
+	float ch2Frequency; ///< Current 11-bit frequency
 	bool ch2DirectionEnv;
 	bool ch2Restart;
 	bool ch2CounterSelect;
@@ -71,8 +57,8 @@ private:
 	// Channel 3 registers
 	unsigned char ch3SoundLengthData;
 	unsigned char ch3OutputLevel;
-	unsigned char ch3FrequencyLow;
-	unsigned char ch3FrequencyHigh;
+	float ch3Frequency0; ///< Initial 11-bit frequency
+	float ch3Frequency; ///< Current 11-bit frequency
 	bool ch3Enable;
 	bool ch3Restart;
 	bool ch3CounterSelect;
@@ -98,7 +84,15 @@ private:
 	unsigned char wavePatternRAM[16];
 	bool masterSoundEnable;
 	
-	FrameSequencer sequencer;
+	Register systemRegisters[127];
+	
+	void triggerLengthCounter();
+	
+	void triggerVolumeEnvelope();
+		
+	void triggerSweepTimer();
+	
+	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, const std::string &name, const std::string &bits);
 };
 
 #endif

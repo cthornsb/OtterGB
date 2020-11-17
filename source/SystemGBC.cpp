@@ -841,7 +841,7 @@ bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &va
 			return joy.writeRegister(reg, val);
 		case 0xFF04 ... 0xFF07: // SystemTimer
 			return timer.writeRegister(reg, val);
-		case 0xFF10 ... 0xFF30: // SoundProcessor
+		case 0xFF10 ... 0xFF3F: // SoundProcessor
 			return sound.writeRegister(reg, val);
 		case 0xFF40 ... 0xFF6B: // GPU
 			return gpu.writeRegister(reg, val);
@@ -858,7 +858,7 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 			return joy.readRegister(reg, val);
 		case 0xFF04 ... 0xFF07: // SystemTimer
 			return timer.readRegister(reg, val);
-		case 0xFF10 ... 0xFF30: // SoundProcessor
+		case 0xFF10 ... 0xFF3F: // SoundProcessor
 			return sound.readRegister(reg, val);
 		case 0xFF40 ... 0xFF6B: // GPU
 			return gpu.readRegister(reg, val);

@@ -1,4 +1,44 @@
+#include "Support.hpp"
 #include "SystemRegisters.hpp"
+
+Register::Register(const std::string &name, const std::string &bits) : value(0), readBits(0), writeBits(0), sName(name) { 
+	// Read/Write bits
+	// 0: Not readable or writeable
+	// 1: Read-only
+	// 2: Write-only
+	// 3: Readable and writeable
+	for(unsigned short i = 0; i < bits.length(); i++){
+		switch(bits[i]){
+			case '0':
+				break;
+			case '1':
+				bitSet(readBits, i);
+				break;
+			case '2':
+				bitSet(writeBits, i);
+				break;
+			case '3':
+				bitSet(readBits, i);
+				bitSet(writeBits, i);
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+unsigned char Register::getBits(const unsigned short &lowBit, const unsigned short &highBit) const {
+	unsigned char nBits = highBit - lowBit;
+	unsigned char mask = 1;
+	for(unsigned char i = 0; i < nBits; i++)
+		mask *= 2;
+	mask = mask << lowBit;
+	return ((value & mask) >> lowBit);
+}
+
+void Register::setBit(const unsigned char &bit){ bitSet(value, bit); }
+
+void Register::resetBit(const unsigned char &bit){ bitReset(value, bit); }
 
 // Set pointers to joypad registers
 unsigned char *rJOYP = 0x0; // JOYP (Joypad register)
