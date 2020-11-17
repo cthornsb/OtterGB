@@ -24,14 +24,14 @@ public:
 		unsigned short nCycles; ///< Length of clock cycles required.
 		unsigned short nBytes; ///< Length of instruction in bytes.
 
-		bool bReads; ///< Flag indicating this instruction reads from memory.
-		bool bWrites; ///< Flag indicating this instruction writes to memory.
+		unsigned short nReadCycles; ///< Flag indicating this instruction reads from memory.
+		unsigned short nWriteCycles; ///< Flag indicating this instruction writes to memory.
 
 		std::string sName; ///< The instruciton mnemonic.
 
-		Opcode() : ptr(0x0), nCycles(0), nBytes(0), bReads(0), bWrites(0), sName() { }
+		Opcode() : ptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
 		
-		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, bool read, bool write, void (LR35902::*p)()) : ptr(p), nCycles(cycles), nBytes(bytes), bReads(read), bWrites(write), sName(mnemonic) { }
+		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) : ptr(p), nCycles(cycles), nBytes(bytes), nReadCycles(read), nWriteCycles(write), sName(mnemonic) { }
 	};
 
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
