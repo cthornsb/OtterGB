@@ -217,8 +217,8 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
   * @return Returns true if the current scanline passes through the sprite and return false otherwise.
   */
 bool GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
-	unsigned char xp = oam->xPos-8+*rSCX; // Top left
-	unsigned char yp = oam->yPos-16+*rSCY; // Top left
+	unsigned char xp = oam->xPos-8+rSCX->getValue(); // Top left
+	unsigned char yp = oam->yPos-16+rSCY->getValue(); // Top left
 
 	// Check that the current scanline goes through the sprite
 	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
@@ -290,23 +290,23 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 void GPU::drawNextScanline(SpriteAttHandler *oam){
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
-	unsigned char ry = (*rLY) + (*rSCY);
+	unsigned char ry = rLY->getValue() + rSCY->getValue();
 	
-	if(((*rLCDC) & 0x80) == 0){ // Screen disabled (draw a "white" line)
+	if(!rLCDC->getBit(7)){ // Screen disabled (draw a "white" line)
 		if(bGBCMODE)
 			window->setDrawColor(Colors::WHITE);
 		else
 			window->setDrawColor(gbcPaletteColors[0][0]);
-		window->drawLine(0, (*rLY), 159, (*rLY));
+		window->drawLine(0, rLY->getValue(), 159, rLY->getValue());
 		return;
 	}
 
-	unsigned char rx = (*rSCX); // This will automatically handle screen wrapping
+	unsigned char rx = rSCX->getValue(); // This will automatically handle screen wrapping
 	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
 		currentLineSprite[rx++].reset();
 
 	// Handle the background layer
-	rx = (*rSCX);
+	rx = rSCX->getValue();
 	if(bGBCMODE || bgDisplayEnable){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
 			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
@@ -318,9 +318,9 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 
 	// Handle the window layer
 	bool windowVisible = false; // Is the window visible on this line?
-	if(winDisplayEnable && ((*rLY) >= (*rWY))){
-		unsigned char rwy = (*rWY) + (*rSCY); // Real Y coordinate of the top left corner of the window
-		unsigned char rwx = (*rWX-7) + (*rSCX); // Real X coordinate of the top left corner of the window
+	if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
+		unsigned char rwy = rWY->getValue() + rSCY->getValue(); // Real Y coordinate of the top left corner of the window
+		unsigned char rwx = (rWX->getValue()-7) + rSCX->getValue(); // Real X coordinate of the top left corner of the window
 		rx = rwx;
 		for(unsigned short x = 0; x <= 20; x++){
 			// The window is visible if WX=[0,167) and WY=[0,144)
@@ -344,7 +344,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	}
 	
 	// Render the current scanline
-	rx = (*rSCX); // This will automatically handle screen wrapping
+	rx = rSCX->getValue(); // This will automatically handle screen wrapping
 	ColorGBC *currentPixel;
 	ColorRGB *currentPixelRGB; // Real RGB color of the current pixel
 	unsigned char layerSelect = 0;
@@ -361,14 +361,14 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		if(bGBCMODE){
 			if(bgDisplayEnable){ // BG/WIN priority
 				if(currentLineBackground[rx].getPriority()){ // BG priority (tile attributes)
-					if(windowVisible && x >= (*rWX)-7) // Draw window
+					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 						layerSelect = 1;
 					else // Draw background
 						layerSelect = 0;
 				}
 				else if(currentLineSprite[rx].visible()){ // Use OAM priority bit
 					if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
-						if(windowVisible && x >= (*rWX)-7) // Draw window
+						if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 								layerSelect = 1;
 							else // Draw background
 								layerSelect = 0;
@@ -377,7 +377,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 						layerSelect = 2;
 				}
 				else{ // Draw background or window
-					if(windowVisible && x >= (*rWX)-7) // Draw window
+					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 						layerSelect = 1;
 					else // Draw background
 						layerSelect = 0;
@@ -386,7 +386,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 			else{ // Sprites always on top (if visible)
 				if(currentLineSprite[rx].visible()) // Draw sprite
 					layerSelect = 2;
-				else if(windowVisible && x >= (*rWX)-7) // Draw window
+				else if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 					layerSelect = 1;
 				else // Draw background
 					layerSelect = 0;
@@ -395,7 +395,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		else{
 			if(currentLineSprite[rx].visible()){ // Use OAM priority bit
 				if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
-					if(windowVisible && x >= (*rWX)-7) // Draw window
+					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 							layerSelect = 1;
 						else // Draw background
 							layerSelect = 0;
@@ -403,7 +403,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 				else // OBJ above BG (except for color 0 which is always transparent)
 					layerSelect = 2;
 			}
-			else if(windowVisible && x >= (*rWX)-7) // Draw window
+			else if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 				layerSelect = 1;
 			else // Draw background
 				layerSelect = 0;
@@ -426,7 +426,7 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 		else
 			currentPixelRGB = &gbcPaletteColors[0][ngbcPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
 		window->setDrawColor(currentPixelRGB);
-		window->drawPixel(x, (*rLY));
+		window->drawPixel(x, rLY->getValue());
 		rx++;
 	}
 }
@@ -474,26 +474,22 @@ bool GPU::preReadAction(){
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(reg){
 		case 0xFF40: // LCDC (LCD Control Register)
-			(*rLCDC) = val;
-			bgDisplayEnable    = (val & 0x1) != 0; // (0:off, 1:on)
-			objDisplayEnable   = (val & 0x2) != 0; // (0:off, 1:on)
-			objSizeSelect      = (val & 0x4) != 0; // (0:off, 1:on)
-			bgTileMapSelect    = (val & 0x8) != 0; // (0:[9800,9BFF], 1-[9C00,9FFF])
-			bgWinTileDataSelect = (val & 0x10) != 0; // (0:[9800,97FF], 1-[8000,8FFF])
-			winDisplayEnable   = (val & 0x20) != 0; // (0:off, 1:on)
-			winTileMapSelect   = (val & 0x40) != 0; // (0:[9800,9BFF], 1-[9C00,9FFF])
-			lcdDisplayEnable   = (val & 0x80) != 0; // (0:off, 1:on);
+			bgDisplayEnable     = rLCDC->getBit(0); // (0:off, 1:on)
+			objDisplayEnable    = rLCDC->getBit(1); // (0:off, 1:on)
+			objSizeSelect       = rLCDC->getBit(2); // (0:off, 1:on)
+			bgTileMapSelect     = rLCDC->getBit(3); // (0:[9800,9BFF], 1-[9C00,9FFF])
+			bgWinTileDataSelect = rLCDC->getBit(4); // (0:[9800,97FF], 1-[8000,8FFF])
+			winDisplayEnable    = rLCDC->getBit(5); // (0:off, 1:on)
+			winTileMapSelect    = rLCDC->getBit(6); // (0:[9800,9BFF], 1-[9C00,9FFF])
+			lcdDisplayEnable    = rLCDC->getBit(7); // (0:off, 1:on);
 			if(!lcdDisplayEnable) // LY is reset if LCD goes from on to off
 				sys->getClock()->resetScanline();
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
-			(*rSTAT) = (val & 0x78);
 			break;
 		case 0xFF42: // SCY (Scroll Y)
-			(*rSCY) = val;
 			break;
 		case 0xFF43: // SCX (Scroll X)
-			(*rSCX) = val;
 			break;
 		case 0xFF44: // LY (LCDC Y-coordinate) [read-only]
 			// Represents the current vertical scanline being drawn in range [0,153].
@@ -505,7 +501,6 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// Sets the LY comparison value. When the LY and LYC registers are equal,
 			// the 2nd bit (coincidence bit) of the STAT register is set and a STAT
 			// interrupt is requested (if 6th bit of STAT set).
-			(*rLYC) = val;
 			break;
 		case 0xFF47: // BGP (BG palette data, non-gbc mode only)
 			// Non-GBC palette "Colors"
@@ -513,62 +508,52 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// 01 : Light gray
 			// 10 : Dark Gray
 			// 11 : Black
-			(*rBGP) = val;
-			ngbcPaletteColor[0][0] = (val & 0x3); 
-			ngbcPaletteColor[0][1] = (val & 0xC) >> 2; 
-			ngbcPaletteColor[0][2] = (val & 0x30) >> 4; 
-			ngbcPaletteColor[0][3] = (val & 0xC0) >> 6; 
+			ngbcPaletteColor[0][0] = rBGP->getBits(0,1);
+			ngbcPaletteColor[0][1] = rBGP->getBits(2,3);
+			ngbcPaletteColor[0][2] = rBGP->getBits(4,5);
+			ngbcPaletteColor[0][3] = rBGP->getBits(6,7); 
 			break;
 		case 0xFF48: // OBP0 (Object palette 0 data, non-gbc mode only)
 			// See BGP above
-			(*rOBP0) = val;
 			ngbcPaletteColor[1][0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcPaletteColor[1][1] = (val & 0xC) >> 2; 
-			ngbcPaletteColor[1][2] = (val & 0x30) >> 4; 
-			ngbcPaletteColor[1][3] = (val & 0xC0) >> 6; 
+			ngbcPaletteColor[1][1] = rOBP0->getBits(2,3); 
+			ngbcPaletteColor[1][2] = rOBP0->getBits(4,5); 
+			ngbcPaletteColor[1][3] = rOBP0->getBits(6,7); 
 			break;
 		case 0xFF49: // OBP1 (Object palette 1 data, non-gbc mode only)
 			// See BGP above
-			(*rOBP1) = val;
 			ngbcPaletteColor[2][0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcPaletteColor[2][1] = (val & 0xC) >> 2; 
-			ngbcPaletteColor[2][2] = (val & 0x30) >> 4; 
-			ngbcPaletteColor[2][3] = (val & 0xC0) >> 6;
+			ngbcPaletteColor[2][1] = rOBP1->getBits(2,3);
+			ngbcPaletteColor[2][2] = rOBP1->getBits(4,5);
+			ngbcPaletteColor[2][3] = rOBP1->getBits(6,7);
 			break;
 		case 0xFF4A: // WY (Window Y Position)
-			(*rWY) = val;
 			break;
 		case 0xFF4B: // WX (Window X Position (minus 7))
-			(*rWX) = val;
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
-			(*rVBK) = val;
-			bs = ((val & 0x1) == 0x1) ? 1 : 0;
+			bs = rVBK->getBit(0) ? 1 : 0;
 			break;
-		case 0xFF68: // BCPS/BGPI (Background palette index, gbc mode)
-			(*rBGPI) = val;
-			bgPaletteIndex        = (val & 0x3F); // Index in the BG palette byte array
-			bgPaletteIndexAutoInc = ((val & 0x80) == 0x80); // Auto increment the BG palette byte index
+		case 0xFF68: // BGPI (Background palette index, gbc mode)
+			bgPaletteIndex        = rBGPI->getBits(0,5); // Index in the BG palette byte array
+			bgPaletteIndexAutoInc = rBGPI->getBit(7); // Auto increment the BG palette byte index
 			break;
-		case 0xFF69: // BCPD/BGPD (Background palette data, gbc mode)
-			(*rBGPD) = val;
+		case 0xFF69: // BGPD (Background palette data, gbc mode)
 			if(bgPaletteIndex > 0x3F)
 				bgPaletteIndex = 0;
-			bgPaletteData[bgPaletteIndex] = val;
+			bgPaletteData[bgPaletteIndex] = rBGPD->getValue();
 			updateBackgroundPalette(); // Updated palette data, refresh the real RGB colors
 			if(bgPaletteIndexAutoInc)
 				bgPaletteIndex++;
 			break;
-		case 0xFF6A: // OCPS/OBPI (Sprite palette index, gbc mode)
-			(*rOBPI) = val;
-			objPaletteIndex        = (val & 0x3F); // Index in the OBJ (sprite) palette byte array
-			objPaletteIndexAutoInc = ((val & 0x80) == 0x80); // Auto increment the OBJ (sprite) palette byte index
+		case 0xFF6A: // OBPI (Sprite palette index, gbc mode)
+			objPaletteIndex        = rOBPI->getBits(0,5); // Index in the OBJ (sprite) palette byte array
+			objPaletteIndexAutoInc = rOBPI->getBit(7); // Auto increment the OBJ (sprite) palette byte index
 			break;
-		case 0xFF6B: // OCPD/OBPD (Sprite palette index, gbc mode)
-			(*rOBPD) = val;
+		case 0xFF6B: // OBPD (Sprite palette index, gbc mode)
 			if(objPaletteIndex > 0x3F)
 				objPaletteIndex = 0;
-			objPaletteData[objPaletteIndex] = val;
+			objPaletteData[objPaletteIndex] = rOBPD->getValue();
 			updateObjectPalette(); // Updated palette data, refresh the real RGB colors
 			if(objPaletteIndexAutoInc)
 				objPaletteIndex++;
@@ -582,55 +567,38 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 bool GPU::readRegister(const unsigned short &reg, unsigned char &dest){
 	switch(reg){
 		case 0xFF40: // LCDC (LCD Control Register)
-			dest = (*rLCDC);
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
-			dest = (*rSTAT);
 			break;
 		case 0xFF42: // SCY (Scroll Y)
-			dest = (*rSCY);
 			break;
 		case 0xFF43: // SCX (Scroll X)
-			dest = (*rSCX);
 			break;
 		case 0xFF44: // LY (LCDC Y-coordinate) [read-only]
-			dest = (*rLY);
 			break;
 		case 0xFF45: // LYC (LY Compare)
-			dest = (*rLYC);
 			break;
 		case 0xFF46: // DMA transfer from ROM/RAM to OAM
-			dest = (*rDMA);
 			break;
 		case 0xFF47: // BGP (BG palette data, non-gbc mode only)
-			dest = (*rBGP);
 			break;
 		case 0xFF48: // OBP0 (Object palette 0 data, non-gbc mode only)
-			dest = (*rOBP0);
 			break;
 		case 0xFF49: // OBP1 (Object palette 1 data, non-gbc mode only)
-			dest = (*rOBP1);
 			break;
 		case 0xFF4A: // WY (Window Y Position)
-			dest = (*rWY);
 			break;
 		case 0xFF4B: // WX (Window X Position (minus 7))
-			dest = (*rWX);
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
-			dest = (*rVBK);
 			break;
 		case 0xFF68: // BCPS/BGPI (Background palette index, gbc mode)
-			dest = (*rBGPI);
 			break;
 		case 0xFF69: // BCPD/BGPD (Background palette data, gbc mode)
-			dest = (*rBGPD);
 			break;
 		case 0xFF6A: // OCPS/OBPI (Sprite palette index, gbc mode)
-			dest = (*rOBPI);
 			break;
 		case 0xFF6B: // OCPD/OBPD (Sprite palette index, gbc mode)
-			dest = (*rOBPD);
 			break;
 		default:
 			return false;
@@ -679,4 +647,23 @@ void GPU::updateObjectPalette(){
 		highByte = objPaletteData[objPaletteIndex+1];	
 	}
 	gbcPaletteColors[objPaletteIndex/8+8][(objPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
+}
+
+void GPU::defineRegisters(){
+	sys->addSystemRegister(this, 0x40, rLCDC, "LCDC", "33333333");
+	sys->addSystemRegister(this, 0x41, rSTAT, "STAT", "11133330");
+	sys->addSystemRegister(this, 0x42, rSCY,  "SCY",  "33333333");
+	sys->addSystemRegister(this, 0x43, rSCX,  "SCX",  "33333333");
+	sys->addSystemRegister(this, 0x44, rLY,   "LY",   "11111111");
+	sys->addSystemRegister(this, 0x45, rLYC,  "LYC",  "33333333");
+	sys->addSystemRegister(this, 0x47, rBGP,  "BGP",  "33333333");
+	sys->addSystemRegister(this, 0x48, rOBP0, "OBP0", "33333333");
+	sys->addSystemRegister(this, 0x49, rOBP1, "OBP1", "33333333");
+	sys->addSystemRegister(this, 0x4A, rWY,   "WY",   "33333333");
+	sys->addSystemRegister(this, 0x4B, rWX,   "WX",   "33333333");
+	sys->addSystemRegister(this, 0x4F, rVBK,  "VBK",  "30000000");
+	sys->addSystemRegister(this, 0x68, rBGPI, "BGPI", "33333303");
+	sys->addSystemRegister(this, 0x69, rBGPD, "BGPD", "33333333");
+	sys->addSystemRegister(this, 0x6A, rOBPI, "OBPI", "33333303");
+	sys->addSystemRegister(this, 0x6B, rOBPD, "OBPD", "33333333");
 }

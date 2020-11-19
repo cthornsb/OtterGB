@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "SystemRegisters.hpp"
+#include "SystemGBC.hpp"
 #include "Support.hpp"
 #include "WorkRam.hpp"
 
@@ -70,4 +72,24 @@ bool WorkRam::preReadAction(){
 	}
 	
 	return false;
+}
+
+bool WorkRam::writeRegister(const unsigned short &reg, const unsigned char &val){
+	if(reg != 0xFF70)
+		return false;
+	unsigned char wramBank = rSVBK->getBits(0,2); // Select WRAM bank (1-7)
+	if(wramBank == 0x0) 
+		wramBank = 0x1; // Select bank 1 instead
+	setBank(wramBank);
+	return true;
+}
+
+bool WorkRam::readRegister(const unsigned short &reg, unsigned char &dest){	
+	if(reg != 0xFF70) 
+		return false;
+	return true;	
+}
+
+void WorkRam::defineRegisters(){
+	sys->addSystemRegister(this, 0x70, rSVBK, "SVBK", "33300000");
 }

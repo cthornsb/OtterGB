@@ -3,6 +3,8 @@
 
 #include "SystemComponent.hpp"
 
+class Register;
+
 class DmaController : public SystemComponent {
 public:
 	DmaController() : SystemComponent(), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
@@ -25,6 +27,12 @@ public:
 	virtual bool preReadAction(){ return false; }
 	
 	virtual bool onClockUpdate();
+
+	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+
+	virtual bool readRegister(const unsigned short &reg, unsigned char &dest);
+
+	virtual void defineRegisters();
 	
 	void onHBlank();
 
@@ -38,7 +46,7 @@ private:
 	unsigned short nBytes; ///< The number of bytes transferred per cycle.
 	unsigned short srcStart; ///< Start location of the source block in memory.
 	unsigned short destStart; ///< Start location of the destination block in memory.
-	
+
 	/** Transfer the next chunk of bytes. Increment the memory index by nBytes.
 	  */
 	void transferByte();

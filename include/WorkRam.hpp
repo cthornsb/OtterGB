@@ -3,6 +3,8 @@
 
 #include "SystemComponent.hpp"
 
+class Register;
+
 class WorkRam : public SystemComponent {
 public:
 	WorkRam();
@@ -12,6 +14,12 @@ public:
 	virtual bool preWriteAction();
 	
 	virtual bool preReadAction();
+
+	virtual void defineRegisters();
+
+	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+
+	virtual bool readRegister(const unsigned short &reg, unsigned char &dest);
 
 private:
 };

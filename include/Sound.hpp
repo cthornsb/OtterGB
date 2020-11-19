@@ -83,16 +83,12 @@ private:
 	unsigned char outputLevelSO2;
 	unsigned char wavePatternRAM[16];
 	bool masterSoundEnable;
-	
-	Register systemRegisters[127];
-	
+
 	void triggerLengthCounter();
 	
 	void triggerVolumeEnvelope();
 		
 	void triggerSweepTimer();
-	
-	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, const std::string &name, const std::string &bits);
 };
 
 #endif

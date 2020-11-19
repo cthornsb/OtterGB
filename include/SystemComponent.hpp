@@ -24,6 +24,8 @@ public:
 
 	virtual bool onClockUpdate(){ return false; }
 
+	virtual void defineRegisters(){ }
+
 	void connectSystemBus(SystemGBC *bus){ sys = bus; }
 	
 	void initialize(const unsigned short &nB, const unsigned short &N=1);
@@ -57,6 +59,12 @@ public:
 	virtual unsigned int writeSavestate(std::ofstream &f);
 
 	virtual unsigned int readSavestate(std::ifstream &f);
+
+	// Return true if this component is sensitive to the register (reg)
+	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val){ return false; }
+	
+	// Return true if this component is sensitive to the register (reg)
+	virtual bool readRegister(const unsigned short &reg, unsigned char &val){ return false; }
 
 	// Do not allow direct write access if in read-only mode.
 	virtual unsigned char *getPtr(const unsigned short &loc){ return (!readOnly ? &mem[bs][loc-offset] : 0x0); }
@@ -105,12 +113,6 @@ protected:
 
 	virtual void postReadAction(){ }
 	
-	// Return true if this component is sensitive to the register (reg)
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val){ return false; }
-	
-	// Return true if this component is sensitive to the register (reg)
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val){ return false; }
-
 	void writeSavestateHeader(std::ofstream &f);
 
 	void readSavestateHeader(std::ifstream &f);

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "SystemComponent.hpp"
+#include "SystemRegisters.hpp"
 #include "Cartridge.hpp"
 #include "GPU.hpp"
 #include "Sound.hpp"
@@ -12,6 +13,7 @@
 #include "LR35902.hpp"
 #include "WorkRam.hpp"
 #include "DmaController.hpp"
+#include "SerialController.hpp"
 
 #define REGISTER_LOW  0xFF00
 #define REGISTER_HIGH 0xFF80
@@ -64,6 +66,12 @@ public:
 	void setMemoryReadRegion(const unsigned short &locL, const unsigned short &locH=0);
 	
 	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
+
+	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
+	
+	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
+
+	void clearRegister(const unsigned char &reg);
 	
 	bool dumpMemory(const char *fname);
 	
@@ -83,9 +91,9 @@ public:
 	
 	void handleJoypadInterrupt();
 
-	void enableInterrupts(){ masterInterruptEnable = 0x1; }
+	void enableInterrupts();
 	
-	void disableInterrupts(){ masterInterruptEnable = 0x0; }
+	void disableInterrupts();
 
 	void haltCPU(){ cpuHalted = true; }
 	
@@ -121,8 +129,6 @@ private:
 	bool currentClockSpeed;
 	bool displayFramerate;
 
-	unsigned char masterInterruptEnable; ///< Master interrupt enable
-	unsigned char interruptEnable; ///< Interrupt enable register (FFFF)
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB
 	unsigned char dmaDestinationH; ///< DMA destination MSB
@@ -131,11 +137,12 @@ private:
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 
 
-	unsigned char registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
+	Register registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
 	
 	unsigned short bootLength; ///< Size of the boot ROM
 	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM
 
+	SerialController serial;
 	DmaController dma;
 	Cartridge cart;
 	GPU gpu;
@@ -147,6 +154,8 @@ private:
 	SystemClock clock;
 	SystemTimer timer;
 	LR35902 cpu;
+
+	std::vector<SystemComponent*> subsystems;
 
 	bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	

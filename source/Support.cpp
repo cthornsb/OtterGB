@@ -72,3 +72,10 @@ void bitSet(unsigned char &input, const unsigned char &bit){
 void bitReset(unsigned char &input, const unsigned char &bit){
 	input &= ~(0x1 << bit);
 }
+
+unsigned char getBitmask(const unsigned char &lowBit, const unsigned char &highBit){
+	unsigned char mask = 0;
+	for(unsigned char i = lowBit; i <= highBit; i++)
+		mask |= (1 << i);
+	return mask;
+}

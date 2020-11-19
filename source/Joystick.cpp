@@ -35,20 +35,18 @@ void JoystickController::clearInput(){
 
 bool JoystickController::writeRegister(const unsigned short &reg, const unsigned char &val){
 	if(reg == 0xFF00){ // The joystick controller has only one register
-		(*rJOYP) = 0xF; // Zero bits 4 and 5 and clear input lines
+		rJOYP->setValue(0xF); // Zero bits 4 and 5 and clear input lines
 		(*rJOYP) |= (val & 0x30); // Only bits 4,5 are writable 
-		selectButtonKeys    = ((*rJOYP & 0x20) == 0); // P15 [0: Select, 1: No action]
-		selectDirectionKeys = ((*rJOYP & 0x10) == 0); // P14 [0: Select, 1: No action]
+		selectButtonKeys    = !rJOYP->getBit(5); // P15 [0: Select, 1: No action]
+		selectDirectionKeys = !rJOYP->getBit(4); // P14 [0: Select, 1: No action]
 		return true;
 	}
 	return false;
 }
 
 bool JoystickController::readRegister(const unsigned short &reg, unsigned char &dest){
-	if(reg == 0xFF00){ // The joystick controller has only one register
-		dest = (*rJOYP);
+	if(reg == 0xFF00) // The joystick controller has only one register
 		return true;
-	}	
 	return false;
 }
 
@@ -66,7 +64,7 @@ bool JoystickController::onClockUpdate(){
 	}
 	
 	// Get the initial state of the input lines.
-	unsigned char initialState = (*rJOYP) & 0xF;
+	unsigned char initialState = rJOYP->getValue() & 0xF;
 	
 	// Check which key is down.
 	// P13 - Down or Start
@@ -95,10 +93,14 @@ bool JoystickController::onClockUpdate(){
 	}
 	
 	// Detect when one or more input lines go low
-	if((*rJOYP & 0xF) != initialState){
+	if(rJOYP->getBits(0,3) != initialState){
 		// Request a joypad interrupt
 		sys->handleJoypadInterrupt();
 	}
 	
 	return true;
+}
+
+void JoystickController::defineRegisters(){
+	sys->addSystemRegister(this, 0x00, rJOYP, "JOYP", "33333333");
 }

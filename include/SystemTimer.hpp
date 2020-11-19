@@ -110,13 +110,15 @@ public:
 	
 	virtual bool onClockUpdate();
 	
+	virtual void defineRegisters();
+	
 private:
 	unsigned short nDividerCycles;
 
 	unsigned char dividerRegister;
 	unsigned char timerModulo;
 	unsigned char clockSelect;
-	
+
 	virtual void rollOver();
 };
 

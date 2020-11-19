@@ -24,18 +24,18 @@ const unsigned char ZERO = 0x0;
 unsigned short LR35902::evaluate(){
 	if(nCyclesRemaining) // Not finished executing previous instruction
 		return nCyclesRemaining;
-
+		
 	// Check for pending interrupts.
-	if((*rIME) && ((*rIE) & (*rIF)) != 0){
-		if(((*rIF) & 0x1) != 0) // VBlank
+	if(!rIME->zero() && ((*rIE) & (*rIF))){
+		if(rIF->getBit(0)) // VBlank
 			acknowledgeVBlankInterrupt();
-		if(((*rIF) & 0x2) != 0) // LCDC STAT
+		if(rIF->getBit(1)) // LCDC STAT
 			acknowledgeLcdInterrupt();
-		if(((*rIF) & 0x4) != 0) // Timer
+		if(rIF->getBit(2)) // Timer
 			acknowledgeTimerInterrupt();
-		if(((*rIF) & 0x8) != 0) // Serial
+		if(rIF->getBit(3)) // Serial
 			acknowledgeSerialInterrupt();
-		if(((*rIF) & 0x10) != 0) // Joypad
+		if(rIF->getBit(4)) // Joypad
 			acknowledgeJoypadInterrupt();
 	}
 
@@ -117,40 +117,40 @@ bool LR35902::onClockUpdate(){
 }
 
 void LR35902::acknowledgeVBlankInterrupt(){
-	(*rIF) &= 0xFE;
-	if((*rIE & 0x1) != 0){ // Execute interrupt
+	rIF->resetBit(0);
+	if(rIE->getBit(0)){ // Execute interrupt
 		(*rIME) = 0;
 		callInterruptVector(0x40);
 	}
 }
 
 void LR35902::acknowledgeLcdInterrupt(){
-	(*rIF) &= 0xFD;
-	if((*rIE & 0x2) != 0){ // Execute interrupt
+	rIF->resetBit(1);
+	if(rIE->getBit(1)){ // Execute interrupt
 		(*rIME) = 0;
 		callInterruptVector(0x48);
 	}
 }
 
 void LR35902::acknowledgeTimerInterrupt(){
-	(*rIF) &= 0xFB;
-	if((*rIE & 0x4) != 0){ // Execute interrupt
+	rIF->resetBit(2);
+	if(rIE->getBit(2)){ // Execute interrupt
 		(*rIME) = 0;
 		callInterruptVector(0x50);
 	}
 }
 
 void LR35902::acknowledgeSerialInterrupt(){
-	(*rIF) &= 0xF7;
-	if((*rIE & 0x8) != 0){ // Execute interrupt
+	rIF->resetBit(3);
+	if(rIE->getBit(3)){ // Execute interrupt
 		(*rIME) = 0;
 		callInterruptVector(0x58);
 	}
 }
 
 void LR35902::acknowledgeJoypadInterrupt(){
-	(*rIF) &= 0xEF;
-	if((*rIE & 0x10) != 0){ // Execute interrupt
+	rIF->resetBit(4);
+	if(rIE->getBit(4)){ // Execute interrupt
 		(*rIME) = 0;
 		callInterruptVector(0x60);
 	}

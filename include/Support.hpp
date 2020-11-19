@@ -25,4 +25,6 @@ void bitSet(unsigned char &input, const unsigned char &bit);
 
 void bitReset(unsigned char &input, const unsigned char &bit);
 
+unsigned char getBitmask(const unsigned char &lowBit, const unsigned char &highBit);
+
 #endif

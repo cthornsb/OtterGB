@@ -6,6 +6,7 @@
 #include "colors.hpp"
 #include "SystemComponent.hpp"
 
+class Register;
 class Window;
 class CharacterMap;
 
@@ -15,17 +16,17 @@ class CharacterMap;
 
 class SpriteAttHandler : public SystemComponent {
 public:
-	unsigned char yPos; // Y-position of the current sprite
-	unsigned char xPos; // X-position of the current sprite
-	unsigned char tileNum; // Tile index for the current sprite
+	unsigned char yPos; ///< Y-position of the current sprite
+	unsigned char xPos; ///< X-position of the current sprite
+	unsigned char tileNum; ///< Tile index for the current sprite
 	
-	bool objPriority; // Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
-	bool yFlip; // (0: normal, 1: mirrored vertically)
-	bool xFlip; // (0: normal, 1: mirrored horizontally)
-	bool ngbcPalette; // (0: OBP0, 1: OBP1)
-	bool gbcVramBank; // (0: Bank 0, 1: Bank 1)
+	bool objPriority; ///< Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
+	bool yFlip; ///< (0: normal, 1: mirrored vertically)
+	bool xFlip; ///< (0: normal, 1: mirrored horizontally)
+	bool ngbcPalette; ///< (0: OBP0, 1: OBP1)
+	bool gbcVramBank; ///< (0: Bank 0, 1: Bank 1)
 
-	unsigned char gbcPalette; // (OBP0-7)
+	unsigned char gbcPalette; ///< (OBP0-7)
 
 	SpriteAttHandler() : SystemComponent(160), index(0) { }
 
@@ -36,7 +37,7 @@ public:
 	void reset(){ index = 0; }
 	
 private:
-	unsigned short index; // Current sprite index [0,40)
+	unsigned short index; ///< Current sprite index [0,40)
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -72,6 +73,8 @@ public:
 	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+
+	virtual void defineRegisters();
 
 private:
 	bool bgDisplayEnable;

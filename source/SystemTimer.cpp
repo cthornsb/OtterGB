@@ -25,10 +25,10 @@ SystemClock::SystemClock() : SystemComponent(), vsync(false), frequencyMultiplie
 // Tick the system clock.
 bool SystemClock::onClockUpdate(){
 	// Check if the display is enabled. If it's not, set STAT to mode 1
-	if(((*rLCDC) & 0x80) == 0){
+	if(!rLCDC->getBit(7)){
 		if(lcdDriverMode != 1){
 			lcdDriverMode = 1;
-			(*rSTAT) = ((*rSTAT) & 0xFC) | 0x1; // Mode 1
+			rSTAT->setBits(0,1,1); // Mode 1
 		}
 		return false;
 	}
@@ -51,24 +51,24 @@ bool SystemClock::onClockUpdate(){
 		// 16416 to 17556 : mode1 - VBlank
 		if(cyclesSinceLastHSync == MODE3_START){ // Mode 2->3 (Drawing the scanline)
 			lcdDriverMode = 3;
-			(*rSTAT) = ((*rSTAT) & 0xFC) | 0x3;
+			rSTAT->setBits(0,1); // Mode 3
 			sys->handleHBlankPeriod(); // Start drawing the scanline
 		}		
 		else if(cyclesSinceLastHSync == MODE0_START){ // Mode 3->0 (HBlank)
 			lcdDriverMode = 0;
-			(*rSTAT) = ((*rSTAT) & 0xFC);
+			rSTAT->resetBits(0,1); // Mode 0
 			mode0Interrupt();
 		}		
 		else if(cyclesSinceLastHSync == HORIZONTAL_SYNC_CYCLES){ // Mode 0->2(1)
 			incrementScanline(); // Increment the scanline
 			if(cyclesSinceLastVSync != MODE1_START){ // Mode 0->2 (Reading from OAM)
 				lcdDriverMode = 2;
-				(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2;
+				rSTAT->setBits(0,1,2); // Mode 2
 				mode2Interrupt();
 			}
 			else{ // Mode 0->1 (VBlank, overscan)
 				lcdDriverMode = 1;
-				(*rSTAT) = ((*rSTAT) & 0xFC) | 0x1;
+				rSTAT->setBits(0,1,1); // Mode 1
 				mode1Interrupt();
 				vsync = true;
 			}
@@ -80,7 +80,7 @@ bool SystemClock::onClockUpdate(){
 		}
 	}
 	else{ // Start the next frame (Mode 1->2)
-		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2;
+		rSTAT->setBits(0,1,2); // Mode 2
 		waitUntilNextVSync();	
 		resetScanline(); // VBlank period has ended, next frame started
 		mode2Interrupt();
@@ -98,13 +98,13 @@ void SystemClock::resetScanline(){
 	//cyclesSinceLastVSync -= (*rLY) * HORIZONTAL_SYNC_CYCLES;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;	
-	if((*rLCDC) & 0x80){ // LCD enabled
+	if(rLCDC->getBit(7)){ // LCD enabled
 		lcdDriverMode = 2;
-		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x2; // Mode 2
+		rSTAT->setBits(0,1,2); // Mode 2
 	}
 	else{ // LCD disabled
 		lcdDriverMode = 1;
-		(*rSTAT) = ((*rSTAT) & 0xFC) | 0x1; // Mode 1
+		rSTAT->setBits(0,1,1); // Mode 1
 	}
 	(*rLY) = 0;
 }
@@ -116,10 +116,10 @@ bool SystemClock::incrementScanline(){
 	cyclesSinceLastHSync = 0; // Reset HSync cycle count
 	(*rLY)++; // Increment LY register
 	if((*rLY) != (*rLYC)) // LY != LYC
-		(*rSTAT) &= 0xFB; // Reset bit 2 of STAT (coincidence flag)
+		rSTAT->resetBit(2); // Reset bit 2 of STAT (coincidence flag)
 	else{ // LY == LYC
-		(*rSTAT) |= 0x4; // Set bit 2 of STAT (coincidence flag)
-		if(bitTest(*rSTAT, 6)) // Issue LCD STAT interrupt
+		rSTAT->setBit(2); // Set bit 2 of STAT (coincidence flag)
+		if(rSTAT->getBit(6)) // Issue LCD STAT interrupt
 			sys->handleLcdInterrupt();
 		return true;
 	}
@@ -131,7 +131,6 @@ void SystemClock::waitUntilNextVSync(){
 	static double totalRenderTime = 0;
 	const double framePeriod = 1E6*VERTICAL_SYNC_CYCLES/SYSTEM_CLOCK_FREQUENCY; // in microseconds
 	std::chrono::duration<double, std::micro> wallTime = sclock::now() - timeOfLastVSync;
-	//std::cout << framePeriod << "\t" << wallTime.count() << std::endl;
 	double timeToSleep = framePeriod - wallTime.count(); // microseconds
 	if(timeToSleep > 0)
 		usleep((int)timeToSleep);
@@ -147,19 +146,23 @@ void SystemClock::waitUntilNextVSync(){
 }
 
 void SystemClock::mode0Interrupt(){
-	if(bitTest(*rSTAT, 3)) // Request LCD STAT interrupt (INT 48)
+	if(rSTAT->getBit(3)){ // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
+		std::cout << " mode 0\n";	
+	}
 }
 
 void SystemClock::mode1Interrupt(){
 	sys->handleVBlankInterrupt(); // Request VBlank interrupt (INT 40)
-	if(bitTest(*rSTAT, 4)) // Request LCD STAT interrupt (INT 48)
+	if(rSTAT->getBit(4)) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
 }
 
 void SystemClock::mode2Interrupt(){
-	if(bitTest(*rSTAT, 5)) // Request LCD STAT interrupt (INT 48)
+	if(rSTAT->getBit(5)){ // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
+		std::cout << " mode 2\n";
+	}
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -174,21 +177,18 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 		case 0xFF04: // DIV (Divider register)
 			// Register incremented at 16384 Hz (256 cycles) or 32768 Hz (128 cycles) in 
 			// GBC double speed mode. Writing any value resets to zero.
-			(*rDIV) = 0x0;
+			rDIV->setValue(0x0);
 			break;
 		case 0xFF05: // TIMA (Timer counter)
 			// Timer incremented by clock frequency specified by TAC. When
 			// value overflows, it is set to TMA and a timer interrupt is
 			// issued.
-			(*rTIMA) = val;
 			break;
 		case 0xFF06: // TMA (Timer modulo)
-			(*rTMA) = val; // Value loaded when TIMA overflows
 			break;
 		case 0xFF07: // TAC (Timer control)
-			(*rTAC) = val;
-			timerEnable = (val & 0x4) != 0; // Timer stop [0: Stop, 1: Start]
-			clockSelect = (val & 0x3); // Input clock select (see below)
+			timerEnable = rTAC->getBit(2); // Timer stop [0: Stop, 1: Start]
+			clockSelect = rTAC->getBits(0,1); // Input clock select (see below)
 			/** Input clocks:
 				0:   4096 Hz (256 cycles)
 				1: 262144 Hz (4 cycles)
@@ -220,16 +220,12 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 bool SystemTimer::readRegister(const unsigned short &reg, unsigned char &dest){
 	switch(reg){
 		case 0xFF04: // DIV (Divider register)
-			dest = (*rDIV);
 			break;
 		case 0xFF05: // TIMA (Timer counter)
-			dest = (*rTIMA);
 			break;
 		case 0xFF06: // TMA (Timer modulo)
-			dest = (*rTMA);
 			break;
 		case 0xFF07: // TAC (Timer control)
-			dest = (*rTAC);
 			break;
 		default:
 			return false;
@@ -254,6 +250,13 @@ bool SystemTimer::onClockUpdate(){
 }
 
 void SystemTimer::rollOver(){
-	(*rTIMA) = (*rTMA);
+	rTIMA->setValue(rTMA->getValue());
 	sys->handleTimerInterrupt();
+}
+
+void SystemTimer::defineRegisters(){
+	sys->addSystemRegister(this, 0x04, rDIV , "DIV" , "33333333");
+	sys->addSystemRegister(this, 0x05, rTIMA, "TIMA", "33333333");
+	sys->addSystemRegister(this, 0x06, rTMA , "TMA" , "33333333");
+	sys->addSystemRegister(this, 0x07, rTAC , "TAC" , "33300000");
 }

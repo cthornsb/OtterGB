@@ -25,6 +25,8 @@ public:
 
 	virtual bool onClockUpdate();
 
+	virtual void defineRegisters();
+
 private:
 	bool selectButtonKeys;
 	bool selectDirectionKeys;

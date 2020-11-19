@@ -44,7 +44,7 @@
 	
 SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
                          emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
-                         masterInterruptEnable(0x1), interruptEnable(0), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
+                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
@@ -55,84 +55,42 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
 
-	// Set pointers to joypad registers
-	rJOYP = getPtrToRegister(0xFF00); // JOYP (Joypad register)
+	// Add all components to the subsystem list
+	subsystems.push_back(&serial);
+	subsystems.push_back(&dma);
+	subsystems.push_back(&cart);
+	subsystems.push_back(&gpu);
+	subsystems.push_back(&sound);
+	subsystems.push_back(&oam);
+	subsystems.push_back(&joy);
+	subsystems.push_back(&wram);
+	subsystems.push_back(&hram);
+	subsystems.push_back(&clock);
+	subsystems.push_back(&timer);
+	subsystems.push_back(&cpu);
 
-	// Set pointers to serial data registers
-	rSB   = getPtrToRegister(0xFF01); // SB (Serial transfer data byte)
-	rSC   = getPtrToRegister(0xFF02); // SC (Serial transfer control)
+	// Define system registers
+	addSystemRegister(0x0, 0x0F, rIF,   "IF",   "33333000");
+	addSystemRegister(0x0, 0x4D, rKEY1, "KEY1", "30000001");
+	addSystemRegister(0x0, 0x56, rRP,   "RP",   "31000033");
+	rIE  = new Register("IE",  "33333000");
+	rIME = new Register("IME", "30000000");
+	(*rIME) = 1; // Interrupts enabled by default
 
-	// Set pointers to timer registers
-	rDIV  = getPtrToRegister(0xFF04); // DIV (Divider register)
-	rTIMA = getPtrToRegister(0xFF05); // TIMA (Timer counter)
-	rTMA  = getPtrToRegister(0xFF06); // TMA (Timer modulo)
-	rTAC  = getPtrToRegister(0xFF07); // TAC (Timer control)
-	
-	// Set pointers to sound processor registers
-	rNR10 = getPtrToRegister(0xFF10); // NR10 ([TONE] Channel 1 sweep register)
-	rNR11 = getPtrToRegister(0xFF11); // NR11 ([TONE] Channel 1 sound length / wave pattern duty)
-	rNR12 = getPtrToRegister(0xFF12); // NR12 ([TONE] Channel 1 volume envelope)
-	rNR13 = getPtrToRegister(0xFF13); // NR13 ([TONE] Channel 1 frequency low)
-	rNR14 = getPtrToRegister(0xFF14); // NR14 ([TONE] Channel 1 frequency high)
-	rNR21 = getPtrToRegister(0xFF16); // NR21 ([TONE] Channel 2 sound length / wave pattern duty)
-	rNR22 = getPtrToRegister(0xFF17); // NR22 ([TONE] Channel 2 volume envelope
-	rNR23 = getPtrToRegister(0xFF18); // NR23 ([TONE] Channel 2 frequency low)
-	rNR24 = getPtrToRegister(0xFF19); // NR24 ([TONE] Channel 2 frequency high)
-	rNR30 = getPtrToRegister(0xFF1A); // NR30 ([TONE] Channel 3 sound on/off)
-	rNR31 = getPtrToRegister(0xFF1B); // NR31 ([WAVE] Channel 3 sound length)
-	rNR32 = getPtrToRegister(0xFF1C); // NR32 ([WAVE] Channel 3 select output level)
-	rNR33 = getPtrToRegister(0xFF1D); // NR33 ([WAVE] Channel 3 frequency low)
-	rNR34 = getPtrToRegister(0xFF1E); // NR34 ([WAVE] Channel 3 frequency high)
-	rNR41 = getPtrToRegister(0xFF20); // NR41 ([NOISE] Channel 4 sound length)
-	rNR42 = getPtrToRegister(0xFF21); // NR42 ([NOISE] Channel 4 volume envelope)
-	rNR43 = getPtrToRegister(0xFF22); // NR43 ([NOISE] Channel 4 polynomial counter)
-	rNR44 = getPtrToRegister(0xFF23); // NR44 ([NOISE] Channel 4 counter / consecutive, initial)
-	rNR50 = getPtrToRegister(0xFF24); // NR50 (Channel control / ON-OFF / volume)
-	rNR51 = getPtrToRegister(0xFF25); // NR51 (Select sound output)
-	rNR52 = getPtrToRegister(0xFF26); // NR52 (Sound ON-OFF)
-	rWAVE = getPtrToRegister(0xFF30); // [Wave] pattern RAM (FF30-FF3F)
+	// Undocumented registers
+	addSystemRegister(0x0, 0x6C, rFF6C, "FF6C", "30000000");
+	addSystemRegister(0x0, 0x72, rFF72, "FF72", "33333333");
+	addSystemRegister(0x0, 0x73, rFF73, "FF73", "33333333");
+	addSystemRegister(0x0, 0x74, rFF74, "FF74", "33333333");
+	addSystemRegister(0x0, 0x75, rFF75, "FF75", "00003330");
+	addSystemRegister(0x0, 0x76, rFF76, "FF76", "11111111");
+	addSystemRegister(0x0, 0x77, rFF77, "FF77", "11111111");
 
-	// Set pointers to GPU registers	
-	rLCDC = getPtrToRegister(0xFF40); // LCDC (LCD Control Register)
-	rSTAT = getPtrToRegister(0xFF41); // STAT (LCDC Status Register)
-	rSCY  = getPtrToRegister(0xFF42); // SCY (Scroll Y)
-	rSCX  = getPtrToRegister(0xFF43); // SCX (Scroll X)
-	rLY   = getPtrToRegister(0xFF44); // LY (LCDC Y-coordinate) [read-only]
-	rLYC  = getPtrToRegister(0xFF45); // LYC (LY Compare)
-	rDMA  = getPtrToRegister(0xFF46); // DMA transfer from ROM/RAM to OAM
-	rBGP  = getPtrToRegister(0xFF47); // BGP (BG palette data, non-gbc mode only)
-	rOBP0 = getPtrToRegister(0xFF48); // OBP0 (Object palette 0 data, non-gbc mode only)
-	rOBP1 = getPtrToRegister(0xFF49); // OBP1 (Object palette 1 data, non-gbc mode only)
-	rWY   = getPtrToRegister(0xFF4A); // WY (Window Y Position)
-	rWX   = getPtrToRegister(0xFF4B); // WX (Window X Position (minus 7))
-	rVBK  = getPtrToRegister(0xFF4F); // VBK (VRAM bank select, gbc mode)
-	rBGPI = getPtrToRegister(0xFF68); // BCPS/BGPI (Background palette index, gbc mode)
-	rBGPD = getPtrToRegister(0xFF69); // BCPD/BGPD (Background palette data, gbc mode)
-	rOBPI = getPtrToRegister(0xFF6A); // OCPS/OBPI (Sprite palette index, gbc mode)
-	rOBPD = getPtrToRegister(0xFF6B); // OCPD/OBPD (Sprite palette index, gbc mode)
-	
-	// Set pointers to system registers
-	rIF    = getPtrToRegister(0xFF0F); // Interrupt Flag
-	rDMA   = getPtrToRegister(0xFF46); // DMA transfer from ROM/RAM to OAM
-	rKEY1  = getPtrToRegister(0xFF4D); // Speed switch register
-	rHDMA1 = getPtrToRegister(0xFF51); // New DMA source, high byte (GBC only)
-	rHDMA2 = getPtrToRegister(0xFF52); // New DMA source, low byte (GBC only)
-	rHDMA3 = getPtrToRegister(0xFF53); // New DMA destination, high byte (GBC only)
-	rHDMA4 = getPtrToRegister(0xFF54); // New DMA destination, low byte (GBC only)
-	rHDMA5 = getPtrToRegister(0xFF55); // New DMA source, length/mode/start (GBC only)
-	rRP    = getPtrToRegister(0xFF56); // Infrared comms port (not used)
-	rSVBK  = getPtrToRegister(0xFF70); // WRAM bank select
-	rIE    = &interruptEnable;       // Interrupt enable (ffff)
-	rIME   = &masterInterruptEnable; // Master interrupt enable
-
-	// Set pointers to undocumented registers
-	rFF6C = getPtrToRegister(0xFF6C);
-	rFF72 = getPtrToRegister(0xFF72);
-	rFF73 = getPtrToRegister(0xFF73);
-	rFF74 = getPtrToRegister(0xFF74);
-	rFF75 = getPtrToRegister(0xFF75);
-	rFF76 = getPtrToRegister(0xFF76);
-	rFF77 = getPtrToRegister(0xFF77);
+	// Define sub-system registers and connect to the system bus.
+	for(auto comp = subsystems.begin(); comp != subsystems.end(); comp++){
+		(*comp)->connectSystemBus(this);
+		(*comp)->defineRegisters();
+	}
 
 	// Set memory offsets for all components	
 	gpu.setOffset(VRAM_SWAP_START);
@@ -141,19 +99,6 @@ bool SystemGBC::initialize(const std::string &fname){
 	oam.setOffset(OAM_TABLE_START);
 	hram.setOffset(HIGH_RAM_START);
 
-	// Connect system components to the system bus.
-	cpu.connectSystemBus(this);
-	timer.connectSystemBus(this);
-	clock.connectSystemBus(this);
-	hram.connectSystemBus(this);
-	wram.connectSystemBus(this);
-	joy.connectSystemBus(this);
-	oam.connectSystemBus(this);
-	sound.connectSystemBus(this);
-	gpu.connectSystemBus(this);
-	cart.connectSystemBus(this);
-	dma.connectSystemBus(this);
-	
 	// Must connect the system bus BEFORE initializing the CPU.
 	cpu.initialize();
 	
@@ -302,9 +247,6 @@ bool SystemGBC::execute(){
 			// Update joypad handler.
 			joy.onClockUpdate();
 
-			// Update DMA controller.
-			//dma.onClockUpdate();
-
 			// Tick the system clock.
 			clock.onClockUpdate();
 
@@ -330,7 +272,7 @@ bool SystemGBC::execute(){
 		}
 		else{
 			if(cpuStopped){ // STOP
-				std::cout << " Stopped! " << getHex(*rIE) << " " << getHex(*rIF) << std::endl;
+				std::cout << " Stopped! " << getHex(rIE->getValue()) << " " << getHex(rIF->getValue()) << std::endl;
 				//if((*rIF) == 0x10)
 					resumeCPU();
 			}
@@ -354,15 +296,33 @@ void SystemGBC::handleHBlankPeriod(){
 	}
 }
 	
-void SystemGBC::handleVBlankInterrupt(){ (*rIF) |= 0x1; }
+void SystemGBC::handleVBlankInterrupt(){ 
+	rIF->setBit(0);
+}
 
-void SystemGBC::handleLcdInterrupt(){ (*rIF) |= 0x2; }
+void SystemGBC::handleLcdInterrupt(){ 
+	rIF->setBit(1);
+}
 
-void SystemGBC::handleTimerInterrupt(){ (*rIF) |= 0x4; }
+void SystemGBC::handleTimerInterrupt(){ 
+	rIF->setBit(2);
+}
 
-void SystemGBC::handleSerialInterrupt(){ (*rIF) |= 0x8; }
+void SystemGBC::handleSerialInterrupt(){ 
+	rIF->setBit(3); 
+}
 
-void SystemGBC::handleJoypadInterrupt(){ (*rIF) |= 0x10; }
+void SystemGBC::handleJoypadInterrupt(){ 
+	rIF->setBit(4); 
+}
+
+void SystemGBC::enableInterrupts(){ 
+	(*rIME) = 1; 
+}
+
+void SystemGBC::disableInterrupts(){ 
+	(*rIME) = 0;
+}
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
@@ -380,61 +340,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
 		unsigned char wramBank;
-		if(!writeRegister(loc, src)){
-			switch(loc){
-				case 0xFF0F: // IF (Interrupt Flag)
-					(*rIF) = src;
-					break;
-				case 0xFF46: // DMA transfer from ROM/RAM to OAM
-					(*rDMA) = src;
-					if(!dma.active())
-						dma.startTransferOAM();
-					break;
-				case 0xFF4D: // KEY1 (Speed switch register)
-					(*rKEY1) = src;
-					prepareSpeedSwitch = (src & 0x1) != 0; // Prepare to switch speed [0:No, 1:Yes]
-					break;
-				case 0xFF50: // Enable/disable ROM boot sequence
-					bootSequence = false;
-					if(forceColor) // Disable GBC mode so that original GB games display correctly after boot.
-						bGBCMODE = false;
-					break;
-				case 0xFF51: // HDMA1 - new DMA source, high byte (GBC only)
-					(*rHDMA1) = src;
-					break;
-				case 0xFF52: // HDMA2 - new DMA source, low byte (GBC only)
-					(*rHDMA2) = src;
-					break;
-				case 0xFF53: // HDMA3 - new DMA destination, high byte (GBC only)
-					(*rHDMA3) = src;
-					break;
-				case 0xFF54: // HDMA4 - new DMA destination, low byte (GBC only)
-					(*rHDMA4) = src;
-					break;
-				case 0xFF55: // HDMA5 - new DMA source, length/mode/start (GBC only)
-					// Start a VRAM DMA transfer
-					if(dma.active() && (*rHDMA5 & 0x80) == 0){
-						(*rHDMA5) |= 0x80; // ???
-						dma.terminateTransfer();
-					}
-					else{ // Start a transfer
-						(*rHDMA5) = src;
-						dma.startTransferVRAM();
-					}
-					break;
-				case 0xFF56: // RP (Infrared comms port (not used))
-					(*rRP) = src;
-					break;
-				case 0xFF70: // SVBK (WRAM bank select)
-					(*rSVBK) = src;
-					wramBank = (src & 0x7); // Select WRAM bank (1-7)
-					if(wramBank == 0x0) wramBank = 0x1; // Select bank 1 instead
-					wram.setBank(wramBank);
-					break;
-				default:
-					return false;
-			}
-		}
+		if(!writeRegister(loc, src))
+			return false;
 	}
 	else{ // Attempt to write to memory
 		switch(loc){
@@ -456,8 +363,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 			case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
 				hram.write(loc, src);
 				break;
-			case 0xFFFF: // Master interrupt enable
-				interruptEnable = src;
+			case 0xFFFF: // Interrupt enable
+				rIE->write(src);
 				break;
 			default:
 				return false;
@@ -468,51 +375,11 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
-	// Check for memory access watch
-	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
-		LR35902::Opcode *op = cpu.getLastOpcode();
-		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " [" << getHex(loc) << "]\n";
-	}
-
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
-		if(!readRegister(loc, dest)){
-			switch(loc){
-				case 0xFF0F: // IF (Interrupt Flag)
-					dest = (*rIF);
-					break;
-				case 0xFF46: // DMA transfer from ROM/RAM to OAM
-					dest = (*rDMA);
-					break;
-				case 0xFF4D: // Speed switch register
-					dest = (*rKEY1);
-					break;
-				case 0xFF51: // HDMA1 (New DMA source, high byte (GBC only))
-					dest = (*rHDMA1);
-					break;
-				case 0xFF52: // HDMA2 (New DMA source, low byte (GBC only))
-					dest = (*rHDMA2);
-					break;
-				case 0xFF53: // HDMA3 (New DMA destination, high byte (GBC only))
-					dest = (*rHDMA3);
-					break;
-				case 0xFF54: // HDMA4 (New DMA destination, low byte (GBC only))
-					dest = (*rHDMA4);
-					break;
-				case 0xFF55: // HDMA5 (New DMA source, length/mode/start (GBC only))
-					dest = (*rHDMA5);
-					break;
-				case 0xFF56: // RP (Infrared comms port (not used))
-					dest = (*rRP);
-					break;
-				case 0xFF70: // WRAM bank select
-					dest = (*rSVBK);
-					break;
-				default:
-					return false;
-			}
-		}
+		if(!readRegister(loc, dest))
+			return false;
 	}
 	else{ // Attempt to read from memory
 		switch(loc){
@@ -539,12 +406,18 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 			case 0xFF80 ... 0xFFFE:
 				hram.read(loc, dest);
 				break;
-			case 0xFFFF: // Master interrupt enable
-				dest = interruptEnable;
+			case 0xFFFF: // Interrupt enable
+				dest = rIE->read();
 				break;
 			default:
 				return false;
 		}
+	}
+
+	// Check for memory access watch
+	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
+		LR35902::Opcode *op = cpu.getLastOpcode();
+		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
 	}
 
 	return true; // Successfully read from memory location (loc)
@@ -574,13 +447,13 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 			retval = oam.getPtr(loc);
 			break;
 		case 0xFF00 ... 0xFF7F: // System registers
-			retval = &registers[loc-0xFF00];
+			retval = getPtrToRegister(loc);
 			break;
 		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
 			retval = hram.getPtr(loc);
 			break;
 		case 0xFFFF:
-			retval = rIE;
+			retval = rIE->getPtr();
 		default:
 			break;
 	}
@@ -590,20 +463,13 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 unsigned char *SystemGBC::getPtrToRegister(const unsigned short &reg){
 	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
 		return 0x0;
-	return &registers[(reg & 0x00FF)];
+	return registers[reg-0xFF00].getPtr();
 }
 
 void SystemGBC::setDebugMode(bool state/*=true*/){
 	debugMode = state;
-	cpu.setDebugMode(state);
-	timer.setDebugMode(state);
-	clock.setDebugMode(state);
-	hram.setDebugMode(state);
-	wram.setDebugMode(state);
-	joy.setDebugMode(state);
-	oam.setDebugMode(state);
-	sound.setDebugMode(state);
-	gpu.setDebugMode(state);
+	for(auto comp = subsystems.begin(); comp != subsystems.end(); comp++)
+		(*comp)->setDebugMode(state);
 }
 
 // Set CPU frequency multiplier
@@ -640,6 +506,21 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 	}
 }
 
+void SystemGBC::addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits){
+	registers[reg].setName(name);
+	registers[reg].setMasks(bits);
+	registers[reg].setSystemComponent(comp);
+	ptr = &registers[reg];
+}
+
+void SystemGBC::addDummyRegister(SystemComponent *comp, const unsigned char &reg){
+	registers[reg].setSystemComponent(comp);
+}
+
+void SystemGBC::clearRegister(const unsigned char &reg){ 
+	registers[reg].clear(); 
+}
+
 bool SystemGBC::dumpMemory(const char *fname){
 	std::cout << " Writing system memory to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname, std::ios::binary);
@@ -655,7 +536,7 @@ bool SystemGBC::dumpMemory(const char *fname){
 			byte = 0x00;
 		else if(!read((unsigned short)i, byte)){
 			if(i >= REGISTER_LOW && i < REGISTER_HIGH) // System registers
-				byte = registers[i-REGISTER_LOW];
+				byte = registers[i-REGISTER_LOW].getValue();
 			else{
 				std::cout << " WARNING! Failed to read memory location " << getHex((unsigned short)i) << "!\n";
 				byte = 0x00; // Write an empty byte
@@ -836,37 +717,55 @@ void SystemGBC::help(){
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){
-	switch(reg){
-		case 0xFF00: // Joypad
-			return joy.writeRegister(reg, val);
-		case 0xFF04 ... 0xFF07: // SystemTimer
-			return timer.writeRegister(reg, val);
-		case 0xFF10 ... 0xFF3F: // SoundProcessor
-			return sound.writeRegister(reg, val);
-		case 0xFF40 ... 0xFF6B: // GPU
-			return gpu.writeRegister(reg, val);
-		default:
-			break;
+	if(reg < REGISTER_LOW || reg > REGISTER_HIGH)
+		return false;
+	Register *ptr = &registers[reg - REGISTER_LOW];
+	ptr->write(val);
+	if(ptr->getSystemComponent()){ // Registers with an associated system component
+		ptr->getSystemComponent()->writeRegister(reg, val);
 	}
-	
-	return false; // Failed to write register
+	else{ // Registers with no associated system component	
+		switch(reg){
+			case 0xFF0F: // IF (Interrupt Flag)
+				break;
+			case 0xFF4D: // KEY1 (Speed switch register)
+				prepareSpeedSwitch = rKEY1->getBit(0); // Prepare to switch speed [0:No, 1:Yes]
+				break;
+			case 0xFF50: // Enable/disable ROM boot sequence
+				bootSequence = false;
+				if(forceColor) // Disable GBC mode so that original GB games display correctly after boot.
+					bGBCMODE = false;
+				break;
+			case 0xFF56: // RP (Infrared comms port (not used))
+				break;
+			default:
+				return false;
+		}
+	}
+	return true; // Wrote register
 }
 
 bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
-	switch(reg){
-		case 0xFF00: // Joypad
-			return joy.readRegister(reg, val);
-		case 0xFF04 ... 0xFF07: // SystemTimer
-			return timer.readRegister(reg, val);
-		case 0xFF10 ... 0xFF3F: // SoundProcessor
-			return sound.readRegister(reg, val);
-		case 0xFF40 ... 0xFF6B: // GPU
-			return gpu.readRegister(reg, val);
-		default:
-			break;
+	if(reg < REGISTER_LOW || reg > REGISTER_HIGH)
+		return false;
+	Register *ptr = &registers[reg - REGISTER_LOW];
+	val = ptr->read();
+	if(ptr->getSystemComponent()){ // Registers with an associated system component
+		ptr->getSystemComponent()->readRegister(reg, val);	
 	}
-	
-	return false; // Failed to read register
+	else{ // Registers with no associated system component
+		switch(reg){
+			case 0xFF0F: // IF (Interrupt Flag)
+				break;
+			case 0xFF4D: // KEY1 (Speed switch register)
+				break;
+			case 0xFF56: // RP (Infrared comms port (not used))
+				break;
+			default:
+				return false;
+		}
+	}
+	return true; // Read register
 }
 
 void SystemGBC::checkSystemKeys(){
