@@ -5,9 +5,9 @@ class SystemComponent;
 
 class Register{
 public:
-	Register() : value(0), readBits(0), writeBits(0), sName(), comp(0x0) { }
+	Register() : value(0), valueBuffer(0), readBits(0), writeBits(0), sName(), comp(0x0) { }
 
-	Register(const std::string &name, const unsigned char &rb, const unsigned char &wb) : value(0), readBits(rb), writeBits(wb), sName(name), comp(0x0) { }
+	Register(const std::string &name, const unsigned char &rb, const unsigned char &wb) : value(0), valueBuffer(0), readBits(rb), writeBits(wb), sName(name), comp(0x0) { }
 
 	Register(const std::string &name, const std::string &bits);
 
@@ -43,7 +43,24 @@ public:
 	
 	unsigned char read() const { return (value & readBits); }
 	
-	void write(const unsigned char &input){ value = (input & writeBits); }
+	/** Write a new register value immediately, ignoring the value buffer.
+	  * @param input The new register value.
+	  * @return The new write-masked register value.
+	  */ 
+	unsigned char write(const unsigned char &input){ return (value = (input & writeBits)); }
+
+	/** Prepare the register for a new value by writing to the value buffer.
+	  * The buffered value will not be written to the register until write()
+	  * is called.
+	  * @param input The value to write to the register buffer.
+	  * @return The new write-masked register buffer value.
+	  */
+	unsigned char buffer(const unsigned char &input){ return (valueBuffer = (input & writeBits)); }
+
+	/** Write the value buffer to the register.
+	  * @return The new register value.
+	  */
+	unsigned char write(){ return (value = valueBuffer); }
 
 	bool getBit(const unsigned char &bit){ return ((value & (0x1 << bit)) == (0x1 << bit)); }
 
@@ -87,6 +104,7 @@ public:
 
 private:
 	unsigned char value;
+	unsigned char valueBuffer;
 
 	unsigned char readBits;
 	unsigned char writeBits;

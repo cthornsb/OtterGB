@@ -16,6 +16,12 @@ public:
 	// The sound controller has no associated RAM, so return false to avoid trying to access it.	
 	virtual bool preReadAction(){ return false; }
 
+	/** Check that the specified APU register may be written to.
+	  * @param reg Register address.
+	  * @return True if the APU is powered or the address is the APU control register or in wave RAM.
+	  */
+	virtual bool checkRegister(const unsigned short &reg);
+
 	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);

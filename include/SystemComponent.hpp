@@ -60,6 +60,14 @@ public:
 
 	virtual unsigned int readSavestate(std::ifstream &f);
 
+	/** Check that this system component is sensitive to the specified
+	  * register address. May be used to prevent certain registers being
+	  * written to (e.g. if the component is currently powered off).
+	  * @param reg Register address.
+	  * @return True if the register location is valid and return false otherwise.
+	  */
+	virtual bool checkRegister(const unsigned short &reg){ return true; }
+
 	// Return true if this component is sensitive to the register (reg)
 	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val){ return false; }
 	

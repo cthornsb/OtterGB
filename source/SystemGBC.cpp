@@ -720,11 +720,14 @@ bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &va
 	if(reg < REGISTER_LOW || reg > REGISTER_HIGH)
 		return false;
 	Register *ptr = &registers[reg - REGISTER_LOW];
-	ptr->write(val);
 	if(ptr->getSystemComponent()){ // Registers with an associated system component
+		if(!ptr->getSystemComponent()->checkRegister(reg))
+			return false;
+		ptr->write(val); // Write the new register value.
 		ptr->getSystemComponent()->writeRegister(reg, val);
 	}
-	else{ // Registers with no associated system component	
+	else{ // Registers with no associated system component
+		ptr->write(); // Write the new register value.
 		switch(reg){
 			case 0xFF0F: // IF (Interrupt Flag)
 				break;
@@ -742,7 +745,7 @@ bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &va
 				return false;
 		}
 	}
-	return true; // Wrote register
+	return true;
 }
 
 bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){

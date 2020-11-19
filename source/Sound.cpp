@@ -11,9 +11,16 @@ SoundProcessor::SoundProcessor() : SystemComponent(), ComponentTimer(512) {
 	masterSoundEnable = false;
 }
 
-bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned char &val){
+bool SoundProcessor::checkRegister(const unsigned short &reg){
+	// Check if the APU is powered down.
+	// If the APU is powered down, only the APU control register and
+	//  wave RAM may be written to.
 	if(!masterSoundEnable && (reg < 0xFF30 || reg > 0xFF3F) && reg != 0xFF26) 
 		return false;
+	return true;
+}
+
+bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned char &val){
 	unsigned short freq16;
 	switch(reg){
 		case 0xFF10: // NR10 ([TONE] Channel 1 sweep register)
