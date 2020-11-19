@@ -185,17 +185,17 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	if(bGBCMODE){
 		tileAttr = mem[1][offset + 32*tileY + tileX]; // Retrieve the BG tile attributes
 		bgPaletteNumber  = tileAttr & 0x7;
-		bgBankNumber     = ((tileAttr & 0x8) == 0x8); // (0=Bank0, 1=Bank1)
-		bgHorizontalFlip = ((tileAttr & 0x20) == 0x20); // (0=Normal, 1=HFlip)
-		bgVerticalFlip   = ((tileAttr & 0x40) == 0x40); // (0=Normal, 1=VFlip)
-		bgPriority       = ((tileAttr & 0x80) == 0x80); // (0=Use OAM, 1=BG Priority)
+		bgBankNumber     = bitTest(tileAttr, 3); // (0=Bank0, 1=Bank1)
+		bgHorizontalFlip = bitTest(tileAttr, 5); // (0=Normal, 1=HFlip)
+		bgVerticalFlip   = bitTest(tileAttr, 6); // (0=Normal, 1=VFlip)
+		bgPriority       = bitTest(tileAttr, 7); // (0=Use OAM, 1=BG Priority)
 		if(bgVerticalFlip) // Vertical flip
 			pixelY = 7 - pixelY;
 	}
 	
 	// Draw the specified line
 	unsigned char rx = x;
-	for(unsigned char dx = 0; dx <= (7-pixelX); dx++){
+	for(unsigned char dx = pixelX; dx <= 7; dx++){
 		if(bGBCMODE){ // Gameboy Color palettes
 			pixelColor = getBitmapPixel(bmpLow, (!bgHorizontalFlip ? (7-dx) : dx), pixelY, (bgBankNumber ? 1 : 0));
 			line[rx].setColorBG(pixelColor, bgPaletteNumber, bgPriority);
