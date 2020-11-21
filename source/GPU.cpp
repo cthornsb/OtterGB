@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <algorithm>
 #include <stdlib.h>
 
 #include "SystemRegisters.hpp"
@@ -23,48 +24,98 @@
 const ColorGBC GBC_WHITE;
 
 /////////////////////////////////////////////////////////////////////
-// class SpriteAttHandler
+// class SpriteAttributes
 /////////////////////////////////////////////////////////////////////
 
-bool SpriteAttHandler::getNextSprite(bool &visible){
-	if(index >= 40){
-		index = 0;
+bool SpriteAttributes::compareDMG(const SpriteAttributes &s1, const SpriteAttributes &s2){
+	// When sprites with differing xPos overlap, the one with the smaller
+	// xPos will have priority and will appear above the other. 
+	if(s1.xPos != s2.xPos)
+		return (s1.xPos < s2.xPos);
+	// If it's the same, priority is assigned based on table ordering.
+	return (s1.oamIndex < s2.oamIndex);
+}
+
+bool SpriteAttributes::compareCGB(const SpriteAttributes &s1, const SpriteAttributes &s2){
+	// Sprite priority is assigned based on table ordering.
+	return (s1.oamIndex < s2.oamIndex);
+}
+
+/////////////////////////////////////////////////////////////////////
+// class SpriteHandler
+/////////////////////////////////////////////////////////////////////
+
+SpriteHandler::SpriteHandler() : SystemComponent(160) { 
+	reset();
+}
+
+bool SpriteHandler::updateNextSprite(std::vector<SpriteAttributes> &sprites){
+	if(lModified.empty())
 		return false;
+
+	unsigned short spriteIndex = lModified.front();
+	bModified[spriteIndex] = false;
+	lModified.pop();
+
+	// Search for the sprite in the list of active sprites
+	std::vector<SpriteAttributes>::iterator iter = std::find(sprites.begin(), sprites.end(), spriteIndex);
+	
+	unsigned char *data = &mem[0][spriteIndex*4];
+	if((data[0] == 0 || data[0] >= 160) || (data[1] == 0 || data[1] >= 168)){
+		if(iter != sprites.end()) // Remove the sprite from the list
+			sprites.erase(iter);
+		return true; // Sprite is hidden.
 	}
 
-	unsigned char *data = &mem[0][(index++)*4];
-	yPos = data[0]; // Specifies the Y coord of the bottom right of the sprite
-	xPos = data[1]; // Specifies the X coord of the bottom right of the sprite
-	
-	if((yPos == 0 || yPos >= 160) || (xPos == 0 || xPos >= 168)){
-		visible = false;
-		return true;
+	SpriteAttributes *current;
+	if(iter != sprites.end()) // Get a pointer to an existing sprite
+		current = &(*iter);
+	else{ // Add the sprite to the list
+		sprites.push_back(SpriteAttributes());
+		current = &sprites.back();
 	}
-	visible = true;
+
+	current->yPos = data[0]; // Specifies the Y coord of the bottom right of the sprite
+	current->xPos = data[1]; // Specifies the X coord of the bottom right of the sprite
 	
-	tileNum = data[2]; // Specifies sprite's tile number from VRAM tile data [8000,8FFF]
+	current->tileNum = data[2]; // Specifies sprite's tile number from VRAM tile data [8000,8FFF]
 	// Note: In 8x16 pixel sprite mode, the lower bit of the tile number is ignored.
 
 	if(bGBCMODE){
-		gbcPalette  = (data[3] & 0x7); // OBP0-7 (GBC only)
-		gbcVramBank = (data[3] & 0x8) != 0; // [0:Bank0, 1:Bank1] (GBC only)
+		current->gbcPalette  = (data[3] & 0x7); // OBP0-7 (GBC only)
+		current->gbcVramBank = bitTest(data[3], 3); // [0:Bank0, 1:Bank1] (GBC only)
 	}
 	else
-		ngbcPalette  = (data[3] & 0x10) != 0; // Non GBC mode only [0:OBP0, 1:OP1]
-	xFlip       = (data[3] & 0x20) != 0;
-	yFlip       = (data[3] & 0x40) != 0;
-	objPriority = (data[3] & 0x80) != 0; // 0: Use OAM priority, 1: Use BG priority
+		current->ngbcPalette  = bitTest(data[3], 4); // Non GBC mode only [0:OBP0, 1:OP1]
+	current->xFlip       = bitTest(data[3], 5);
+	current->yFlip       = bitTest(data[3], 6);
+	current->objPriority = bitTest(data[3], 7); // 0: Use OAM priority, 1: Use BG priority
+
+	current->oamIndex = spriteIndex;
+	
+	return true;
+}
+
+bool SpriteHandler::preWriteAction(){
+	// The OAM table has no associated registers, so return false
+	// because we aren't in the OAM region of memory.
+	if(writeLoc < OAM_TABLE_LOW && writeLoc > OAM_TABLE_HIGH)
+		return false;
+
+	unsigned short spriteIndex = (writeLoc-OAM_TABLE_LOW)/4;
+	if(!bModified[spriteIndex]){
+		lModified.push(spriteIndex);
+		bModified[spriteIndex] = true;
+	}
 
 	return true;
 }
 
-bool SpriteAttHandler::preWriteAction(){
-	if(writeLoc >= OAM_TABLE_LOW && writeLoc < OAM_TABLE_HIGH)
-		return true;
-
-	// The OAM table has no associated registers, so return false
-	// because we aren't in the OAM region of memory.
-	return false;
+void SpriteHandler::reset(){
+	for(unsigned short i = 0; i < 40; i++)
+		bModified[i] = false;
+	while(!lModified.empty())
+		lModified.pop();
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -87,7 +138,7 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	window->setGPU(this);
 #endif
 
-	// 
+	// Setup the ascii character map for text output
 	cmap = new CharacterMap();
 	cmap->setWindow(window);
 	cmap->setTransparency(false);
@@ -213,12 +264,12 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 
 /** Draw the current sprite.
   * @param y The current LCD screen scanline [0,256).
-  * @param oam Pointer to the sprite handler with the currently selected sprite.
+  * @param oam The currently selected sprite to draw.
   * @return Returns true if the current scanline passes through the sprite and return false otherwise.
   */
-bool GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
-	unsigned char xp = oam->xPos-8+rSCX->getValue(); // Top left
-	unsigned char yp = oam->yPos-16+rSCY->getValue(); // Top left
+bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
+	unsigned char xp = oam.xPos-8+rSCX->getValue(); // Top left
+	unsigned char yp = oam.yPos-16+rSCY->getValue(); // Top left
 
 	// Check that the current scanline goes through the sprite
 	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
@@ -231,26 +282,28 @@ bool GPU::drawSprite(const unsigned char &y, SpriteAttHandler *oam){
 	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
 	if(!objSizeSelect) // 8x8 pixel sprites
-		bmpLow = 16*oam->tileNum;
+		bmpLow = 16*oam.tileNum;
 	else if(pixelY <= 7) // Top half of 8x16 pixel sprites
-		bmpLow = 16*(oam->tileNum & 0xFE);
+		bmpLow = 16*(oam.tileNum & 0xFE);
 	else{ // Bottom half of 8x16 pixel sprites
-		bmpLow = 16*(oam->tileNum | 0x01); 
+		bmpLow = 16*(oam.tileNum | 0x01); 
 		pixelY -= 8;
 	}
 
-	if(oam->yFlip) // Vertical flip
+	if(oam.yFlip) // Vertical flip
 		pixelY = 7 - pixelY;
 
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
-		if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
-			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY, (oam->gbcVramBank ? 1 : 0));
-			currentLineSprite[xp].setColorOBJ(pixelColor, oam->gbcPalette+8, oam->objPriority);
-		}
-		else{ // Original gameboy sprite palettes (OBP0-1)
-			pixelColor = getBitmapPixel(bmpLow, (!oam->xFlip ? (7-dx) : dx), pixelY);
-			currentLineSprite[xp].setColorOBJ(pixelColor, (oam->ngbcPalette ? 2 : 1), oam->objPriority);
+		if(!currentLineSprite[xp].getColor()){
+			if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
+				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY, (oam.gbcVramBank ? 1 : 0));
+				currentLineSprite[xp].setColorOBJ(pixelColor, oam.gbcPalette+8, oam.objPriority);
+			}
+			else{ // Original gameboy sprite palettes (OBP0-1)
+				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY);
+				currentLineSprite[xp].setColorOBJ(pixelColor, (oam.ngbcPalette ? 2 : 1), oam.objPriority);
+			}
 		}
 		xp++;
 	}
@@ -287,7 +340,7 @@ void GPU::drawTileMaps(bool map1/*=false*/){
 	}
 }
 
-void GPU::drawNextScanline(SpriteAttHandler *oam){
+void GPU::drawNextScanline(SpriteHandler *oam){
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = rLY->getValue() + rSCY->getValue();
@@ -333,11 +386,16 @@ void GPU::drawNextScanline(SpriteAttHandler *oam){
 	// Handle the OBJ (sprite) layer
 	if(objDisplayEnable){
 		int spritesDrawn = 0;
-		bool visible = false;
-		oam->reset();
-		while(oam->getNextSprite(visible)){
-			if(visible){ // The sprite is on screen
-				if(drawSprite(ry, oam) && ++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
+		if(oam->modified()){
+			// Gather sprite attributes from OAM
+			while(oam->updateNextSprite(sprites)){
+			}
+			// Sort sprites by priority.
+			std::sort(sprites.begin(), sprites.end(), (bGBCMODE ? SpriteAttributes::compareCGB : SpriteAttributes::compareDMG));
+		}
+		if(!sprites.empty()){
+			for(auto sp = sprites.begin(); sp != sprites.end(); sp++){
+				if(drawSprite(ry, *sp) && ++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
 					break;
 			}
 		}

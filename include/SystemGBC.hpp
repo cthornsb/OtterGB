@@ -147,7 +147,7 @@ private:
 	Cartridge cart;
 	GPU gpu;
 	SoundProcessor sound;
-	SpriteAttHandler oam;
+	SpriteHandler oam;
 	JoystickController joy;
 	WorkRam wram; // 8 4kB banks of RAM
 	SystemComponent hram; // 127 bytes of high RAM

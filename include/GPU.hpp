@@ -2,6 +2,7 @@
 #define GPU_HPP
 
 #include <string>
+#include <queue>
 
 #include "colors.hpp"
 #include "SystemComponent.hpp"
@@ -11,10 +12,10 @@ class Window;
 class CharacterMap;
 
 /////////////////////////////////////////////////////////////////////
-// class SpriteAttHandler
+// class SpriteHandler
 /////////////////////////////////////////////////////////////////////
 
-class SpriteAttHandler : public SystemComponent {
+class SpriteAttributes{
 public:
 	unsigned char yPos; ///< Y-position of the current sprite
 	unsigned char xPos; ///< X-position of the current sprite
@@ -27,17 +28,45 @@ public:
 	bool gbcVramBank; ///< (0: Bank 0, 1: Bank 1)
 
 	unsigned char gbcPalette; ///< (OBP0-7)
+	unsigned char oamIndex; ///< Sprite index in the OAM table (0-39)
+	
+	/** Default constructor.
+	  */
+	SpriteAttributes(){ }
+	
+	/** Equality operator.
+	  * @param other Another sprite to check for equality.
+	  * @return True if the OAM sprite index is equal for both sprites and return false otherwise.
+	  */
+	bool operator == (const SpriteAttributes &other) const { return (oamIndex == other.oamIndex); }
 
-	SpriteAttHandler() : SystemComponent(160), index(0) { }
+	/** Equality operator.
+	  * @param index An index in OAM memory to check for equality.
+	  * @return True if the OAM sprite index is equal and return false otherwise.
+	  */
+	bool operator == (const unsigned char &index) const { return (oamIndex == index); }
+	
+	static bool compareDMG(const SpriteAttributes &s1, const SpriteAttributes &s2);
+	
+	static bool compareCGB(const SpriteAttributes &s1, const SpriteAttributes &s2);
+};
+
+class SpriteHandler : public SystemComponent {
+public:
+	SpriteHandler();
 
 	virtual bool preWriteAction();
 	
-	bool getNextSprite(bool &visible);
+	bool updateNextSprite(std::vector<SpriteAttributes> &sprites);
 	
-	void reset(){ index = 0; }
+	bool modified(){ return !lModified.empty(); }
+	
+	void reset();
 	
 private:
-	unsigned short index; ///< Current sprite index [0,40)
+	bool bModified[40];
+
+	std::queue<unsigned short> lModified; ///< List of sprites which have been written to.
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -54,7 +83,7 @@ public:
 
 	void drawTileMaps(bool map1=false);
 
-	void drawNextScanline(SpriteAttHandler *oam);
+	void drawNextScanline(SpriteHandler *oam);
 
 	void render();
 
@@ -109,6 +138,8 @@ private:
 	ColorGBC currentLineWindow[256];
 	ColorGBC currentLineBackground[256];
 
+	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
+
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
 	  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
@@ -131,10 +162,10 @@ private:
 
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).
-	  * @param oam Pointer to the sprite handler with the currently selected sprite.
+	  * @param oam The currently selected sprite to draw.
 	  * @return Returns true if the current scanline passes through the sprite and return false otherwise.
 	  */	
-	bool drawSprite(const unsigned char &y, SpriteAttHandler *oam);
+	bool drawSprite(const unsigned char &y, const SpriteAttributes &oam);
 	
 	/** Get the real RGB values for a 15-bit GBC format color.
 	  * @param low The low byte (RED and lower 3 bits of GREEN) of the GBC color.
