@@ -44,7 +44,7 @@
 	
 SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
                          emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
-                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0) { 
+                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), idleTask(0x0), cleanUpTask(0x0) { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
@@ -223,7 +223,7 @@ bool SystemGBC::execute(){
 	while(true){
 		// Check the status of the GPU and LCD screen
 		if(!gpu.getWindowStatus())
-			return false;
+			break;
 
 		if(!emulationPaused && !cpuStopped){
 			// Check for interrupt out of HALT
@@ -266,8 +266,10 @@ bool SystemGBC::execute(){
 					gpu.print(getHex(cpu.getStackPointer())+" "+getHex(cpu.getProgramCounter()), 9, 0);
 					gpu.render();
 				}
-				//gpu.drawTileMaps((nFrames++/60) % 2 == 0);
+				//gpu.drawTileMaps();
 				//gpu.render();
+				if(idleTask)
+					idleTask();
 			}
 		}
 		else{
@@ -285,6 +287,10 @@ bool SystemGBC::execute(){
 			clock.wait();
 		}
 	}
+	
+	if(cleanUpTask)
+		cleanUpTask();
+	
 	return true;
 }
 

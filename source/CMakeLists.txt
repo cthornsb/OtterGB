@@ -1,8 +1,8 @@
 set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp DmaController.cpp SerialController.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp optionHandler.cpp Bitmap.cpp)
 
-#if(BACKGROUND_DEBUG)
-#	add_definitions(-DBACKGROUND_DEBUG)
-#endif()
+if(BUILD_DEBUG)
+	add_definitions(-DUSE_QT_DEBUGGER)
+endif()
 
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
@@ -39,5 +39,9 @@ add_library(GRAPHICS_LIB STATIC $<TARGET_OBJECTS:GRAPHICS_OBJECTS>)
 
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
+if(NOT BUILD_DEBUG)
 target_link_libraries(gbc CORE_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
+else()
+target_link_libraries(gbc CORE_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${GRAPHICS_LIBS})
+endif()
 install(TARGETS gbc DESTINATION bin)

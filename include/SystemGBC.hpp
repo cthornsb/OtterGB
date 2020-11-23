@@ -67,6 +67,16 @@ public:
 	
 	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
 
+	/** Set pointer to the user function which will be called once per frame.
+	  * @param ptr Pointer to a void function.
+	  */
+	void setIdleTask(void (*ptr)(void)){ idleTask = ptr; }
+	
+	/** Set pointer to the user function which will be called once when the emulator is closed.
+	  * @param ptr Pointer to a void function.
+	  */
+	void setCleanUpTask(void (*ptr)(void)){ cleanUpTask = ptr; }
+
 	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
 	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
@@ -133,6 +143,9 @@ private:
 	unsigned char dmaSourceL; ///< DMA source LSB
 	unsigned char dmaDestinationH; ///< DMA destination MSB
 	unsigned char dmaDestinationL; ///< DMA destination LSB
+
+	void (*idleTask)(void); ///< Function pointer which will be called once per frame (VBlank)
+	void (*cleanUpTask)(void); ///< Function pointer which will be called once when the emulator is closed
 
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 

@@ -50,16 +50,22 @@ endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
 #Install options
 option(BUILD_TOOLS "Build and install tools." OFF)
-#option(BACKGROUND_DEBUG "Display entire background tilemap." OFF)
+option(BUILD_DEBUG "Build with emulator debug window support (Requires QT)." OFF)
 
 #------------------------------------------------------------------------------
 
 #Find required packages.
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-
-#Find SDL install.
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+if(BUILD_DEBUG)
+	#Find qt install.
+	#sudo apt-get install libqt4-dev
+	find_package (QT REQUIRED)
+	include_directories(qtfiles ${QT_INC_DIR} ${QT_CORE_INC_DIR} ${QT_GUI_INC_DIR})
+	add_subdirectory(qtfiles)
+endif()
 
 #Set the graphics library
 if(NOT GRAPHICS_LIBRARY)

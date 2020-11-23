@@ -3,9 +3,24 @@
 #include <string>
 #include <stdlib.h>
 
+#ifdef USE_QT_DEBUGGER
+	#include "mainwindow.h"
+	#include <QApplication>
+#endif
+
 #include "Support.hpp"
 #include "optionHandler.hpp"
 #include "SystemGBC.hpp"
+
+#ifdef USE_QT_DEBUGGER
+QApplication app(0, 0x0);
+void idleTask(void){
+	app.processEvents();
+}
+void cleanup(void){
+	app.closeAllWindows();
+}
+#endif
 
 int main(int argc, char *argv[]){
 	optionHandler handler;
@@ -93,6 +108,13 @@ int main(int argc, char *argv[]){
 		std::cout << " ERROR! Failed to read input ROM file \"" << inputFilename << "\"!\n";
 		return 3;
 	}
+
+#ifdef USE_QT_DEBUGGER
+	MainWindow win;
+	win.show();
+	gbc.setIdleTask(idleTask);
+	gbc.setCleanUpTask(cleanup);
+#endif
 	gbc.execute();
 
 	return 0;
