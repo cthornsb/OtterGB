@@ -57,6 +57,38 @@ std::string getBinary(const unsigned short &input, const int &startBit/*=0*/){
 	return stream.str();
 }
 
+std::string ucharToStr(const unsigned char &input){
+	std::stringstream stream;
+	stream << input;
+	return stream.str();
+}
+
+std::string ushortToStr(const unsigned short &input){
+	std::stringstream stream;
+	stream << input;
+	return stream.str();
+}
+
+std::string floatToStr(const float &input, const unsigned short &fixed/*=0*/){
+	std::stringstream stream;
+	if(fixed != 0){
+		stream.precision(fixed);
+		stream << std::fixed;
+	}
+	stream << input;
+	return stream.str();
+}
+
+std::string doubleToStr(const double &input, const unsigned short &fixed/*=0*/){
+	std::stringstream stream;
+	if(fixed != 0){
+		stream.precision(fixed);
+		stream << std::fixed;
+	}
+	stream << input;
+	return stream.str();
+}
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l){ 
 	return (((0xFFFF & h) << 8) + l); 
 }

@@ -1,7 +1,7 @@
 #include "Support.hpp"
 #include "SystemRegisters.hpp"
 
-Register::Register(const std::string &name, const std::string &bits) : value(0), readBits(0), writeBits(0), sName(name), comp(0x0) { 
+Register::Register(const std::string &name, const std::string &bits) : value(0), readBits(0), writeBits(0), sName(name), address(0), comp(0x0) { 
 	// Read/Write bits
 	// 0: Not readable or writeable
 	// 1: Read-only
@@ -55,6 +55,10 @@ void Register::resetBit(const unsigned char &bit){
 void Register::resetBits(const unsigned char &lowBit, const unsigned char &highBit){
 	for(unsigned char i = lowBit; i <= highBit; i++)
 		resetBit(i);
+}
+
+std::string Register::dump() const {
+	return (getHex(address)+"  "+getHex(value)+"  "+getBinary(value)+"  "+sName);
 }
 
 // Pointer to joypad register

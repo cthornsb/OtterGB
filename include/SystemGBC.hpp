@@ -18,6 +18,10 @@
 #define REGISTER_LOW  0xFF00
 #define REGISTER_HIGH 0xFF80
 
+#ifdef USE_QT_DEBUGGER
+	class MainWindow;
+#endif
+
 class SystemGBC{
 public:
 	SystemGBC();
@@ -33,18 +37,30 @@ public:
 	bool read(const unsigned short &loc, unsigned char *dest){ return read(loc, (*dest)); }
 	
 	bool read(const unsigned short &loc, unsigned char &dest);
+
+	std::string getRomFilename() const { return romFilename; }
+	
+	bool getEmulationPaused() const { return emulationPaused; }
 	
 	unsigned char getValue(const unsigned short &loc);
 	
 	unsigned char *getPtr(const unsigned short &loc);
 	
-	unsigned char *getPtrToRegister(const unsigned short &reg);
+	Register *getPtrToRegister(const unsigned short &reg);
+
+	unsigned char *getPtrToRegisterValue(const unsigned short &reg);
 
 	LR35902 *getCPU(){ return &cpu; }
 	
 	GPU *getGPU(){ return &gpu; }
 	
+	SpriteHandler *getOAM(){ return &oam; }
+	
 	SystemClock *getClock(){ return &clock; }
+	
+	Cartridge *getCartridge(){ return &cart; }
+	
+	WorkRam *getWRAM(){ return &wram; }
 	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
@@ -67,15 +83,11 @@ public:
 	
 	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
 
-	/** Set pointer to the user function which will be called once per frame.
-	  * @param ptr Pointer to a void function.
-	  */
-	void setIdleTask(void (*ptr)(void)){ idleTask = ptr; }
-	
-	/** Set pointer to the user function which will be called once when the emulator is closed.
-	  * @param ptr Pointer to a void function.
-	  */
-	void setCleanUpTask(void (*ptr)(void)){ cleanUpTask = ptr; }
+	void setRomFilename(const std::string &fname){ romFilename = fname; }
+
+#ifdef USE_QT_DEBUGGER
+	void connectToGui(MainWindow *g){ gui = g; }
+#endif
 
 	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
@@ -115,6 +127,8 @@ public:
 	
 	void unpause(){ emulationPaused = false; }
 
+	bool reset();
+
 	bool screenshot();
 
 	bool quicksave();
@@ -122,6 +136,8 @@ public:
 	bool quickload();
 	
 	void help();
+	
+	void quit(){ userQuitting = true; }
 	
 private:
 	unsigned short nFrames;
@@ -138,14 +154,18 @@ private:
 	bool prepareSpeedSwitch;
 	bool currentClockSpeed;
 	bool displayFramerate;
+	bool userQuitting;
 
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB
 	unsigned char dmaDestinationH; ///< DMA destination MSB
 	unsigned char dmaDestinationL; ///< DMA destination LSB
 
-	void (*idleTask)(void); ///< Function pointer which will be called once per frame (VBlank)
-	void (*cleanUpTask)(void); ///< Function pointer which will be called once when the emulator is closed
+	std::string romFilename; ///< Path to input ROM file
+
+#ifdef USE_QT_DEBUGGER
+	MainWindow *gui;
+#endif
 
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 

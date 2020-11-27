@@ -17,6 +17,14 @@ std::string getBinary(const unsigned char &input, const int &startBit=0);
 
 std::string getBinary(const unsigned short &input, const int &startBit=0);
 
+std::string ucharToStr(const unsigned char &input);
+
+std::string ushortToStr(const unsigned short &input);
+
+std::string floatToStr(const float &input, const unsigned short &fixed=0);
+
+std::string doubleToStr(const double &input, const unsigned short &fixed=0);
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 
 bool bitTest(const unsigned char &input, const unsigned char &bit);

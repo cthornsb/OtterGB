@@ -57,6 +57,8 @@ public:
 
 	virtual bool preWriteAction();
 	
+	SpriteAttributes getSpriteAttributes(const unsigned short &index);
+	
 	bool updateNextSprite(std::vector<SpriteAttributes> &sprites);
 	
 	bool modified(){ return !lModified.empty(); }
@@ -67,6 +69,8 @@ private:
 	bool bModified[40];
 
 	std::queue<unsigned short> lModified; ///< List of sprites which have been written to.
+	
+	void getSpriteData(unsigned char *ptr, SpriteAttributes *attr);
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -74,6 +78,9 @@ private:
 /////////////////////////////////////////////////////////////////////
 
 class GPU : public SystemComponent {
+//#ifdef USE_QT_DEBUGGER
+	friend class MainWindow;
+//#endif
 public:
 	GPU();
 
@@ -81,7 +88,11 @@ public:
 	
 	void initialize();
 
-	void drawTileMaps(bool map1=false);
+	void drawTileMaps();
+
+	void disableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = false; }
+	
+	void enableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = true; }
 
 	void drawNextScanline(SpriteHandler *oam);
 
@@ -90,6 +101,10 @@ public:
 	Window *getWindow(){ return window; }
 
 	bool getWindowStatus();
+
+	unsigned short getBgPaletteColorHex(const unsigned short &index) const ;
+
+	unsigned short getObjPaletteColorHex(const unsigned short &index) const ;
 	
 	void setPixelScale(const unsigned int &n);
 
@@ -138,10 +153,12 @@ private:
 	ColorGBC currentLineWindow[256];
 	ColorGBC currentLineBackground[256];
 
+	bool userLayerEnable[3]; ///< Flags for the three render layers.
+
 	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
 
 	/** Retrieve the color of a pixel in a tile bitmap.
-	  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
+	  * @param index The start address of the tile in VRAM [0x0000,0x1800].
 	  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
 	  * @param dy    The vertical pixel in the bitmap [0,7] where the top-most pixel is denoted as y=0.
 	  * @param bank  The VRAM bank number [0,1]

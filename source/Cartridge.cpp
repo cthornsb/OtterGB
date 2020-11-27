@@ -179,6 +179,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	bGBCMODE = ((gbcFlag & 0x80) != 0);
 	
 	// Initialize ROM storage
+	mem.clear();
 	switch(romSize){
 		case 0x00: // 32 kB (2 bank)
 			initialize(16384, 2);
@@ -241,11 +242,11 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 }
 
 void Cartridge::print(){
-	std::cout << "Title: " << std::string(titleString) << std::endl;
-	std::cout << " ROM: " << size/1024 << " kB\n";
-	std::cout << " RAM: " << ram.getSize()/1024 << " kB\n";
+	std::cout << "Title: " << getTitleString() << std::endl;
+	std::cout << " ROM: " << getRomSize() << " kB\n";
+	std::cout << " RAM: " << getRamSize() << " kB\n";
 	std::cout << " Type: " << getHex(cartridgeType) << std::endl;
 	std::cout << " Vers: " << getHex(versionNumber) << "\n";
-	std::cout << " Lang: " << (language == 0x0 ? "J" : "E") << std::endl;
+	std::cout << " Lang: " << getLanguage() << std::endl;
 	std::cout << " Program entry at " << getHex(programStart) << "\n";
 }

@@ -20,9 +20,23 @@ public:
 
 	SystemComponent *getRam(){ return &ram; }
 
-	bool readRom(const std::string &fname, bool verbose=false);
+	std::string getTitleString() const { return std::string(titleString); }
+
+	std::string getLanguage() const { return (language == 0x0 ? "Japanese" : "English"); }
 	
-	unsigned short getProgramEntryPoint() const { return programStart; }
+	unsigned short getRomSize() const { return size/1024; }
+	
+	unsigned short getRamSize() const { return ram.getSize()/1024; }
+	
+	unsigned char getCartridgeType() const { return cartridgeType; }
+
+	unsigned short getProgramEntryPoint() const { return programStart; }	
+	
+	bool getExternalRamEnabled() const { return extRamEnabled; }
+	
+	bool readRom(const std::string &fname, bool verbose=false);
+
+	void print();
 
 private:
 	bool ramSelect;
@@ -48,8 +62,6 @@ private:
 	SystemComponent ram;
 	
 	unsigned int readHeader(std::ifstream &f);
-	
-	void print();
 };
 
 #endif

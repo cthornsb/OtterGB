@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <stdlib.h>
 
@@ -74,23 +75,11 @@ bool SpriteHandler::updateNextSprite(std::vector<SpriteAttributes> &sprites){
 		sprites.push_back(SpriteAttributes());
 		current = &sprites.back();
 	}
-
-	current->yPos = data[0]; // Specifies the Y coord of the bottom right of the sprite
-	current->xPos = data[1]; // Specifies the X coord of the bottom right of the sprite
 	
-	current->tileNum = data[2]; // Specifies sprite's tile number from VRAM tile data [8000,8FFF]
-	// Note: In 8x16 pixel sprite mode, the lower bit of the tile number is ignored.
-
-	if(bGBCMODE){
-		current->gbcPalette  = (data[3] & 0x7); // OBP0-7 (GBC only)
-		current->gbcVramBank = bitTest(data[3], 3); // [0:Bank0, 1:Bank1] (GBC only)
-	}
-	else
-		current->ngbcPalette  = bitTest(data[3], 4); // Non GBC mode only [0:OBP0, 1:OP1]
-	current->xFlip       = bitTest(data[3], 5);
-	current->yFlip       = bitTest(data[3], 6);
-	current->objPriority = bitTest(data[3], 7); // 0: Use OAM priority, 1: Use BG priority
-
+	// Decode the sprite attributes.
+	getSpriteData(data, current);
+	
+	// Set the sprite index. 
 	current->oamIndex = spriteIndex;
 	
 	return true;
@@ -111,11 +100,37 @@ bool SpriteHandler::preWriteAction(){
 	return true;
 }
 
+SpriteAttributes SpriteHandler::getSpriteAttributes(const unsigned short &index){
+	unsigned char *data = &mem[0][index*4];
+	SpriteAttributes attr;
+	getSpriteData(data, &attr);
+	attr.oamIndex = index;
+	return attr;
+}
+
 void SpriteHandler::reset(){
 	for(unsigned short i = 0; i < 40; i++)
 		bModified[i] = false;
 	while(!lModified.empty())
 		lModified.pop();
+}
+
+void SpriteHandler::getSpriteData(unsigned char *ptr, SpriteAttributes *attr){
+	attr->yPos = ptr[0]; // Specifies the Y coord of the bottom right of the sprite
+	attr->xPos = ptr[1]; // Specifies the X coord of the bottom right of the sprite
+	
+	attr->tileNum = ptr[2]; // Specifies sprite's tile number from VRAM tile data [8000,8FFF]
+	// Note: In 8x16 pixel sprite mode, the lower bit of the tile number is ignored.
+
+	if(bGBCMODE){
+		attr->gbcPalette  = (ptr[3] & 0x7); // OBP0-7 (GBC only)
+		attr->gbcVramBank = bitTest(ptr[3], 3); // [0:Bank0, 1:Bank1] (GBC only)
+	}
+	else
+		attr->ngbcPalette  = bitTest(ptr[3], 4); // Non GBC mode only [0:OBP0, 1:OP1]
+	attr->xFlip       = bitTest(ptr[3], 5);
+	attr->yFlip       = bitTest(ptr[3], 6);
+	attr->objPriority = bitTest(ptr[3], 7); // 0: Use OAM priority, 1: Use BG priority
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -129,6 +144,7 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 		ngbcPaletteColor[i][1] = 0x1;
 		ngbcPaletteColor[i][2] = 0x2;
 		ngbcPaletteColor[i][3] = 0x3;
+		userLayerEnable[i] = true;
 	}
 	
 	// Create a new window
@@ -311,31 +327,36 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	return true;
 }
 
-void GPU::drawTileMaps(bool map1/*=false*/){
-	unsigned char tileY, tileX;
-	unsigned char pixelY, pixelX;
+void GPU::drawTileMaps(){
+	// Tile maps are defined in VRAM [0x8000, 0x9800]
+	unsigned char tileX, tileY;
 	unsigned char pixelColor;
-	unsigned short bmpLow;
-	for(unsigned short y = 0; y < 144; y++){ // Scanline (vertical pixel)
-		for(unsigned short x = 0; x <= 20; x++){ // Horizontal tile
-			tileY = y / 8; // Current vertical BG tile [0,32)
-			pixelY = y % 8; // Vertical pixel in the tile [0,8)
-
-			// Draw the background tile
-			// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
-			// Background & window tile data selection [0: 8800-97FF, 1: 8000-8FFF]
-			//  -> Indexing for 0:-128,127 1:0,255
-			if(!map1) // 0x8000-0x8FFF
-				bmpLow = 16*(tileY*20+x);
-			else // 0x8800-0x97FF
-				bmpLow = 0x0800 + 16*(tileY*20+x);
-			
-			// Draw the specified line
-			for(unsigned char dx = 0; dx <= 7; dx++){
-				pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
+	for(unsigned short i = 0; i < 384; i++){
+		tileY = i/32;
+		for(unsigned short dy = 0; dy < 8; dy++){
+			tileX = i%32;
+			for(unsigned short dx = 0; dx < 8; dx++){
+				pixelColor = getBitmapPixel(16*i, (7-dx), dy);
 				window->setDrawColor(gbcPaletteColors[0][pixelColor]);
-				window->drawPixel(x*8+dx, y);
+				window->drawPixel(tileX*8+dx, tileY*8+dy);
 			}
+		}
+	}
+	ColorGBC current[160];
+	ColorGBC *currentPixel;
+	ColorRGB *currentPixelRGB;
+	for(unsigned short dy = 0; dy < 144; dy++){
+		for(unsigned short dx = 0; dx < 20; dx++){
+			drawTile(dx*8, dy, rSCX->getValue(), rSCY->getValue(), (bgTileMapSelect ? 0x1C00 : 0x1800), current);
+		}
+		for(unsigned short x = 0; x < 160; x++){
+			currentPixel = &current[x];
+			if(bGBCMODE)
+				currentPixelRGB = &gbcPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
+			else
+				currentPixelRGB = &gbcPaletteColors[0][ngbcPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
+			window->setDrawColor(currentPixelRGB);
+			window->drawPixel(x, 96+dy);
 		}
 	}
 }
@@ -360,7 +381,7 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 
 	// Handle the background layer
 	rx = rSCX->getValue();
-	if(bGBCMODE || bgDisplayEnable){ // Background enabled
+	if((bGBCMODE || bgDisplayEnable) && userLayerEnable[0]){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
 			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
 	}
@@ -371,20 +392,22 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 
 	// Handle the window layer
 	bool windowVisible = false; // Is the window visible on this line?
-	if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
-		unsigned char rwy = rWY->getValue() + rSCY->getValue(); // Real Y coordinate of the top left corner of the window
-		unsigned char rwx = (rWX->getValue()-7) + rSCX->getValue(); // Real X coordinate of the top left corner of the window
-		rx = rwx;
-		for(unsigned short x = 0; x <= 20; x++){
-			// The window is visible if WX=[0,167) and WY=[0,144)
-			// WX=7, WY=0 locates the window at the upper left of the screen
-			rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+	if(userLayerEnable[1]){
+		if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
+			unsigned char rwy = rWY->getValue() + rSCY->getValue(); // Real Y coordinate of the top left corner of the window
+			unsigned char rwx = (rWX->getValue()-7) + rSCX->getValue(); // Real X coordinate of the top left corner of the window
+			rx = rwx;
+			for(unsigned short x = 0; x <= 20; x++){
+				// The window is visible if WX=[0,167) and WY=[0,144)
+				// WX=7, WY=0 locates the window at the upper left of the screen
+				rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+			}
+			windowVisible = true;
 		}
-		windowVisible = true;
 	}
 
 	// Handle the OBJ (sprite) layer
-	if(objDisplayEnable){
+	if(objDisplayEnable && userLayerEnable[2]){
 		int spritesDrawn = 0;
 		if(oam->modified()){
 			// Gather sprite attributes from OAM
@@ -498,6 +521,14 @@ void GPU::render(){
 
 bool GPU::getWindowStatus(){
 	return window->status();
+}
+
+unsigned short GPU::getBgPaletteColorHex(const unsigned short &index) const { 
+	return getUShort(bgPaletteData[index], bgPaletteData[index+1]); 
+}
+
+unsigned short GPU::getObjPaletteColorHex(const unsigned short &index) const { 
+	return getUShort(objPaletteData[index], objPaletteData[index+1]); 
 }
 
 void GPU::setPixelScale(const unsigned int &n){

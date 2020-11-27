@@ -1,21 +1,21 @@
 #ifndef COLORS_HPP
 #define COLORS_HPP
 
-#ifndef USE_OPENGL
-
-	class ColorRGB{
-	public:
-		unsigned char r;
-		unsigned char g;
-		unsigned char b;
-
-#else
+#ifdef USE_OPENGL
 
 	class ColorRGB{
 	public:
 		float r;
 		float g;
 		float b;
+		
+#else
+
+	class ColorRGB{
+	public:
+		unsigned char r;
+		unsigned char g;
+		unsigned char b;
 
 #endif
 

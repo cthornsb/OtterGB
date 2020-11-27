@@ -1,13 +1,15 @@
 #ifndef SYSTEM_REGISTERS_HPP
 #define SYSTEM_REGISTERS_HPP
 
+#include <string>
+
 class SystemComponent;
 
 class Register{
 public:
-	Register() : value(0), valueBuffer(0), readBits(0), writeBits(0), sName(), comp(0x0) { }
+	Register() : value(0), valueBuffer(0), readBits(0), writeBits(0), sName(), address(0), comp(0x0) { }
 
-	Register(const std::string &name, const unsigned char &rb, const unsigned char &wb) : value(0), valueBuffer(0), readBits(rb), writeBits(wb), sName(name), comp(0x0) { }
+	Register(const std::string &name, const unsigned char &rb, const unsigned char &wb) : value(0), valueBuffer(0), readBits(rb), writeBits(wb), sName(name), address(0), comp(0x0) { }
 
 	Register(const std::string &name, const std::string &bits);
 
@@ -80,6 +82,8 @@ public:
 	
 	SystemComponent *getSystemComponent(){ return comp; }
 
+	void setAddress(const unsigned short &addr){ address = addr; }
+
 	void setName(const std::string &name){ sName = name; }
 	
 	void setMasks(const std::string &masks);
@@ -101,6 +105,8 @@ public:
 	void clear(){ value = 0x0; }
 
 	bool zero() const { return (value == 0); }
+	
+	std::string dump() const ;
 
 private:
 	unsigned char value;
@@ -110,6 +116,8 @@ private:
 	unsigned char writeBits;
 	
 	std::string sName;
+	
+	unsigned short address;
 	
 	SystemComponent *comp;
 };

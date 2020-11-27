@@ -15,7 +15,7 @@ add_custom_target(UicFile ALL DEPENDS ${UIC_FILENAME})
 add_custom_command(OUTPUT ${UIC_FILENAME} COMMAND ${UIC_EXECUTABLE} ${QT_UI_HEADER} -o ${UIC_FILENAME} DEPENDS ${QT_UI_HEADER} VERBATIM)
 
 # Include the newly generated files
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${TOP_DIRECTORY}/include ${CMAKE_CURRENT_BINARY_DIR})
 
 # Generate the QT window library
 add_library(QTDEBUG_OBJECTS OBJECT mainwindow.cpp ${MOC_FILENAME})

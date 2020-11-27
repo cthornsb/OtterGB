@@ -85,6 +85,8 @@ public:
 
 	unsigned int getSize() const { return size; }
 
+	unsigned short getBankSelect() const { return bs; }
+
 	void setDebugMode(bool state=true){ debugMode = state; }
 
 protected:

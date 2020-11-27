@@ -38,7 +38,9 @@ public:
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
 	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), OPM(0xFFFF), nCyclesRemaining(0) { }
 
-	bool initialize();
+	void initialize();
+
+	void reset();
 
 	/** Read the next instruction from memory and return the number of clock cycles. 
 	  */
@@ -66,6 +68,22 @@ public:
 	unsigned short getDE() const ;
 
 	unsigned short getHL() const ;
+
+	unsigned char getA() const { return A; }
+
+	unsigned char getB() const { return B; }
+
+	unsigned char getC() const { return C; }
+
+	unsigned char getD() const { return D; }
+
+	unsigned char getE() const { return E; }
+
+	unsigned char getF() const { return F; }
+
+	unsigned char getH() const { return H; }
+
+	unsigned char getL() const { return L; }
 
 	unsigned short getCyclesRemaining() const { return nCyclesRemaining; }
 	

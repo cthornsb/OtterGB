@@ -44,16 +44,16 @@ unsigned short LR35902::evaluate(){
 	nCyclesRemaining = 0; // Zero the CPU cycles counter
 	nExtraCyclesRemaining = 0;
 
-	if(PC == BP) // Check for instruction breakpoint
-		debugMode = true;
+	//if(PC == BP) // Check for instruction breakpoint
+	//	debugMode = true;
 
 	// Read an opcode
 	if(!sys->read(PC++, &op))
 		std::cout << " Opcode read failed! PC=" << getHex((unsigned short)(PC-1)) << std::endl;
 	
 	// Check for breakpoints
-	if(op == OPM)
-		debugMode = true;
+	//if(op == OPM)
+	//	debugMode = true;
 	
 	if(op != 0xCB) // Normal opcodes
 		lastOpcode = &opcodes[op];
@@ -69,11 +69,15 @@ unsigned short LR35902::evaluate(){
 	d16h = 0x0;
 	d16l = 0x0;
 
+	//std::stringstream stream;
+	//if(debugMode){
+	//	stream << getHex(A) << " " << getHex(B) << " " << getHex(C) << " " << getHex(D) << " " << getHex(E);
+	//	stream << " " << getHex(H) << " " <<  getHex(L) << " F=" << getBinary(F, 4) << " PC=" << getHex((unsigned short)(PC-1)) << " SP=" << getHex(SP);
+	//}
+#ifdef USE_QT_DEBUGGER
 	std::stringstream stream;
-	if(debugMode){
-		stream << getHex(A) << " " << getHex(B) << " " << getHex(C) << " " << getHex(D) << " " << getHex(E);
-		stream << " " << getHex(H) << " " <<  getHex(L) << " F=" << getBinary(F, 4) << " PC=" << getHex((unsigned short)(PC-1)) << " SP=" << getHex(SP);
-	}
+	stream << getHex((unsigned short)(PC-1)) << " " << lastOpcode->sName << "\n";
+#endif
 
 	// Read the opcode's accompanying value (if any)
 	if(lastOpcode->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
@@ -85,7 +89,7 @@ unsigned short LR35902::evaluate(){
 		sys->read(PC++, d16h);
 	}
 
-	if(debugMode){
+	/*if(debugMode){
 		stream << " d8=" << getHex(d8) << " d16=" << getHex(getd16()) << " " << lastOpcode->sName;
 	
 		std::cout << stream.str();// << "\r" << std::flush;
@@ -93,8 +97,8 @@ unsigned short LR35902::evaluate(){
 		// Wait for the user to hit enter
 		std::string dummy;
 		getline(std::cin, dummy);
-	}
-	
+	}*/
+
 	return nCyclesRemaining;
 }
 
@@ -1043,15 +1047,7 @@ void LR35902::SET_7_aHL(){
 	set_d8(sys->getPtr(getHL()), 7);
 }
 
-bool LR35902::initialize(){
-	// Set startup values for the CPU registers
-	setAF(0x01B0);
-	setBC(0x0013);
-	setDE(0x00D8);
-	setHL(0x014D);
-	SP = 0xFFFE;
-	PC = 0x0100;
-
+void LR35902::initialize(){
 	// Standard opcodes
 	//                    Mnemonic        C  L  R  W  Pointer
 	opcodes[0]   = Opcode("NOP         ", 1, 1, 0, 0, &LR35902::NOP);
@@ -1569,8 +1565,14 @@ bool LR35902::initialize(){
 	opcodesCB[253] = Opcode("SET 7,L     ", 2, 1, 0, 0, &LR35902::SET_7_L);
 	opcodesCB[254] = Opcode("SET 7,(HL)  ", 4, 1, 3, 4, &LR35902::SET_7_aHL);
 	opcodesCB[255] = Opcode("SET 7,A     ", 2, 1, 0, 0, &LR35902::SET_7_A);	
-
-	return true;
 }
 
-
+void LR35902::reset(){
+	// Set startup values for the CPU registers
+	setAF(0x11B0); // 0x01B0
+	setBC(0x0013); // 0x0013
+	setDE(0x00D8); // 0x00D8
+	setHL(0x014D); // 0x014D
+	SP = 0xFFFE;   // 0xFFFE
+	PC = 0x0100;   // 0x0100
+}

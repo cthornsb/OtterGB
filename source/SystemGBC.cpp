@@ -1,13 +1,16 @@
 
 #include <unistd.h>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 #include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
+
+#ifdef USE_QT_DEBUGGER
+	#include "mainwindow.h"
+#endif
 
 #define ROM_ZERO_START  0x0000
 #define ROM_SWAP_START  0x4000
@@ -44,7 +47,7 @@
 	
 SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
                          emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
-                         dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), idleTask(0x0), cleanUpTask(0x0) { 
+                         userQuitting(false), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), romFilename(), gui(0x0) { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
@@ -102,127 +105,25 @@ bool SystemGBC::initialize(const std::string &fname){
 	// Must connect the system bus BEFORE initializing the CPU.
 	cpu.initialize();
 	
+	// Set the ROM path
+	romFilename = fname;
+	
 	// Disable the system timer.
 	timer.disable();
 
-	// Read the ROM into memory
-	bool retval = cart.readRom(fname, verboseMode);
-
 	// Initialize the window and link it to the joystick controller	
-	if(retval){
-		gpu.initialize();
-		joy.setWindow(gpu.getWindow());
-	}
+	gpu.initialize();
+	joy.setWindow(gpu.getWindow());
 	
-	// Check that the ROM is loaded and the window is open
-	if(!retval || !gpu.getWindowStatus())
-		return false;
-
-	// Enable GBC features for original GB games.
-	if(forceColor){
-		if(!bGBCMODE)
-			bGBCMODE = true;
-		else // Disable force color for GBC games
-			forceColor = false;
-	}
-
-	// Load the boot ROM (if available)
-	bool loadBootROM = false;
-	std::ifstream bootstrap;
-	if(bGBCMODE){
-		if(!gameboyColorBootRomPath.empty()){
-			bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
-			if(!bootstrap.good())
-				std::cout << " Warning! Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\".\n";
-			else
-				loadBootROM = true;
-		}
-	}
-	else{
-		if(!gameboyBootRomPath.empty()){
-			bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
-			if(!bootstrap.good())
-				std::cout << " Warning! Failed to load GB boot ROM \"" << gameboyBootRomPath << "\".\n";
-			else
-				loadBootROM = true;
-		}
-	}
-	
-	if(loadBootROM){
-		bootstrap.seekg(0, bootstrap.end);
-		bootLength = bootstrap.tellg();
-		bootstrap.seekg(0);
-		bootROM.reserve(bootLength);
-		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
-		bootstrap.close();
-		std::cout << " Successfully loaded " << bootLength << " B boot ROM.\n";
-		cpu.setProgramCounter(0);
-		bootSequence = true;
-	}
-	else{ // Initialize the system registers with default values.
-		// Timer registers
-		(*rTIMA)  = 0x00;
-		(*rTMA)   = 0x00;
-		(*rTAC)   = 0x00;
-		
-		// Sound processor registers
-		(*rNR10)  = 0x80;
-		(*rNR11)  = 0xBF;
-		(*rNR12)  = 0xFE;
-		(*rNR14)  = 0xBF;
-		(*rNR21)  = 0x3F;
-		(*rNR22)  = 0x00;
-		(*rNR24)  = 0xBF;
-		(*rNR30)  = 0x7F;
-		(*rNR31)  = 0xFF;
-		(*rNR32)  = 0x9F;
-		(*rNR33)  = 0xBF;
-		(*rNR41)  = 0xFF;
-		(*rNR42)  = 0x00;
-		(*rNR43)  = 0x00;
-		(*rNR44)  = 0xBF;
-		(*rNR50)  = 0x77;
-		(*rNR51)  = 0xF3;
-		(*rNR52)  = 0xF1;
-
-		// GPU registers
-		(*rLCDC)  = 0x91;
-		(*rSCY)   = 0x00;
-		(*rSCX)   = 0x00;
-		(*rLYC)   = 0x00;
-		(*rBGP)   = 0xFC;
-		(*rOBP0)  = 0xFF;
-		(*rOBP1)  = 0xFF;
-		(*rWY)    = 0x00;
-		(*rWX)    = 0x00;
-
-		// Interrupt enable
-		(*rIE)    = 0x00;
-
-		// Undocumented registers (for completeness)
-		(*rFF6C)  = 0xFE;
-		(*rFF72)  = 0x00;
-		(*rFF73)  = 0x00;
-		(*rFF74)  = 0x00;
-		(*rFF75)  = 0x8F;
-		(*rFF76)  = 0x00;
-		(*rFF77)  = 0x00;
-
-		// Set the PC to the entry point of the program. Skip the boot sequence.
-		cpu.setProgramCounter(cart.getProgramEntryPoint());
-		
-		// Disable the boot sequence
-		bootSequence = false;
-	}
-
-	return true;
+	// Boot the system
+	return reset();
 }
 
 bool SystemGBC::execute(){
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
-		if(!gpu.getWindowStatus())
+		if(!gpu.getWindowStatus() || userQuitting)
 			break;
 
 		if(!emulationPaused && !cpuStopped){
@@ -258,18 +159,14 @@ bool SystemGBC::execute(){
 				
 				// Render the current frame
 				if(nFrames++ % frameSkip == 0 && !cpuStopped){
-					if(displayFramerate){
-						std::stringstream stream;
-						stream << clock.getFramerate() << " fps";
-						gpu.print(stream.str(), 0, 17);
-					}
-					gpu.print(getHex(cpu.getStackPointer())+" "+getHex(cpu.getProgramCounter()), 9, 0);
+					if(displayFramerate)
+						gpu.print(doubleToStr(clock.getFramerate(), 1)+" fps", 0, 17);
 					gpu.render();
 				}
-				//gpu.drawTileMaps();
-				//gpu.render();
-				if(idleTask)
-					idleTask();
+#ifdef USE_QT_DEBUGGER
+				gui->processEvents();
+				gui->update();
+#endif
 			}
 		}
 		else{
@@ -285,12 +182,17 @@ bool SystemGBC::execute(){
 
 			// Maintain framerate but do not advance the system clock.
 			clock.wait();
+#ifndef USE_QT_DEBUGGER
 		}
 	}
-	
-	if(cleanUpTask)
-		cleanUpTask();
-	
+#else
+			// Process events for the Qt GUI
+			gui->processEvents();
+			gui->update();
+		}
+	}
+	gui->closeAllWindows(); // Clean up the Qt GUI
+#endif
 	return true;
 }
 
@@ -453,7 +355,7 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 			retval = oam.getPtr(loc);
 			break;
 		case 0xFF00 ... 0xFF7F: // System registers
-			retval = getPtrToRegister(loc);
+			retval = getPtrToRegisterValue(loc);
 			break;
 		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
 			retval = hram.getPtr(loc);
@@ -466,7 +368,13 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 	return retval;
 }
 
-unsigned char *SystemGBC::getPtrToRegister(const unsigned short &reg){
+Register *SystemGBC::getPtrToRegister(const unsigned short &reg){
+	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
+		return 0x0;
+	return &registers[reg-0xFF00];
+}
+
+unsigned char *SystemGBC::getPtrToRegisterValue(const unsigned short &reg){
 	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
 		return 0x0;
 	return registers[reg-0xFF00].getPtr();
@@ -515,6 +423,7 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 void SystemGBC::addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits){
 	registers[reg].setName(name);
 	registers[reg].setMasks(bits);
+	registers[reg].setAddress(0xFF00+reg);
 	registers[reg].setSystemComponent(comp);
 	ptr = &registers[reg];
 }
@@ -601,6 +510,116 @@ void SystemGBC::resumeCPU(){
 			(*rKEY1) |= 0x80;
 		prepareSpeedSwitch = false;
 	}
+}
+
+bool SystemGBC::reset(){
+	// Set default register values.
+	cpu.reset();
+	
+	// Read the ROM into memory
+	bool retval = cart.readRom(romFilename, verboseMode);
+
+	// Check that the ROM is loaded and the window is open
+	if(!retval || !gpu.getWindowStatus())
+		return false;
+
+	// Enable GBC features for original GB games.
+	if(forceColor){
+		if(!bGBCMODE)
+			bGBCMODE = true;
+		else // Disable force color for GBC games
+			forceColor = false;
+	}
+
+	// Load the boot ROM (if available)
+	bool loadBootROM = false;
+	std::ifstream bootstrap;
+	if(bGBCMODE){
+		if(!gameboyColorBootRomPath.empty()){
+			bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrap.good())
+				std::cout << " Warning! Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\".\n";
+			else
+				loadBootROM = true;
+		}
+	}
+	else{
+		if(!gameboyBootRomPath.empty()){
+			bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrap.good())
+				std::cout << " Warning! Failed to load GB boot ROM \"" << gameboyBootRomPath << "\".\n";
+			else
+				loadBootROM = true;
+		}
+	}
+	
+	if(loadBootROM){
+		bootstrap.seekg(0, bootstrap.end);
+		bootLength = bootstrap.tellg();
+		bootstrap.seekg(0);
+		bootROM.reserve(bootLength);
+		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
+		bootstrap.close();
+		std::cout << " Successfully loaded " << bootLength << " B boot ROM.\n";
+		cpu.setProgramCounter(0);
+		bootSequence = true;
+	}
+	else{ // Initialize the system registers with default values.
+		// Timer registers
+		(*rTIMA)  = 0x00;
+		(*rTMA)   = 0x00;
+		(*rTAC)   = 0x00;
+		
+		// Sound processor registers
+		(*rNR10)  = 0x80;
+		(*rNR11)  = 0xBF;
+		(*rNR12)  = 0xFE;
+		(*rNR14)  = 0xBF;
+		(*rNR21)  = 0x3F;
+		(*rNR22)  = 0x00;
+		(*rNR24)  = 0xBF;
+		(*rNR30)  = 0x7F;
+		(*rNR31)  = 0xFF;
+		(*rNR32)  = 0x9F;
+		(*rNR33)  = 0xBF;
+		(*rNR41)  = 0xFF;
+		(*rNR42)  = 0x00;
+		(*rNR43)  = 0x00;
+		(*rNR44)  = 0xBF;
+		(*rNR50)  = 0x77;
+		(*rNR51)  = 0xF3;
+		(*rNR52)  = 0xF1;
+
+		// GPU registers
+		(*rLCDC)  = 0x91;
+		(*rSCY)   = 0x00;
+		(*rSCX)   = 0x00;
+		(*rLYC)   = 0x00;
+		(*rBGP)   = 0xFC;
+		(*rOBP0)  = 0xFF;
+		(*rOBP1)  = 0xFF;
+		(*rWY)    = 0x00;
+		(*rWX)    = 0x00;
+
+		// Interrupt enable
+		(*rIE)    = 0x00;
+
+		// Undocumented registers (for completeness)
+		(*rFF6C)  = 0xFE;
+		(*rFF72)  = 0x00;
+		(*rFF73)  = 0x00;
+		(*rFF74)  = 0x00;
+		(*rFF75)  = 0x8F;
+		(*rFF76)  = 0x00;
+		(*rFF77)  = 0x00;
+
+		// Set the PC to the entry point of the program. Skip the boot sequence.
+		cpu.setProgramCounter(cart.getProgramEntryPoint());
+		
+		// Disable the boot sequence
+		bootSequence = false;
+	}
+	return true;
 }
 
 bool SystemGBC::screenshot(){

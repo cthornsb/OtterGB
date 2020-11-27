@@ -4,23 +4,13 @@
 #include <stdlib.h>
 
 #ifdef USE_QT_DEBUGGER
-	#include "mainwindow.h"
 	#include <QApplication>
+	#include "mainwindow.h"
 #endif
 
 #include "Support.hpp"
 #include "optionHandler.hpp"
 #include "SystemGBC.hpp"
-
-#ifdef USE_QT_DEBUGGER
-QApplication app(0, 0x0);
-void idleTask(void){
-	app.processEvents();
-}
-void cleanup(void){
-	app.closeAllWindows();
-}
-#endif
 
 int main(int argc, char *argv[]){
 	optionHandler handler;
@@ -110,10 +100,10 @@ int main(int argc, char *argv[]){
 	}
 
 #ifdef USE_QT_DEBUGGER
-	MainWindow win;
-	win.show();
-	gbc.setIdleTask(idleTask);
-	gbc.setCleanUpTask(cleanup);
+	QApplication app(argc, argv);
+	MainWindow win(&app);
+	win.connectToSystem(&gbc);
+	gbc.connectToGui(&win);
 #endif
 	gbc.execute();
 
