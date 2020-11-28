@@ -2,6 +2,8 @@
 #define SYSTEM_GBC_HPP
 
 #include <vector>
+#include <memory>
+#include <map>
 
 #include "SystemComponent.hpp"
 #include "SystemRegisters.hpp"
@@ -19,12 +21,38 @@
 #define REGISTER_HIGH 0xFF80
 
 #ifdef USE_QT_DEBUGGER
+	class QApplication;
 	class MainWindow;
 #endif
 
+class ComponentList{
+public:
+	SerialController   *serial;
+	DmaController      *dma;
+	Cartridge          *cart;
+	GPU                *gpu;
+	SoundProcessor     *apu;
+	SpriteHandler      *oam;
+	JoystickController *joy;
+	WorkRam            *wram; // 8 4kB banks of RAM
+	SystemComponent    *hram; // 127 bytes of high RAM
+	SystemClock        *sclk;
+	SystemTimer        *timer;
+	LR35902            *cpu;
+	
+	std::map<std::string, SystemComponent*> list;
+	
+	ComponentList(){ }
+	
+	ComponentList(SystemGBC *sys);
+};
+
 class SystemGBC{
+	friend class ComponentList;
 public:
 	SystemGBC();
+	
+	~SystemGBC();
 
 	bool initialize(const std::string &fname);
 
@@ -62,6 +90,8 @@ public:
 	
 	WorkRam *getWRAM(){ return &wram; }
 	
+	ComponentList *getListOfComponents(){ return subsystems.get(); }
+	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 
@@ -84,10 +114,6 @@ public:
 	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
 
 	void setRomFilename(const std::string &fname){ romFilename = fname; }
-
-#ifdef USE_QT_DEBUGGER
-	void connectToGui(MainWindow *g){ gui = g; }
-#endif
 
 	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
@@ -164,6 +190,8 @@ private:
 	std::string romFilename; ///< Path to input ROM file
 
 #ifdef USE_QT_DEBUGGER
+	QApplication *app;
+
 	MainWindow *gui;
 #endif
 
@@ -188,7 +216,7 @@ private:
 	SystemTimer timer;
 	LR35902 cpu;
 
-	std::vector<SystemComponent*> subsystems;
+	std::unique_ptr<ComponentList> subsystems;
 
 	bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	

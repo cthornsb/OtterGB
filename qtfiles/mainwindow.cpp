@@ -4,7 +4,6 @@
 #include "ui_mainwindow.h"
 
 #include "Support.hpp"
-#include "SystemGBC.hpp"
 #include "SystemTimer.hpp"
 #include "LR35902.hpp"
 #include "GPU.hpp"
@@ -60,7 +59,7 @@ void MainWindow::update()
 }
 
 void MainWindow::updateMainTab(){
-	LR35902 *cpu = sys->getCPU();
+	LR35902 *cpu = components->cpu;
 
 	// CPU registers
 	setLineEditHex(ui->lineEdit_rA, cpu->getA());
@@ -79,14 +78,17 @@ void MainWindow::updateMainTab(){
 	setLineEditHex(ui->lineEdit_SP, cpu->getStackPointer());
 	
 	// Memory bank indicators
-	setLineEditText(ui->lineEdit_WRAM_Bank, sys->getWRAM()->getBankSelect());
+	setLineEditText(ui->lineEdit_WRAM_Bank, components->wram->getBankSelect());
 	
 	// Frames per second
-	setLineEditText(ui->lineEdit_FPS, sys->getClock()->getFramerate());
+	setLineEditText(ui->lineEdit_FPS, components->sclk->getFramerate());
+	
+	// Instruction history
+	//ui->plainText_Instr_History->setPlainText(getQString(cpu->getInstruction()));
 }
 
 void MainWindow::updateGraphicsTab(){
-	GPU *gpu = sys->getGPU();
+	GPU *gpu = components->gpu;
 
 	// LCD status
 	setRadioButtonState(ui->radioButton_LcdEnabled, gpu->bgDisplayEnable);
@@ -117,7 +119,7 @@ void MainWindow::updateGraphicsTab(){
 }
 
 void MainWindow::updateSpritesTab(){
-	SpriteAttributes attr = sys->getOAM()->getSpriteAttributes(ui->spinBox_SpriteIndex->value());
+	SpriteAttributes attr = components->oam->getSpriteAttributes(ui->spinBox_SpriteIndex->value());
 	
 	// Display numerical sprite attributes
 	setLineEditHex(ui->lineEdit_SpriteX, attr.xPos);
@@ -139,7 +141,7 @@ void MainWindow::updateSoundTab(){
 }
 
 void MainWindow::updateCartridgeTab(){
-	Cartridge *cart = sys->getCartridge();
+	Cartridge *cart = components->cart;
 
 	// Cartridge header information
 	setLineEditText(ui->lineEdit_RomPath, sys->getRomFilename());
@@ -191,6 +193,9 @@ void MainWindow::updateMemoryTab(){
 
 void MainWindow::connectToSystem(SystemGBC *ptr){ 
 	sys = ptr; 
+	components = ptr->getListOfComponents();
+	for(auto comp = components->list.begin(); comp != components->list.end(); comp++)
+		ui->comboBox_Registers->addItem(getQString(comp->first));
 }
 
 void MainWindow::processEvents()
@@ -242,17 +247,17 @@ void MainWindow::setRadioButtonState(QRadioButton *button, const bool &state)
 
 void MainWindow::on_checkBox_Background_stateChanged(int arg1)
 {
-	sys->getGPU()->userLayerEnable[0] = (arg1 != 0);
+	components->gpu->userLayerEnable[0] = (arg1 != 0);
 }
 
 void MainWindow::on_checkBox_Window_stateChanged(int arg1)
 {
-	sys->getGPU()->userLayerEnable[1] = (arg1 != 0);
+	components->gpu->userLayerEnable[1] = (arg1 != 0);
 }
 
 void MainWindow::on_checkBox_Sprites_stateChanged(int arg1)
 {
-	sys->getGPU()->userLayerEnable[2] = (arg1 != 0);
+	components->gpu->userLayerEnable[2] = (arg1 != 0);
 }
 
 void MainWindow::on_checkBox_Show_Framerate_stateChanged(int arg1)
@@ -416,6 +421,5 @@ void MainWindow::on_lineEdit_MemoryByte_editingFinished()
 {
 	std::string str = ui->lineEdit_MemoryByte->text().toStdString();
 	unsigned short byte = strtoul(str.c_str(), 0, 16);
-	std::cout << " page=" << byte/128 << std::endl;
 	ui->spinBox_MemoryPage->setValue(byte/128);
 }

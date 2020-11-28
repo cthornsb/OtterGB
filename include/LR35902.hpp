@@ -29,14 +29,17 @@ public:
 
 		std::string sName; ///< The instruciton mnemonic.
 
+		std::string sPrefix;
+		std::string sSuffix;
+
 		Opcode() : ptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
 		
-		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) : ptr(p), nCycles(cycles), nBytes(bytes), nReadCycles(read), nWriteCycles(write), sName(mnemonic) { }
+		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
 	};
 
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
-	            d8(0), d16h(0), d16l(0), SP(0), PC(0), BP(0xFFFF), OPM(0xFFFF), nCyclesRemaining(0) { }
+	            d8(0), d16h(0), d16l(0), SP(0), PC(0), nCyclesRemaining(0) { }
 
 	void initialize();
 
@@ -52,6 +55,8 @@ public:
 	virtual bool onClockUpdate();
 
 	Opcode *getLastOpcode(){ return lastOpcode; }
+
+	std::string getInstruction() const { return instruction; }
 
 	unsigned short getProgramCounter() const { return PC; }
 
@@ -89,10 +94,6 @@ public:
 	
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
-	void setBreakpoint(const unsigned short &breakpoint){ BP = breakpoint; }
-
-	void setOpcode(const unsigned char &op){ OPM = op; }
-
 	void setd8(const unsigned char &d){ d8 = d; }
 	
 	void setd16(const unsigned short &dd);
@@ -129,8 +130,6 @@ protected:
 
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
-	unsigned short BP; ///< User specified program counter breakpoint
-	unsigned short OPM; ///< User specified opcode monitor
 	
 	Opcode *lastOpcode; ///< Pointer to the last read opcode.
 	unsigned short nCyclesRemaining; ///< Number of clock cycles remaining for last instruction
@@ -138,6 +137,8 @@ protected:
 
 	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
 	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
+
+	std::string instruction; ///< The next instruction which will be executed
 
 	void acknowledgeVBlankInterrupt();
 

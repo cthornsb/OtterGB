@@ -9,6 +9,7 @@
 #include "Graphics.hpp"
 
 #ifdef USE_QT_DEBUGGER
+	#include <QApplication>
 	#include "mainwindow.h"
 #endif
 
@@ -45,6 +46,21 @@
 	0x60 - Joypad interrupt (triggered any time a joypad button is pressed)
 **/
 	
+ComponentList::ComponentList(SystemGBC *sys){
+		list["APU"]       = (apu = &sys->sound);
+		list["Cartridge"] = (cart = &sys->cart);
+		list["CPU"]       = (cpu = &sys->cpu);
+		list["DMA"]       = (dma = &sys->dma);
+		list["GPU"]       = (gpu = &sys->gpu);
+		list["HRAM"]      = (hram = &sys->hram);
+		list["Joypad"]    = (joy = &sys->joy);
+		list["OAM"]       = (oam = &sys->oam);
+		list["Clock"]     = (sclk = &sys->clock);
+		list["Serial"]    = (serial = &sys->serial);
+		list["Timer"]     = (timer = &sys->timer);
+		list["WRAM"]      = (wram = &sys->wram);
+}
+	
 SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
                          emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
                          userQuitting(false), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), romFilename(), gui(0x0) { 
@@ -53,24 +69,17 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 	memoryAccessWrite[1] = 0;
 	memoryAccessRead[0] = 1; 
 	memoryAccessRead[1] = 0;
+
+	// Add all components to the subsystem list
+	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
+	getListOfComponents(); // Why does this prevent seg-faults CRT?
+}
+
+SystemGBC::~SystemGBC(){
 }
 
 bool SystemGBC::initialize(const std::string &fname){ 
 	hram.initialize(127);
-
-	// Add all components to the subsystem list
-	subsystems.push_back(&serial);
-	subsystems.push_back(&dma);
-	subsystems.push_back(&cart);
-	subsystems.push_back(&gpu);
-	subsystems.push_back(&sound);
-	subsystems.push_back(&oam);
-	subsystems.push_back(&joy);
-	subsystems.push_back(&wram);
-	subsystems.push_back(&hram);
-	subsystems.push_back(&clock);
-	subsystems.push_back(&timer);
-	subsystems.push_back(&cpu);
 
 	// Define system registers
 	addSystemRegister(0x0, 0x0F, rIF,   "IF",   "33333000");
@@ -90,9 +99,9 @@ bool SystemGBC::initialize(const std::string &fname){
 	addSystemRegister(0x0, 0x77, rFF77, "FF77", "11111111");
 
 	// Define sub-system registers and connect to the system bus.
-	for(auto comp = subsystems.begin(); comp != subsystems.end(); comp++){
-		(*comp)->connectSystemBus(this);
-		(*comp)->defineRegisters();
+	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++){
+		comp->second->connectSystemBus(this);
+		comp->second->defineRegisters();
 	}
 
 	// Set memory offsets for all components	
@@ -164,8 +173,10 @@ bool SystemGBC::execute(){
 					gpu.render();
 				}
 #ifdef USE_QT_DEBUGGER
-				gui->processEvents();
-				gui->update();
+				if(debugMode){
+					gui->processEvents();
+					gui->update();
+				}
 #endif
 			}
 		}
@@ -186,12 +197,14 @@ bool SystemGBC::execute(){
 		}
 	}
 #else
-			// Process events for the Qt GUI
-			gui->processEvents();
-			gui->update();
+			if(debugMode){ // Process events for the Qt GUI
+				gui->processEvents();
+				gui->update();
+			}
 		}
 	}
-	gui->closeAllWindows(); // Clean up the Qt GUI
+	if(debugMode)
+		gui->closeAllWindows(); // Clean up the Qt GUI
 #endif
 	return true;
 }
@@ -382,8 +395,17 @@ unsigned char *SystemGBC::getPtrToRegisterValue(const unsigned short &reg){
 
 void SystemGBC::setDebugMode(bool state/*=true*/){
 	debugMode = state;
-	for(auto comp = subsystems.begin(); comp != subsystems.end(); comp++)
-		(*comp)->setDebugMode(state);
+	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++)
+		comp->second->setDebugMode(state);
+#ifdef USE_QT_DEBUGGER
+	if(debugMode){
+		int dummyARGC = 1;
+		char *dummyARGV[1] = {0};
+		app = new QApplication(dummyARGC, dummyARGV);
+		gui = new MainWindow(app);
+		gui->connectToSystem(this);
+	}
+#endif
 }
 
 // Set CPU frequency multiplier

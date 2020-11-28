@@ -1,5 +1,4 @@
 #include <iostream>
-#include <sstream>
 #include <stdlib.h>
 
 #include "Support.hpp"
@@ -18,6 +17,32 @@ const unsigned char FLAG_H_MASK = 0x20;
 const unsigned char FLAG_C_MASK = 0x10;
 
 const unsigned char ZERO = 0x0;
+
+LR35902::Opcode::Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
+	ptr(p),
+	nCycles(cycles), 
+	nBytes(bytes), 
+	nReadCycles(read), 
+	nWriteCycles(write), 
+	sName(mnemonic) 
+{
+	const std::string targets[5] = {"d8", "r8", "a8", "d16", "a16"};
+	if(nBytes > 1){
+		for(int i = 0; i < 5; i++){
+			size_t index = sName.find(targets[i]);
+			if(index != std::string::npos){
+				sPrefix = sName.substr(0, index);
+				sSuffix = sName.substr(index+targets[i].length());
+				if(nBytes == 2)
+					sSuffix += " ";
+				break;
+			}
+		}
+	}
+	else{
+		sPrefix = sName + "  ";
+	}
+}
 
 /** Read the next instruction from memory and return the number of clock cycles. 
   */
@@ -44,16 +69,9 @@ unsigned short LR35902::evaluate(){
 	nCyclesRemaining = 0; // Zero the CPU cycles counter
 	nExtraCyclesRemaining = 0;
 
-	//if(PC == BP) // Check for instruction breakpoint
-	//	debugMode = true;
-
 	// Read an opcode
 	if(!sys->read(PC++, &op))
 		std::cout << " Opcode read failed! PC=" << getHex((unsigned short)(PC-1)) << std::endl;
-	
-	// Check for breakpoints
-	//if(op == OPM)
-	//	debugMode = true;
 	
 	if(op != 0xCB) // Normal opcodes
 		lastOpcode = &opcodes[op];
@@ -69,16 +87,6 @@ unsigned short LR35902::evaluate(){
 	d16h = 0x0;
 	d16l = 0x0;
 
-	//std::stringstream stream;
-	//if(debugMode){
-	//	stream << getHex(A) << " " << getHex(B) << " " << getHex(C) << " " << getHex(D) << " " << getHex(E);
-	//	stream << " " << getHex(H) << " " <<  getHex(L) << " F=" << getBinary(F, 4) << " PC=" << getHex((unsigned short)(PC-1)) << " SP=" << getHex(SP);
-	//}
-#ifdef USE_QT_DEBUGGER
-	std::stringstream stream;
-	stream << getHex((unsigned short)(PC-1)) << " " << lastOpcode->sName << "\n";
-#endif
-
 	// Read the opcode's accompanying value (if any)
 	if(lastOpcode->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
 		sys->read(PC++, d8);
@@ -89,15 +97,13 @@ unsigned short LR35902::evaluate(){
 		sys->read(PC++, d16h);
 	}
 
-	/*if(debugMode){
-		stream << " d8=" << getHex(d8) << " d16=" << getHex(getd16()) << " " << lastOpcode->sName;
-	
-		std::cout << stream.str();// << "\r" << std::flush;
-
-		// Wait for the user to hit enter
-		std::string dummy;
-		getline(std::cin, dummy);
-	}*/
+#ifdef USE_QT_DEBUGGER
+	instruction = getHex((unsigned short)(PC-lastOpcode->nBytes)) + " " + lastOpcode->sPrefix;
+	if(lastOpcode->nBytes == 2)
+		instruction += getHex(d8) + lastOpcode->sSuffix;
+	else if(lastOpcode->nBytes == 3)
+		instruction += getHex(getUShort(d16h,d16l)) + lastOpcode->sSuffix;
+#endif
 
 	return nCyclesRemaining;
 }

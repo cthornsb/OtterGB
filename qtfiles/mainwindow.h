@@ -3,10 +3,10 @@
 
 #include <QMainWindow>
 
+#include "SystemGBC.hpp"
+
 class QLineEdit;
 class QRadioButton;
-
-class SystemGBC;
 
 namespace Ui {
 class MainWindow;
@@ -102,7 +102,9 @@ private:
     QApplication *app;
     
     SystemGBC *sys;
-    
+
+	ComponentList *components;
+
     void setLineEditText(QLineEdit *line, const std::string &str);
     
     void setLineEditText(QLineEdit *line, const unsigned char &value);
