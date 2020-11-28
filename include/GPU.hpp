@@ -3,6 +3,7 @@
 
 #include <string>
 #include <queue>
+#include <memory>
 
 #include "colors.hpp"
 #include "SystemComponent.hpp"
@@ -98,7 +99,7 @@ public:
 
 	void render();
 
-	Window *getWindow(){ return window; }
+	Window *getWindow(){ return window.get(); }
 
 	bool getWindowStatus();
 
@@ -145,9 +146,9 @@ private:
 
 	ColorRGB gbcPaletteColors[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
 
-	Window *window; ///< Pointer to the main renderer window
+	std::unique_ptr<Window> window; ///< Pointer to the main renderer window
 	
-	CharacterMap *cmap; ///< Pointer to the character map used for printing text.
+	std::unique_ptr<CharacterMap> cmap; ///< Pointer to the character map used for printing text.
 	
 	ColorGBC currentLineSprite[256];
 	ColorGBC currentLineWindow[256];

@@ -63,7 +63,7 @@ ComponentList::ComponentList(SystemGBC *sys){
 	
 SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
                          emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
-                         userQuitting(false), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), romFilename(), gui(0x0) { 
+                         userQuitting(false), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), romFilename() { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
@@ -401,8 +401,9 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 	if(debugMode){
 		int dummyARGC = 1;
 		char *dummyARGV[1] = {0};
-		app = new QApplication(dummyARGC, dummyARGV);
-		gui = new MainWindow(app);
+		std::unique_ptr<ComponentList>(new ComponentList(this));
+		app = std::unique_ptr<QApplication>(new QApplication(dummyARGC, dummyARGV));
+		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
 		gui->connectToSystem(this);
 	}
 #endif

@@ -25,8 +25,6 @@ MainWindow::MainWindow(QApplication *parent) :
 
 MainWindow::~MainWindow()
 {
-    delete ui;
-    delete app;
 }
 
 void MainWindow::update()

@@ -148,21 +148,19 @@ GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	}
 	
 	// Create a new window
-	window = new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS);
+	window = std::unique_ptr<Window>(new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS));
 #ifdef USE_OPENGL 
 	// Create a link to the LCD driver
 	window->setGPU(this);
 #endif
 
 	// Setup the ascii character map for text output
-	cmap = new CharacterMap();
-	cmap->setWindow(window);
+	cmap = std::unique_ptr<CharacterMap>(new CharacterMap());
+	cmap->setWindow(window.get());
 	cmap->setTransparency(false);
 }
 
 GPU::~GPU(){
-	delete window;
-	delete cmap;
 }
 
 void GPU::initialize(){

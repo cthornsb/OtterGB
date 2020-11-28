@@ -190,9 +190,9 @@ private:
 	std::string romFilename; ///< Path to input ROM file
 
 #ifdef USE_QT_DEBUGGER
-	QApplication *app;
+	std::unique_ptr<QApplication> app;
 
-	MainWindow *gui;
+	std::unique_ptr<MainWindow> gui;
 #endif
 
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 

@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <memory>
+
 #include <QMainWindow>
 
 #include "SystemGBC.hpp"
@@ -97,7 +99,7 @@ private slots:
     void on_lineEdit_MemoryByte_editingFinished();
 
 private:
-    Ui::MainWindow *ui;
+    std::unique_ptr<Ui::MainWindow> ui;
     
     QApplication *app;
     
