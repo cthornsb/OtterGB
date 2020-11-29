@@ -8,6 +8,8 @@
 #include "LR35902.hpp"
 #include "GPU.hpp"
 
+unsigned char ZERO = 0;
+
 QString getQString(const std::string &str)
 {
 	return QString(str.c_str());
@@ -85,16 +87,20 @@ void MainWindow::updateMainTab(){
 	setLineEditText(ui->lineEdit_FPS, components->sclk->getFramerate());
 	
 	// Instruction history
-	const int maxInstructions = 15;
-	static int counter = 0;
-	QString history = ui->plainText_Instr_History->toPlainText();
-	if(counter++ >= 15){
-		int index = history.indexOf('\n');
-		history.remove(0, index+1);
+	if(ui->checkBox_Show_Instructions->isChecked()){
+		const int maxInstructions = 14;
+		static int instructions = 1;
+		QString history = ui->plainText_Instr_History->toPlainText();
+		if(instructions >= maxInstructions){
+			int index = history.indexOf('\n');
+			history.remove(0, index+1);
+		}
+		else
+			instructions++;
+		std::string newinstr = cpu->getInstruction();
+		history.append(getQString(newinstr+"\n"));
+		ui->plainText_Instr_History->setPlainText(history);
 	}
-	std::string newinstr = cpu->getInstruction();
-	history.append(getQString(newinstr+"\n"));
-	ui->plainText_Instr_History->setPlainText(history);
 }
 
 void MainWindow::updateGraphicsTab(){
@@ -182,18 +188,18 @@ void MainWindow::updateRegistersTab(){
 }
 
 void MainWindow::updateMemoryTab(){
-	unsigned short memLow = 0x80*ui->spinBox_MemoryPage->value();
-	unsigned short memHigh = memLow + 0x80;
-	unsigned short currentByte = memLow;
-	setLineEditHex(ui->lineEdit_MemoryPageLow, memLow);
-	setLineEditHex(ui->lineEdit_MemoryPageHigh, memHigh);
+	static bool firstUpdate = true;
+	if(firstUpdate){
+	    // Get pointers to the page in memory.
+	    updateMemoryArray();
+	    firstUpdate = false;
+	}
+	unsigned short currentByte = 0x80*ui->spinBox_MemoryPage->value();
 	QString str;
-	unsigned char byte;
-	for(unsigned short i = 0; i < 0x8; i++){
+	for(unsigned short i = 0; i < 8; i++){
 		str.append(getQString(getHex(currentByte))+" ");
-		for(unsigned short j = 0; j <= 0xF; j++){
-			sys->read(currentByte+j, byte);
-			str.append(getQString(getHex(byte))+" ");
+		for(unsigned short j = 0; j < 16; j++){
+			str.append(getQString(getHex(*memory[8*i+j]))+" ");
 		}
 		str.append("\n");
 		currentByte += 16;
@@ -217,6 +223,19 @@ void MainWindow::updateClockTab(){
 	setRadioButtonState(ui->radioButton_Clock_Mode3, driverMode == 3);
 }
 
+void MainWindow::updateMemoryArray()
+{
+	unsigned short memLow = 0x80*ui->spinBox_MemoryPage->value();
+	unsigned short memHigh = memLow + 0x80;
+	setLineEditHex(ui->lineEdit_MemoryPageLow, memLow);
+	setLineEditHex(ui->lineEdit_MemoryPageHigh, memHigh);
+	for(unsigned short i = 0; i < 128; i++){
+		memory[i] = sys->getConstPtr(memLow+i);
+		if(!memory[i]) // Inaccessible memory location
+			memory[i] = &ZERO;
+	}	
+}
+
 void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){ 
 	sys = ptr; 
 	components = comp;
@@ -228,6 +247,9 @@ void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){
     opcodes = components->cpu->getOpcodesCB();
     for(unsigned short i = 0; i < 256; i++)
     	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
+	// Toggle opcode breakpoint off since it was activated by adding names to the list.
+	ui->checkBox_Breakpoint_Opcode->setChecked(false);
+	sys->clearOpcodeBreakpoint();
 }
 
 void MainWindow::processEvents()
@@ -448,18 +470,20 @@ void MainWindow::on_tabWidget_currentChanged(int index)
 void MainWindow::on_spinBox_MemoryPage_valueChanged(int arg1)
 {
 	ui->horizontalSlider_MemoryPage->setValue(arg1);
+	updateMemoryArray();
 }
 
 void MainWindow::on_horizontalSlider_MemoryPage_valueChanged(int arg1)
 {
 	ui->spinBox_MemoryPage->setValue(arg1);
+	updateMemoryArray();
 }
 
 void MainWindow::on_lineEdit_MemoryByte_editingFinished()
 {
 	std::string str = ui->lineEdit_MemoryByte->text().toStdString();
 	unsigned short byte = strtoul(str.c_str(), 0, 16);
-	ui->spinBox_MemoryPage->setValue(byte/128);
+	ui->spinBox_MemoryPage->setValue(byte/128); // This will automatically update the memory array
 }
 
 /////////////////////////////////////////////////////////////////////

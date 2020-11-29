@@ -661,6 +661,19 @@
        </rect>
       </property>
      </widget>
+     <widget class="QCheckBox" name="checkBox_Show_Instructions">
+      <property name="geometry">
+       <rect>
+        <x>390</x>
+        <y>50</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Show CPU Instr</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_4">
      <attribute name="title">

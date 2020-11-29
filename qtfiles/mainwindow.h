@@ -125,6 +125,8 @@ private:
 
 	ComponentList *components;
 
+	const unsigned char *memory[128];
+
     void setLineEditText(QLineEdit *line, const std::string &str);
     
     void setLineEditText(QLineEdit *line, const unsigned char &value);
@@ -158,6 +160,8 @@ private:
 	void updateMemoryTab();
 	
 	void updateClockTab();
+	
+	void updateMemoryArray();
 };
 
 #endif // MAINWINDOW_H

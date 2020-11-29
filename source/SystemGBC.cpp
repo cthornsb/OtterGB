@@ -391,6 +391,40 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 	return retval;
 }
 
+const unsigned char *SystemGBC::getConstPtr(const unsigned short &loc){
+	// Note: Direct access to ROM banks is restricted. 
+	// Use write() and read() methods to access instead.
+	const unsigned char *retval = 0x0;
+	switch(loc){
+		case 0x0000 ... 0x7FFF: // ROM
+			retval = cart.getConstPtr(loc);
+			break;
+		case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
+			retval = gpu.getConstPtr(loc);
+			break;
+		case 0xA000 ... 0xBFFF: // External (cartridge) RAM (if available)
+			retval = cart.getRam()->getConstPtr(loc);
+			break;
+		case 0xC000 ... 0xFDFF: // Work RAM (WRAM) 0-1 and ECHO
+			retval = wram.getConstPtr(loc);
+			break;
+		case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
+			retval = oam.getConstPtr(loc);
+			break;
+		case 0xFF00 ... 0xFF7F: // System registers
+			retval = getConstPtrToRegisterValue(loc);
+			break;
+		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
+			retval = hram.getConstPtr(loc);
+			break;
+		case 0xFFFF:
+			retval = rIE->getConstPtr();
+		default:
+			break;
+	}
+	return retval;
+}
+
 Register *SystemGBC::getPtrToRegister(const unsigned short &reg){
 	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
 		return 0x0;
@@ -401,6 +435,12 @@ unsigned char *SystemGBC::getPtrToRegisterValue(const unsigned short &reg){
 	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
 		return 0x0;
 	return registers[reg-0xFF00].getPtr();
+}
+
+const unsigned char *SystemGBC::getConstPtrToRegisterValue(const unsigned short &reg){
+	if(reg < REGISTER_LOW || reg >= REGISTER_HIGH)
+		return 0x0;
+	return registers[reg-0xFF00].getConstPtr();
 }
 
 void SystemGBC::setDebugMode(bool state/*=true*/){

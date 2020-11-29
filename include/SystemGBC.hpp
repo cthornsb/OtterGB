@@ -65,7 +65,7 @@ public:
 	
 	bool check(const unsigned int &value) const { return ((enabled & 0x4) && value == d32); }
 	
-//private:
+private:
 	unsigned char d8;
 	
 	unsigned short d16;
@@ -102,9 +102,13 @@ public:
 	
 	unsigned char *getPtr(const unsigned short &loc);
 	
+	const unsigned char *getConstPtr(const unsigned short &loc);
+	
 	Register *getPtrToRegister(const unsigned short &reg);
 
 	unsigned char *getPtrToRegisterValue(const unsigned short &reg);
+
+	const unsigned char *getConstPtrToRegisterValue(const unsigned short &reg);
 
 	LR35902 *getCPU(){ return &cpu; }
 	
