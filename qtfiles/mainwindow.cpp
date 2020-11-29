@@ -51,6 +51,9 @@ void MainWindow::update()
 		case 6: // Memory tab
 			updateMemoryTab();
 			break;
+		case 7: // Clock tab
+			updateClockTab();
+			break;
 		default:
 			break;
 	}
@@ -82,7 +85,16 @@ void MainWindow::updateMainTab(){
 	setLineEditText(ui->lineEdit_FPS, components->sclk->getFramerate());
 	
 	// Instruction history
-	//ui->plainText_Instr_History->setPlainText(getQString(cpu->getInstruction()));
+	const int maxInstructions = 15;
+	static int counter = 0;
+	QString history = ui->plainText_Instr_History->toPlainText();
+	if(counter++ >= 15){
+		int index = history.indexOf('\n');
+		history.remove(0, index+1);
+	}
+	std::string newinstr = cpu->getInstruction();
+	history.append(getQString(newinstr+"\n"));
+	ui->plainText_Instr_History->setPlainText(history);
 }
 
 void MainWindow::updateGraphicsTab(){
@@ -189,11 +201,33 @@ void MainWindow::updateMemoryTab(){
 	ui->textBrowser_Memory->setPlainText(str);
 }
 
-void MainWindow::connectToSystem(SystemGBC *ptr){ 
+void MainWindow::updateClockTab(){
+	SystemClock *sclk = components->sclk;
+
+	setLineEditText(ui->lineEdit_Clock_Frequency, sclk->getFrequency()/1E6);
+	setLineEditText(ui->lineEdit_Clock_SinceVBlank, sclk->getCyclesSinceVBlank());
+	setLineEditText(ui->lineEdit_Clock_SinceHBlank, sclk->getCyclesSinceHBlank());
+
+	unsigned char driverMode = sclk->getDriverMode();	
+	setRadioButtonState(ui->radioButton_Clock_VBlank, sclk->getVSync());
+	setRadioButtonState(ui->radioButton_Clock_HBlank, driverMode == 0);
+	setRadioButtonState(ui->radioButton_Clock_Mode0, driverMode == 0);
+	setRadioButtonState(ui->radioButton_Clock_Mode1, driverMode == 1);
+	setRadioButtonState(ui->radioButton_Clock_Mode2, driverMode == 2);
+	setRadioButtonState(ui->radioButton_Clock_Mode3, driverMode == 3);
+}
+
+void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){ 
 	sys = ptr; 
-	components = ptr->getListOfComponents();
-	for(auto comp = components->list.begin(); comp != components->list.end(); comp++)
-		ui->comboBox_Registers->addItem(getQString(comp->first));
+	components = comp;
+	for(auto component = components->list.begin(); component != components->list.end(); component++)
+		ui->comboBox_Registers->addItem(getQString(component->first));
+    LR35902::Opcode *opcodes = components->cpu->getOpcodes();
+    for(unsigned short i = 0; i < 256; i++)
+    	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
+    opcodes = components->cpu->getOpcodesCB();
+    for(unsigned short i = 0; i < 256; i++)
+    	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
 }
 
 void MainWindow::processEvents()
@@ -206,6 +240,13 @@ void MainWindow::closeAllWindows()
 	app->closeAllWindows();
 }
 
+void MainWindow::updatePausedState(bool state/*=true*/){
+	if(state)
+		ui->pushButton_PauseResume->setText("Resume");
+	else
+		ui->pushButton_PauseResume->setText("Pause");
+}
+
 void MainWindow::setLineEditText(QLineEdit *line, const std::string &str){
 	line->setText(getQString(str));
 }
@@ -216,6 +257,10 @@ void MainWindow::setLineEditText(QLineEdit *line, const unsigned char &value){
 
 void MainWindow::setLineEditText(QLineEdit *line, const unsigned short &value){
 	line->setText(getQString(ushortToStr(value)));
+}
+
+void MainWindow::setLineEditText(QLineEdit *line, const unsigned int &value){
+	line->setText(getQString(uintToStr(value)));
 }
 
 void MainWindow::setLineEditText(QLineEdit *line, const float &value){
@@ -263,6 +308,81 @@ void MainWindow::on_checkBox_Show_Framerate_stateChanged(int arg1)
 	sys->setDisplayFramerate(arg1 != 0);
 }
 
+void MainWindow::on_checkBox_Breakpoint_PC_stateChanged(int arg1)
+{
+	if(arg1){
+		std::string str = ui->lineEdit_Breakpoint_PC->text().toStdString();
+		sys->setBreakpoint((unsigned short)strtoul(str.c_str(), 0, 16));
+	}
+	else
+		sys->clearBreakpoint();
+}
+
+void MainWindow::on_checkBox_Breakpoint_Write_stateChanged(int arg1)
+{
+	if(arg1){
+		std::string str = ui->lineEdit_Breakpoint_Write->text().toStdString();
+		sys->setMemWriteBreakpoint((unsigned short)strtoul(str.c_str(), 0, 16));
+	}
+	else
+		sys->clearMemWriteBreakpoint();
+}
+
+void MainWindow::on_checkBox_Breakpoint_Read_stateChanged(int arg1)
+{
+	if(arg1){
+		std::string str = ui->lineEdit_Breakpoint_Read->text().toStdString();
+		sys->setMemReadBreakpoint((unsigned short)strtoul(str.c_str(), 0, 16));
+	}
+	else
+		sys->clearMemReadBreakpoint();
+}
+
+void MainWindow::on_checkBox_Breakpoint_Opcode_stateChanged(int arg1)
+{
+	if(arg1){
+		int index = ui->comboBox_Breakpoint_Opcode->currentIndex();
+		if(index < 256) // Normal opcodes
+			sys->setOpcodeBreakpoint((unsigned char)index);		
+		else // CB prefix opcodes
+			sys->setOpcodeBreakpoint((unsigned char)(index-256), true);
+	}
+	else
+		sys->clearOpcodeBreakpoint();
+}
+
+void MainWindow::on_lineEdit_Breakpoint_PC_editingFinished()
+{
+	if(ui->checkBox_Breakpoint_PC->isChecked())
+		on_checkBox_Breakpoint_PC_stateChanged(1);
+	else
+		ui->checkBox_Breakpoint_PC->setChecked(true);
+}
+
+void MainWindow::on_lineEdit_Breakpoint_Write_editingFinished()
+{
+	if(ui->checkBox_Breakpoint_Write->isChecked())
+		on_checkBox_Breakpoint_Write_stateChanged(1);
+	else
+		ui->checkBox_Breakpoint_Write->setChecked(true);
+}
+
+void MainWindow::on_lineEdit_Breakpoint_Read_editingFinished()
+{
+	if(ui->checkBox_Breakpoint_Read->isChecked())
+		on_checkBox_Breakpoint_Read_stateChanged(1);
+	else
+		ui->checkBox_Breakpoint_Read->setChecked(true);
+}
+
+void MainWindow::on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1)
+{
+	if(ui->checkBox_Breakpoint_Opcode->isChecked())
+		on_checkBox_Breakpoint_Opcode_stateChanged(1);
+	else
+		ui->checkBox_Breakpoint_Opcode->setChecked(true);
+}
+
 void MainWindow::on_spinBox_BGP_valueChanged(int arg1)
 {
 
@@ -282,11 +402,11 @@ void MainWindow::on_pushButton_PauseResume_pressed()
 {
 	if(!sys->getEmulationPaused()){
 		sys->pause();
-		ui->pushButton_PauseResume->setText("Resume");
+		updatePausedState(true);
 	}
 	else{
 		sys->unpause();
-		ui->pushButton_PauseResume->setText("Pause");
+		updatePausedState(false);
 	}
 }
 
@@ -318,6 +438,28 @@ void MainWindow::on_spinBox_SpriteIndex_valueChanged(int arg1)
 void MainWindow::on_checkBox_SoundEnabled_stateChanged(int arg1)
 {
 
+}
+
+void MainWindow::on_tabWidget_currentChanged(int index)
+{
+
+}
+
+void MainWindow::on_spinBox_MemoryPage_valueChanged(int arg1)
+{
+	ui->horizontalSlider_MemoryPage->setValue(arg1);
+}
+
+void MainWindow::on_horizontalSlider_MemoryPage_valueChanged(int arg1)
+{
+	ui->spinBox_MemoryPage->setValue(arg1);
+}
+
+void MainWindow::on_lineEdit_MemoryByte_editingFinished()
+{
+	std::string str = ui->lineEdit_MemoryByte->text().toStdString();
+	unsigned short byte = strtoul(str.c_str(), 0, 16);
+	ui->spinBox_MemoryPage->setValue(byte/128);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -398,26 +540,4 @@ void MainWindow::on_actionDump_WRAM_triggered()
 void MainWindow::on_actionHlep_triggered()
 {
 	sys->help();
-}
-
-void MainWindow::on_tabWidget_currentChanged(int index)
-{
-
-}
-
-void MainWindow::on_spinBox_MemoryPage_valueChanged(int arg1)
-{
-	ui->horizontalSlider_MemoryPage->setValue(arg1);
-}
-
-void MainWindow::on_horizontalSlider_MemoryPage_valueChanged(int arg1)
-{
-	ui->spinBox_MemoryPage->setValue(arg1);
-}
-
-void MainWindow::on_lineEdit_MemoryByte_editingFinished()
-{
-	std::string str = ui->lineEdit_MemoryByte->text().toStdString();
-	unsigned short byte = strtoul(str.c_str(), 0, 16);
-	ui->spinBox_MemoryPage->setValue(byte/128);
 }

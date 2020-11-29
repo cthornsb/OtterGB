@@ -44,6 +44,22 @@ LR35902::Opcode::Opcode(const std::string &mnemonic, const unsigned short &cycle
 	}
 }
 
+void LR35902::OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
+	op    = &opcodes_[index_];
+	index = index_;
+	pc    = pc_;
+	data  = 0;
+	cbPrefix = false;
+}
+
+void LR35902::OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
+	op    = &opcodes_[index_];
+	index = index_;
+	pc    = pc_;
+	data  = 0;
+	cbPrefix = true;
+}
+
 /** Read the next instruction from memory and return the number of clock cycles. 
   */
 unsigned short LR35902::evaluate(){
@@ -74,35 +90,38 @@ unsigned short LR35902::evaluate(){
 		std::cout << " Opcode read failed! PC=" << getHex((unsigned short)(PC-1)) << std::endl;
 	
 	if(op != 0xCB) // Normal opcodes
-		lastOpcode = &opcodes[op];
+		lastOpcode.set(opcodes, op, PC-1);
 	else{ // CB prefix opcodes
 		sys->read(PC++, &op);
-		lastOpcode = &opcodesCB[op];
+		lastOpcode.set(opcodesCB, op, PC-2);
 	}
 
 	// Get the number of clock cycles for the current opcode.
-	nCyclesRemaining = lastOpcode->nCycles;
+	nCyclesRemaining = lastOpcode()->nCycles;
 	
 	d8 = 0x0;
 	d16h = 0x0;
 	d16l = 0x0;
 
 	// Read the opcode's accompanying value (if any)
-	if(lastOpcode->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
+	if(lastOpcode()->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
 		sys->read(PC++, d8);
+		lastOpcode.setImmediateData(d8);
 	}
-	else if(lastOpcode->nBytes == 3){ // Read 16 bits (valid targets: d16, d16)
+	else if(lastOpcode()->nBytes == 3){ // Read 16 bits (valid targets: d16, d16)
 		// Low byte read first!
 		sys->read(PC++, d16l);
 		sys->read(PC++, d16h);
+		lastOpcode.setImmediateData(getUShort(d16h, d16l));
 	}
 
 #ifdef USE_QT_DEBUGGER
-	instruction = getHex((unsigned short)(PC-lastOpcode->nBytes)) + " " + lastOpcode->sPrefix;
-	if(lastOpcode->nBytes == 2)
-		instruction += getHex(d8) + lastOpcode->sSuffix;
-	else if(lastOpcode->nBytes == 3)
-		instruction += getHex(getUShort(d16h,d16l)) + lastOpcode->sSuffix;
+	instruction = getHex(lastOpcode.pc) + " " + lastOpcode()->sPrefix;
+	if(lastOpcode()->nBytes == 2)
+		instruction += getHex(lastOpcode.getd8());
+	else if(lastOpcode()->nBytes == 3)
+		instruction += getHex(lastOpcode.getd16());
+	instruction += lastOpcode()->sSuffix;
 #endif
 
 	return nCyclesRemaining;
@@ -120,7 +139,7 @@ bool LR35902::onClockUpdate(){
 		evaluate();
 	nCyclesRemaining--;
 	if(nCyclesRemaining == 0){ // Execute the instruction on the last cycle
-		(this->*lastOpcode->ptr)();
+		(this->*lastOpcode()->ptr)();
 		return true;
 	}
 	return false;

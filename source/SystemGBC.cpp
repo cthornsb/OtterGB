@@ -72,13 +72,15 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 
 	// Add all components to the subsystem list
 	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
-	getListOfComponents(); // Why does this prevent seg-faults CRT?
+
+	// Initialize system
+	this->initialize();	
 }
 
 SystemGBC::~SystemGBC(){
 }
 
-bool SystemGBC::initialize(const std::string &fname){ 
+void SystemGBC::initialize(){ 
 	hram.initialize(127);
 
 	// Define system registers
@@ -114,18 +116,12 @@ bool SystemGBC::initialize(const std::string &fname){
 	// Must connect the system bus BEFORE initializing the CPU.
 	cpu.initialize();
 	
-	// Set the ROM path
-	romFilename = fname;
-	
 	// Disable the system timer.
 	timer.disable();
 
 	// Initialize the window and link it to the joystick controller	
 	gpu.initialize();
 	joy.setWindow(gpu.getWindow());
-	
-	// Boot the system
-	return reset();
 }
 
 bool SystemGBC::execute(){
@@ -145,7 +141,13 @@ bool SystemGBC::execute(){
 			// Check if the CPU is halted.
 			if(!cpuHalted && !dma.onClockUpdate()){
 				// Perform one instruction.
-				cpu.onClockUpdate();
+				if(cpu.onClockUpdate()){
+#ifdef USE_QT_DEBUGGER
+					if(breakpointOpcode.check(cpu.getLastOpcode()->index) ||
+					   breakpointProgramCounter.check(cpu.getLastOpcode()->pc))
+						pause();				
+#endif
+				}
 			}
 
 			// Update system timer.
@@ -248,14 +250,18 @@ void SystemGBC::disableInterrupts(){
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
 	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		LR35902::Opcode *op = cpu.getLastOpcode();
-		std::cout << " (W) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
-		if(op->nBytes == 2)
-			std::cout << "d8=" << getHex(cpu.getd8());
-		else if(op->nBytes == 3)
-			std::cout << "d16=" << getHex(cpu.getd16());
+		LR35902::OpcodeData *op = cpu.getLastOpcode();
+		std::cout << " (W) PC=" << getHex(op->pc) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		if(op->op->nBytes == 2)
+			std::cout << "d8=" << getHex(op->getd8());
+		else if(op->op->nBytes == 3)
+			std::cout << "d16=" << getHex(op->getd16());
 		std::cout << std::endl;
 	}
+	
+	// Check for memory write breakpoint
+	if(breakpointMemoryWrite.check(loc))
+		pause();
 
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
@@ -296,6 +302,10 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
+	// Check for memory read breakpoint
+	if(breakpointMemoryRead.check(loc))
+		pause();
+
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
@@ -337,8 +347,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 
 	// Check for memory access watch
 	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
-		LR35902::Opcode *op = cpu.getLastOpcode();
-		std::cout << " (R) PC=" << getHex((unsigned short)(cpu.getProgramCounter()-op->nBytes)) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
+		LR35902::OpcodeData *op = cpu.getLastOpcode();
+		std::cout << " (R) PC=" << getHex(op->pc) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
 	}
 
 	return true; // Successfully read from memory location (loc)
@@ -404,7 +414,7 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 		std::unique_ptr<ComponentList>(new ComponentList(this));
 		app = std::unique_ptr<QApplication>(new QApplication(dummyARGC, dummyARGV));
 		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
-		gui->connectToSystem(this);
+		gui->connectToSystem(this, subsystems.get());
 	}
 #endif
 }
@@ -441,6 +451,39 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 		memoryAccessRead[1] = locL;
 		std::cout << " Watching reads from memory location " << getHex(locL) << std::endl;
 	}
+}
+
+void SystemGBC::setBreakpoint(const unsigned short &pc){
+	breakpointProgramCounter.enable(pc);
+}
+
+void SystemGBC::setMemWriteBreakpoint(const unsigned short &addr){
+	breakpointMemoryWrite.enable(addr);
+}
+
+void SystemGBC::setMemReadBreakpoint(const unsigned short &addr){
+	breakpointMemoryRead.enable(addr);
+	std::cout << this << "\tread=" << getHex(addr) << std::endl;
+}
+
+void SystemGBC::setOpcodeBreakpoint(const unsigned char &op, bool cb/*=false*/){
+	breakpointOpcode.enable(op);
+}
+
+void SystemGBC::clearBreakpoint(){
+	breakpointProgramCounter.clear();
+}
+
+void SystemGBC::clearMemWriteBreakpoint(){
+	breakpointMemoryWrite.clear();
+}
+
+void SystemGBC::clearMemReadBreakpoint(){
+	breakpointMemoryRead.clear();
+}
+
+void SystemGBC::clearOpcodeBreakpoint(){
+	breakpointOpcode.clear();
 }
 
 void SystemGBC::addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits){
@@ -533,6 +576,20 @@ void SystemGBC::resumeCPU(){
 			(*rKEY1) |= 0x80;
 		prepareSpeedSwitch = false;
 	}
+}
+
+void SystemGBC::pause(){ 
+	emulationPaused = true; 
+#ifdef USE_QT_DEBUGGER
+	gui->updatePausedState(true);
+#endif
+}
+
+void SystemGBC::unpause(){ 
+	emulationPaused = false; 
+#ifdef USE_QT_DEBUGGER
+	gui->updatePausedState(false);
+#endif
 }
 
 bool SystemGBC::reset(){

@@ -15,6 +15,16 @@ public:
 	double getFramerate() const { return framerate; }
 	
 	void setFrequencyMultiplier(const double &mult){ frequencyMultiplier = mult; }
+
+	double getFrequency() const ;
+	
+	unsigned int getCyclesSinceVBlank() const { return cyclesSinceLastVSync; }
+	
+	unsigned int getCyclesSinceHBlank() const { return cyclesSinceLastHSync; }
+	
+	unsigned char getDriverMode() const { return lcdDriverMode; }
+	
+	bool getVSync() const { return vsync; }
 	
 	/** Poll the VSync (VBlank) flag and reset it.
 	  */

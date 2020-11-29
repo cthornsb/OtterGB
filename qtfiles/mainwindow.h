@@ -25,11 +25,13 @@ public:
 
 	void update();
 
-	void connectToSystem(SystemGBC *ptr);
+	void connectToSystem(SystemGBC *ptr, ComponentList *comp);
 
 	void processEvents();
 	
 	void closeAllWindows();
+	
+	void updatePausedState(bool state=true);
 
 private slots:
     void on_checkBox_Background_stateChanged(int arg1);
@@ -39,6 +41,22 @@ private slots:
     void on_checkBox_Sprites_stateChanged(int arg1);
 
 	void on_checkBox_Show_Framerate_stateChanged(int arg1);
+
+	void on_checkBox_Breakpoint_PC_stateChanged(int arg1);
+
+	void on_checkBox_Breakpoint_Write_stateChanged(int arg1);
+
+	void on_checkBox_Breakpoint_Read_stateChanged(int arg1);
+
+	void on_checkBox_Breakpoint_Opcode_stateChanged(int arg1);
+
+	void on_lineEdit_Breakpoint_PC_editingFinished();
+
+	void on_lineEdit_Breakpoint_Write_editingFinished();
+
+	void on_lineEdit_Breakpoint_Read_editingFinished();
+
+	void on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1);
 
     void on_spinBox_BGP_valueChanged(int arg1);
 
@@ -113,6 +131,8 @@ private:
     
     void setLineEditText(QLineEdit *line, const unsigned short &value);
 
+    void setLineEditText(QLineEdit *line, const unsigned int &value);
+
     void setLineEditText(QLineEdit *line, const float &value);
     
     void setLineEditText(QLineEdit *line, const double &value);
@@ -136,6 +156,8 @@ private:
 	void updateRegistersTab();
 	
 	void updateMemoryTab();
+	
+	void updateClockTab();
 };
 
 #endif // MAINWINDOW_H

@@ -47,6 +47,34 @@ public:
 	ComponentList(SystemGBC *sys);
 };
 
+class Breakpoint{
+public:
+	Breakpoint() : d8(0), d16(0), d32(0), enabled(0) { }
+
+	void enable(const unsigned char &value){ d8 = value; enabled |= 0x1; }
+	
+	void enable(const unsigned short &value){ d16 = value; enabled |= 0x2; }
+	
+	void enable(const unsigned int &value){ d32 = value; enabled |= 0x4; }
+
+	void clear(){ enabled = 0; }
+	
+	bool check(const unsigned char &value) const { return ((enabled & 0x1) && value == d8); }
+	
+	bool check(const unsigned short &value) const { return ((enabled & 0x2) && value == d16); }
+	
+	bool check(const unsigned int &value) const { return ((enabled & 0x4) && value == d32); }
+	
+//private:
+	unsigned char d8;
+	
+	unsigned short d16;
+	
+	unsigned int d32;
+	
+	unsigned char enabled;
+};
+
 class SystemGBC{
 	friend class ComponentList;
 public:
@@ -54,7 +82,7 @@ public:
 	
 	~SystemGBC();
 
-	bool initialize(const std::string &fname);
+	void initialize();
 
 	bool execute();
 	
@@ -115,6 +143,22 @@ public:
 
 	void setRomFilename(const std::string &fname){ romFilename = fname; }
 
+	void setBreakpoint(const unsigned short &pc);
+	
+	void setMemWriteBreakpoint(const unsigned short &addr);
+	
+	void setMemReadBreakpoint(const unsigned short &addr);
+	
+	void setOpcodeBreakpoint(const unsigned char &op, bool cb=false);
+
+	void clearBreakpoint();
+	
+	void clearMemWriteBreakpoint();
+	
+	void clearMemReadBreakpoint();
+	
+	void clearOpcodeBreakpoint();
+
 	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
 	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
@@ -149,9 +193,9 @@ public:
 	
 	void resumeCPU();
 	
-	void pause(){ emulationPaused = true; }
+	void pause();
 	
-	void unpause(){ emulationPaused = false; }
+	void unpause();
 
 	bool reset();
 
@@ -194,6 +238,11 @@ private:
 
 	std::unique_ptr<MainWindow> gui;
 #endif
+
+	Breakpoint breakpointProgramCounter;
+	Breakpoint breakpointMemoryWrite;
+	Breakpoint breakpointMemoryRead;
+	Breakpoint breakpointOpcode;
 
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 

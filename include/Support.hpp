@@ -21,6 +21,8 @@ std::string ucharToStr(const unsigned char &input);
 
 std::string ushortToStr(const unsigned short &input);
 
+std::string uintToStr(const unsigned int &input);
+
 std::string floatToStr(const float &input, const unsigned short &fixed=0);
 
 std::string doubleToStr(const double &input, const unsigned short &fixed=0);

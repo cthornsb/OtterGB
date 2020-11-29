@@ -22,6 +22,10 @@ SystemClock::SystemClock() : SystemComponent(), vsync(false), frequencyMultiplie
 	timeOfLastVSync = sclock::now();
 }
 
+double SystemClock::getFrequency() const {
+	return SYSTEM_CLOCK_FREQUENCY*frequencyMultiplier;
+}
+
 // Tick the system clock.
 bool SystemClock::onClockUpdate(){
 	// Check if the display is enabled. If it's not, set STAT to mode 1

@@ -37,6 +37,35 @@ public:
 		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
 	};
 
+	class OpcodeData{
+	public:
+		Opcode *op; ///< Pointer to the opcode instruction.
+		
+		unsigned char index; ///< Opcode index.
+		
+		unsigned short data; ///< Immediate data.
+		
+		unsigned short pc; ///< Program counter.
+		
+		bool cbPrefix; ///< CB Prefix opcodes.
+		
+		OpcodeData() : op(0x0), index(0), data(0), pc(0), cbPrefix(false) { }
+		
+		Opcode * operator () () { return op; }
+		
+		unsigned char getd8() const { return (unsigned char)data; }
+		
+		unsigned short getd16() const { return data; }
+		
+		void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
+		
+		void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
+	
+		void setImmediateData(const unsigned char &d8){ data = (d8 & 0x00FF); }
+		
+		void setImmediateData(const unsigned short &d16){ data = d16; }
+	};
+
 	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
 	            d8(0), d16h(0), d16l(0), SP(0), PC(0), nCyclesRemaining(0) { }
@@ -54,7 +83,11 @@ public:
 	  */
 	virtual bool onClockUpdate();
 
-	Opcode *getLastOpcode(){ return lastOpcode; }
+	Opcode *getOpcodes(){ return opcodes; }
+	
+	Opcode *getOpcodesCB(){ return opcodesCB; }
+
+	OpcodeData *getLastOpcode(){ return &lastOpcode; }
 
 	std::string getInstruction() const { return instruction; }
 
@@ -131,7 +164,7 @@ protected:
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
 	
-	Opcode *lastOpcode; ///< Pointer to the last read opcode.
+	OpcodeData lastOpcode; ///< Pointer to the last read opcode.
 	unsigned short nCyclesRemaining; ///< Number of clock cycles remaining for last instruction
 	unsigned short nExtraCyclesRemaining; ///< Number of extra clock cycles remaining for conditional statements
 

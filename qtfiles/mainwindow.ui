@@ -64,7 +64,7 @@
        <rect>
         <x>230</x>
         <y>10</y>
-        <width>111</width>
+        <width>121</width>
         <height>16</height>
        </rect>
       </property>
@@ -435,8 +435,7 @@
        <bool>true</bool>
       </property>
       <property name="plainText">
-       <string>$0000 LD HL,SP+$fc
-$0000 CALL NC,$0000</string>
+       <string/>
       </property>
      </widget>
      <widget class="QRadioButton" name="radioButton_CurrentSpeed">
@@ -500,7 +499,7 @@ $0000 CALL NC,$0000</string>
        <string>ZSHC</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_WRAM_Bank_2">
+     <widget class="QLineEdit" name="lineEdit_Breakpoint_PC">
       <property name="geometry">
        <rect>
         <x>390</x>
@@ -510,26 +509,13 @@ $0000 CALL NC,$0000</string>
        </rect>
       </property>
       <property name="text">
-       <string>$0000</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QComboBox" name="comboBox">
-      <property name="geometry">
-       <rect>
-        <x>390</x>
-        <y>220</y>
-        <width>131</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="currentText">
        <string/>
       </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_WRAM_Bank_3">
+     <widget class="QLineEdit" name="lineEdit_Breakpoint_Write">
       <property name="geometry">
        <rect>
         <x>390</x>
@@ -539,13 +525,13 @@ $0000 CALL NC,$0000</string>
        </rect>
       </property>
       <property name="text">
-       <string>$0000</string>
+       <string/>
       </property>
       <property name="readOnly">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_WRAM_Bank_4">
+     <widget class="QLineEdit" name="lineEdit_Breakpoint_Read">
       <property name="geometry">
        <rect>
         <x>390</x>
@@ -555,10 +541,10 @@ $0000 CALL NC,$0000</string>
        </rect>
       </property>
       <property name="text">
-       <string>$0000</string>
+       <string/>
       </property>
       <property name="readOnly">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
      </widget>
      <widget class="QLabel" name="label_52">
@@ -613,12 +599,12 @@ $0000 CALL NC,$0000</string>
        <string>Breakpoints</string>
       </property>
      </widget>
-     <widget class="QCheckBox" name="checkBox">
+     <widget class="QCheckBox" name="checkBox_Breakpoint_PC">
       <property name="geometry">
        <rect>
         <x>366</x>
         <y>124</y>
-        <width>87</width>
+        <width>21</width>
         <height>21</height>
        </rect>
       </property>
@@ -626,12 +612,12 @@ $0000 CALL NC,$0000</string>
        <string/>
       </property>
      </widget>
-     <widget class="QCheckBox" name="checkBox_2">
+     <widget class="QCheckBox" name="checkBox_Breakpoint_Write">
       <property name="geometry">
        <rect>
         <x>366</x>
         <y>154</y>
-        <width>87</width>
+        <width>21</width>
         <height>21</height>
        </rect>
       </property>
@@ -639,12 +625,12 @@ $0000 CALL NC,$0000</string>
        <string/>
       </property>
      </widget>
-     <widget class="QCheckBox" name="checkBox_3">
+     <widget class="QCheckBox" name="checkBox_Breakpoint_Read">
       <property name="geometry">
        <rect>
         <x>366</x>
         <y>184</y>
-        <width>87</width>
+        <width>21</width>
         <height>21</height>
        </rect>
       </property>
@@ -652,17 +638,27 @@ $0000 CALL NC,$0000</string>
        <string/>
       </property>
      </widget>
-     <widget class="QCheckBox" name="checkBox_4">
+     <widget class="QCheckBox" name="checkBox_Breakpoint_Opcode">
       <property name="geometry">
        <rect>
         <x>366</x>
         <y>220</y>
-        <width>87</width>
+        <width>21</width>
         <height>21</height>
        </rect>
       </property>
       <property name="text">
        <string/>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="comboBox_Breakpoint_Opcode">
+      <property name="geometry">
+       <rect>
+        <x>390</x>
+        <y>220</y>
+        <width>131</width>
+        <height>24</height>
+       </rect>
       </property>
      </widget>
     </widget>
@@ -2128,6 +2124,180 @@ p, li { white-space: pre-wrap; }
       </property>
       <property name="text">
        <string>IO/HRAM</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_8">
+     <attribute name="title">
+      <string>Clock</string>
+     </attribute>
+     <widget class="QRadioButton" name="radioButton_Clock_VBlank">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>130</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>VBlank</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Clock_Frequency">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_56">
+      <property name="geometry">
+       <rect>
+        <x>340</x>
+        <y>10</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>LCD Driver Mode</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_57">
+      <property name="geometry">
+       <rect>
+        <x>140</x>
+        <y>14</y>
+        <width>131</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Frequency (MHz)</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_58">
+      <property name="geometry">
+       <rect>
+        <x>140</x>
+        <y>54</y>
+        <width>121</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Cycles Since VBlank</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_59">
+      <property name="geometry">
+       <rect>
+        <x>140</x>
+        <y>94</y>
+        <width>121</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Cycles Since HBlank</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Clock_SinceVBlank">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Clock_SinceHBlank">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>90</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Clock_Mode0">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>30</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mode 0</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Clock_Mode1">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>50</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mode 1</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Clock_Mode2">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>70</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mode 2</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Clock_Mode3">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>90</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mode 3</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Clock_HBlank">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>160</y>
+        <width>104</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>HBlank</string>
       </property>
      </widget>
     </widget>

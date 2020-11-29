@@ -69,6 +69,12 @@ std::string ushortToStr(const unsigned short &input){
 	return stream.str();
 }
 
+std::string uintToStr(const unsigned int &input){
+	std::stringstream stream;
+	stream << input;
+	return stream.str();
+}
+
 std::string floatToStr(const float &input, const unsigned short &fixed/*=0*/){
 	std::stringstream stream;
 	if(fixed != 0){

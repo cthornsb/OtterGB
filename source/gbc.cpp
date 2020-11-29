@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
 
 	// Main system bus
 	SystemGBC gbc;
-
+	
 	std::string inputFilename;
 	if(handler.getOption(0)->active) // Set input filename
 		inputFilename = handler.getOption(0)->argument;
@@ -53,7 +53,8 @@ int main(int argc, char *argv[]){
 	}
 
 	// Read the ROM into memory
-	if(!gbc.initialize(inputFilename)){
+	gbc.setRomFilename(inputFilename);
+	if(!gbc.reset()){
 		std::cout << " ERROR! Failed to read input ROM file \"" << inputFilename << "\"!\n";
 		return 3;
 	}
