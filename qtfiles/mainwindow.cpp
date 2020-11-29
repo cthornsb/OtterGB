@@ -215,12 +215,13 @@ void MainWindow::updateClockTab(){
 	setLineEditText(ui->lineEdit_Clock_SinceHBlank, sclk->getCyclesSinceHBlank());
 
 	unsigned char driverMode = sclk->getDriverMode();	
-	setRadioButtonState(ui->radioButton_Clock_VBlank, sclk->getVSync());
+	setRadioButtonState(ui->radioButton_Clock_VBlank, driverMode == 1);
 	setRadioButtonState(ui->radioButton_Clock_HBlank, driverMode == 0);
 	setRadioButtonState(ui->radioButton_Clock_Mode0, driverMode == 0);
 	setRadioButtonState(ui->radioButton_Clock_Mode1, driverMode == 1);
 	setRadioButtonState(ui->radioButton_Clock_Mode2, driverMode == 2);
 	setRadioButtonState(ui->radioButton_Clock_Mode3, driverMode == 3);
+	setLineEditText(ui->lineEdit_rLY, *sys->getPtrToRegisterValue(0xFF44));
 }
 
 void MainWindow::updateMemoryArray()
@@ -434,7 +435,7 @@ void MainWindow::on_pushButton_PauseResume_pressed()
 
 void MainWindow::on_pushButton_Step_pressed()
 {
-
+	sys->stepThrough();
 }
 
 void MainWindow::on_pushButton_Reset_pressed()
@@ -444,12 +445,12 @@ void MainWindow::on_pushButton_Reset_pressed()
 
 void MainWindow::on_pushButton_NextScanline_pressed()
 {
-
+	sys->resumeUntilNextHBlank();
 }
 
 void MainWindow::on_pushButton_NextFrame_pressed()
 {
-
+	sys->resumeUntilNextVBlank();
 }
 
 void MainWindow::on_spinBox_SpriteIndex_valueChanged(int arg1)
@@ -464,13 +465,14 @@ void MainWindow::on_checkBox_SoundEnabled_stateChanged(int arg1)
 
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
-
+	this->update();
 }
 
 void MainWindow::on_spinBox_MemoryPage_valueChanged(int arg1)
 {
 	ui->horizontalSlider_MemoryPage->setValue(arg1);
 	updateMemoryArray();
+	updateMemoryTab();
 }
 
 void MainWindow::on_horizontalSlider_MemoryPage_valueChanged(int arg1)

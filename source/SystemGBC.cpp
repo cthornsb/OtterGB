@@ -74,7 +74,11 @@ SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode
 	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
 
 	// Initialize system
-	this->initialize();	
+	this->initialize();
+	
+	pauseAfterNextInstruction = false;
+	pauseAfterNextHBlank = false;
+	pauseAfterNextVBlank = false;
 }
 
 SystemGBC::~SystemGBC(){
@@ -143,9 +147,13 @@ bool SystemGBC::execute(){
 				// Perform one instruction.
 				if(cpu.onClockUpdate()){
 #ifdef USE_QT_DEBUGGER
-					if(breakpointOpcode.check(cpu.getLastOpcode()->index) ||
+					if(pauseAfterNextInstruction){
+						pauseAfterNextInstruction = false;					
+						pause();
+					}
+					else if(breakpointOpcode.check(cpu.getLastOpcode()->index) ||
 					   breakpointProgramCounter.check(cpu.getLastOpcode()->pc))
-						pause();				
+						pause();
 #endif
 				}
 			}
@@ -176,8 +184,14 @@ bool SystemGBC::execute(){
 				}
 #ifdef USE_QT_DEBUGGER
 				if(debugMode){
-					gui->processEvents();
-					gui->update();
+					if(!pauseAfterNextVBlank){
+						gui->processEvents();
+						gui->update();
+					}
+					else{
+						pauseAfterNextVBlank = false;
+						pause();
+					}
 				}
 #endif
 			}
@@ -199,10 +213,8 @@ bool SystemGBC::execute(){
 		}
 	}
 #else
-			if(debugMode){ // Process events for the Qt GUI
+			if(debugMode) // Process events for the Qt GUI
 				gui->processEvents();
-				gui->update();
-			}
 		}
 	}
 	if(debugMode)
@@ -217,6 +229,13 @@ void SystemGBC::handleHBlankPeriod(){
 			gpu.drawNextScanline(&oam);
 		dma.onHBlank();
 	}
+#ifdef USE_QT_DEBUGGER
+	if(debugMode && pauseAfterNextHBlank){
+		pauseAfterNextHBlank = false;
+		pause();
+		gpu.render(); // Show the newly drawn scanline
+	}
+#endif
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ 
@@ -621,14 +640,19 @@ void SystemGBC::resumeCPU(){
 void SystemGBC::pause(){ 
 	emulationPaused = true; 
 #ifdef USE_QT_DEBUGGER
-	gui->updatePausedState(true);
+	if(debugMode){
+		gui->updatePausedState(true);
+		gui->processEvents();
+		gui->update();
+	}
 #endif
 }
 
 void SystemGBC::unpause(){ 
 	emulationPaused = false; 
 #ifdef USE_QT_DEBUGGER
-	gui->updatePausedState(false);
+	if(debugMode)
+		gui->updatePausedState(false);
 #endif
 }
 
@@ -859,6 +883,21 @@ void SystemGBC::help(){
 	std::cout << "   - : Decrease frame skip\n";
 	std::cout << "   + : Increase frame skip\n";
 	std::cout << "   f : Show/hide FPS counter on screen\n";
+}
+
+void SystemGBC::stepThrough(){
+	unpause();
+	pauseAfterNextInstruction = true;
+}
+
+void SystemGBC::resumeUntilNextHBlank(){
+	unpause();
+	pauseAfterNextHBlank = true;
+}
+
+void SystemGBC::resumeUntilNextVBlank(){
+	unpause();
+	pauseAfterNextVBlank = true;
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){

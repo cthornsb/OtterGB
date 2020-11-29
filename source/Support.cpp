@@ -59,7 +59,7 @@ std::string getBinary(const unsigned short &input, const int &startBit/*=0*/){
 
 std::string ucharToStr(const unsigned char &input){
 	std::stringstream stream;
-	stream << input;
+	stream << (int)input;
 	return stream.str();
 }
 

@@ -212,6 +212,18 @@ public:
 	void help();
 	
 	void quit(){ userQuitting = true; }
+
+	/** Resume emulation and 
+	  */	
+	void stepThrough();
+	
+	/** Resume emulation until the next HBlank period.
+	  */
+	void resumeUntilNextHBlank();
+	
+	/** Resume emulation until the next VBlank period.
+	  */
+	void resumeUntilNextVBlank();
 	
 private:
 	unsigned short nFrames;
@@ -247,6 +259,10 @@ private:
 	Breakpoint breakpointMemoryWrite;
 	Breakpoint breakpointMemoryRead;
 	Breakpoint breakpointOpcode;
+
+	bool pauseAfterNextInstruction;
+	bool pauseAfterNextHBlank;
+	bool pauseAfterNextVBlank;
 
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 

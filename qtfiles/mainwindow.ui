@@ -2173,7 +2173,7 @@ p, li { white-space: pre-wrap; }
      <widget class="QLabel" name="label_56">
       <property name="geometry">
        <rect>
-        <x>340</x>
+        <x>320</x>
         <y>10</y>
         <width>111</width>
         <height>16</height>
@@ -2251,7 +2251,7 @@ p, li { white-space: pre-wrap; }
      <widget class="QRadioButton" name="radioButton_Clock_Mode0">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>30</y>
         <width>104</width>
         <height>21</height>
@@ -2264,7 +2264,7 @@ p, li { white-space: pre-wrap; }
      <widget class="QRadioButton" name="radioButton_Clock_Mode1">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>50</y>
         <width>104</width>
         <height>21</height>
@@ -2277,7 +2277,7 @@ p, li { white-space: pre-wrap; }
      <widget class="QRadioButton" name="radioButton_Clock_Mode2">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>70</y>
         <width>104</width>
         <height>21</height>
@@ -2290,7 +2290,7 @@ p, li { white-space: pre-wrap; }
      <widget class="QRadioButton" name="radioButton_Clock_Mode3">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>90</y>
         <width>104</width>
         <height>21</height>
@@ -2311,6 +2311,35 @@ p, li { white-space: pre-wrap; }
       </property>
       <property name="text">
        <string>HBlank</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rLY">
+      <property name="geometry">
+       <rect>
+        <x>430</x>
+        <y>56</y>
+        <width>41</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>154</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_60">
+      <property name="geometry">
+       <rect>
+        <x>480</x>
+        <y>60</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>rLY</string>
       </property>
      </widget>
     </widget>

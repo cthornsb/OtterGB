@@ -99,7 +99,6 @@ void SystemClock::wait(){
 
 void SystemClock::resetScanline(){
 	vsync = false;
-	//cyclesSinceLastVSync -= (*rLY) * HORIZONTAL_SYNC_CYCLES;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;	
 	if(rLCDC->getBit(7)){ // LCD enabled
@@ -145,7 +144,6 @@ void SystemClock::waitUntilNextVSync(){
 		frameCount = 0;
 	}
 	timeOfLastVSync = sclock::now();
-	cyclesSinceLastVSync = 0;
 	vsync = false;
 }
 
