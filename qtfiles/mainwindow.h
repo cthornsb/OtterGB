@@ -162,6 +162,8 @@ private:
 	void updateClockTab();
 	
 	void updateMemoryArray();
+	
+	void setDmgMode();
 };
 
 #endif // MAINWINDOW_H

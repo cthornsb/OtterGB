@@ -31,6 +31,23 @@ MainWindow::~MainWindow()
 
 void MainWindow::update()
 {
+	static bool firstUpdate = true;
+	if(firstUpdate){
+	    // Get pointers to the page in memory.
+	    updateMemoryArray();
+	    if(!bGBCMODE)
+	    	setDmgMode();
+	    Cartridge *cart = components->cart;
+		if(cart->getRamSize() == 0){
+			ui->radioButton_RomSramEnabled->setEnabled(false);
+			ui->lineEdit_RomSramSize->setEnabled(false);
+			ui->lineEdit_SRAM_Bank->setEnabled(false);
+		}
+		if(cart->getRomSize() <= 32){
+			ui->lineEdit_ROM_Bank->setEnabled(false);
+		}
+	    firstUpdate = false;
+	}
 	switch(ui->tabWidget->currentIndex()){
 		case 0: // Main tab
 			updateMainTab();
@@ -81,7 +98,7 @@ void MainWindow::updateMainTab(){
 	setLineEditHex(ui->lineEdit_SP, cpu->getStackPointer());
 	
 	// Memory bank indicators
-	setLineEditText(ui->lineEdit_WRAM_Bank, components->wram->getBankSelect());
+	setLineEditHex(ui->lineEdit_WRAM_Bank, components->wram->getBankSelect());
 	
 	// Frames per second
 	setLineEditText(ui->lineEdit_FPS, components->sclk->getFramerate());
@@ -117,18 +134,21 @@ void MainWindow::updateGraphicsTab(){
 	setRadioButtonState(ui->radioButton_BgWinTileData, gpu->bgWinTileDataSelect);
 
 	// Color palettes
-	int bgp = ui->spinBox_BGP->value();
-	int obp = ui->spinBox_OBP->value();
-	setLineEditHex(ui->lineEdit_BGP_0, gpu->getBgPaletteColorHex(bgp*4));
-	setLineEditHex(ui->lineEdit_BGP_1, gpu->getBgPaletteColorHex(bgp*4+1));
-	setLineEditHex(ui->lineEdit_BGP_2, gpu->getBgPaletteColorHex(bgp*4+2));
-	setLineEditHex(ui->lineEdit_BGP_3, gpu->getBgPaletteColorHex(bgp*4+3));
-	setLineEditHex(ui->lineEdit_OBP_0, gpu->getObjPaletteColorHex(obp*4));
-	setLineEditHex(ui->lineEdit_OBP_1, gpu->getObjPaletteColorHex(obp*4+1));
-	setLineEditHex(ui->lineEdit_OBP_2, gpu->getObjPaletteColorHex(obp*4+2));
-	setLineEditHex(ui->lineEdit_OBP_3, gpu->getObjPaletteColorHex(obp*4+3));
-	//QPalette pal(QColor());
-	//setPalette(pal);
+	//gpu->getDmgPaletteColorHex(bgp*4)
+	if(bGBCMODE){
+		int bgp = ui->spinBox_BGP->value();
+		int obp = ui->spinBox_OBP->value();
+		setLineEditHex(ui->lineEdit_BGP_0, gpu->getBgPaletteColorHex(bgp*4));
+		setLineEditHex(ui->lineEdit_BGP_1, gpu->getBgPaletteColorHex(bgp*4+1));
+		setLineEditHex(ui->lineEdit_BGP_2, gpu->getBgPaletteColorHex(bgp*4+2));
+		setLineEditHex(ui->lineEdit_BGP_3, gpu->getBgPaletteColorHex(bgp*4+3));
+		setLineEditHex(ui->lineEdit_OBP_0, gpu->getObjPaletteColorHex(obp*4));
+		setLineEditHex(ui->lineEdit_OBP_1, gpu->getObjPaletteColorHex(obp*4+1));
+		setLineEditHex(ui->lineEdit_OBP_2, gpu->getObjPaletteColorHex(obp*4+2));
+		setLineEditHex(ui->lineEdit_OBP_3, gpu->getObjPaletteColorHex(obp*4+3));
+		//QPalette pal(QColor());
+		//setPalette(pal);
+	}
 	
 	// VRAM bank select
 	setLineEditHex(ui->lineEdit_VRAM_Bank, gpu->getBankSelect());
@@ -188,12 +208,6 @@ void MainWindow::updateRegistersTab(){
 }
 
 void MainWindow::updateMemoryTab(){
-	static bool firstUpdate = true;
-	if(firstUpdate){
-	    // Get pointers to the page in memory.
-	    updateMemoryArray();
-	    firstUpdate = false;
-	}
 	unsigned short currentByte = 0x80*ui->spinBox_MemoryPage->value();
 	QString str;
 	for(unsigned short i = 0; i < 8; i++){
@@ -235,6 +249,21 @@ void MainWindow::updateMemoryArray()
 		if(!memory[i]) // Inaccessible memory location
 			memory[i] = &ZERO;
 	}	
+}
+
+void MainWindow::setDmgMode(){
+	ui->radioButton_CurrentSpeed->setEnabled(false);
+	ui->lineEdit_BGP_0->setEnabled(false);
+	ui->lineEdit_BGP_1->setEnabled(false);
+	ui->lineEdit_BGP_2->setEnabled(false);
+	ui->lineEdit_BGP_3->setEnabled(false);
+	ui->lineEdit_OBP_0->setEnabled(false);
+	ui->lineEdit_OBP_1->setEnabled(false);
+	ui->lineEdit_OBP_2->setEnabled(false);
+	ui->lineEdit_OBP_3->setEnabled(false);
+	ui->spinBox_BGP->setEnabled(false);
+	ui->spinBox_OBP->setEnabled(false);
+	ui->lineEdit_VRAM_Bank->setEnabled(false);
 }
 
 void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){ 

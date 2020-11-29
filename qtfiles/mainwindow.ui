@@ -836,7 +836,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -865,7 +865,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -894,7 +894,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -975,7 +975,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -991,7 +991,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1020,7 +1020,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1145,7 +1145,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1161,7 +1161,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$ABCD</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1546,7 +1546,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>$00</string>
+       <string>$0000</string>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1588,7 +1588,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>path_to_rom.gb</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1604,7 +1604,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>ABCDEFGHIJKL</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1633,7 +1633,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>TITLE</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1649,7 +1649,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>TITLE</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1704,7 +1704,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>TITLE</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1720,7 +1720,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>TITLE</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -1749,7 +1749,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>TITLE</string>
+       <string/>
       </property>
       <property name="readOnly">
        <bool>true</bool>

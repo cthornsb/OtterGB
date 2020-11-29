@@ -103,6 +103,8 @@ public:
 
 	bool getWindowStatus();
 
+	unsigned char getDmgPaletteColorHex(const unsigned short &index) const ;
+
 	unsigned short getBgPaletteColorHex(const unsigned short &index) const ;
 
 	unsigned short getObjPaletteColorHex(const unsigned short &index) const ;

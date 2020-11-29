@@ -176,9 +176,9 @@ void GPU::initialize(){
 	}
 	else{ // Gameboy palettes
 		gbcPaletteColors[0][0] = Colors::GB_GREEN;
-		gbcPaletteColors[0][1] = (Colors::GB_LTGREEN);
-		gbcPaletteColors[0][2] = (Colors::GB_DKGREEN);
-		gbcPaletteColors[0][3] = (Colors::GB_DKSTGREEN);
+		gbcPaletteColors[0][1] = Colors::GB_LTGREEN;
+		gbcPaletteColors[0][2] = Colors::GB_DKGREEN;
+		gbcPaletteColors[0][3] = Colors::GB_DKSTGREEN;
 	}
 }
 
@@ -519,6 +519,10 @@ void GPU::render(){
 
 bool GPU::getWindowStatus(){
 	return window->status();
+}
+
+unsigned char GPU::getDmgPaletteColorHex(const unsigned short &index) const {
+	return ngbcPaletteColor[index/4][index%4];
 }
 
 unsigned short GPU::getBgPaletteColorHex(const unsigned short &index) const { 
