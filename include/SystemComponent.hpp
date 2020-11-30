@@ -8,13 +8,13 @@ class SystemGBC;
 
 class SystemComponent{
 public:
-	SystemComponent() : sys(0x0), readOnly(0), debugMode(0), offset(0), nBytes(0), nBanks(0), bs(0), size(0) { }
+	SystemComponent(const std::string name="") : sys(0x0), sName(name), readOnly(0), debugMode(0), offset(0), nBytes(0), nBanks(0), bs(0), size(0) { }
 
-	SystemComponent(const unsigned short &nB, const unsigned short &N=1) : sys(0x0), readOnly(0), offset(0), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
+	SystemComponent(const std::string name, const unsigned short &nB, const unsigned short &N=1) : sys(0x0), sName(name), readOnly(0), offset(0), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
 		initialize(nB, N);
 	}
 
-	SystemComponent(const unsigned short &nB, const unsigned short &off, const unsigned short &N) : sys(0x0), readOnly(0), offset(off), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
+	SystemComponent(const std::string name, const unsigned short &nB, const unsigned short &off, const unsigned short &N) : sys(0x0), sName(name), readOnly(0), offset(off), nBytes(nB), nBanks(N), bs(0), size(nB*N) {
 		initialize(nB, N);
 	}
 
@@ -49,6 +49,8 @@ public:
 	void setBank(const unsigned short &b){ bs = (b < nBanks ? b : b-1); }
 
 	void setOffset(const unsigned short &off){ offset = off; }
+
+	void setName(const std::string &name){ sName = name; }
 
 	void print(const unsigned short bytesPerRow=10);
 
@@ -87,29 +89,33 @@ public:
 
 	unsigned short getBankSelect() const { return bs; }
 
+	std::string getName() const { return sName; }
+
 	void setDebugMode(bool state=true){ debugMode = state; }
 
 protected:
-	SystemGBC *sys; // Pointer to the system bus
+	SystemGBC *sys; ///< Pointer to the system bus
+
+	std::string sName; ///< Name of component
 	
-	bool readOnly; // Read-only flag
-	bool debugMode; // Debug flag
+	bool readOnly; ///< Read-only flag
+	bool debugMode; ///< Debug flag
 
-	unsigned short offset; // Memory address offset
-	unsigned short nBytes; // Number of bytes per bank
-	unsigned short nBanks; // Number of banks
-	unsigned short bs; // Bank select
+	unsigned short offset; ///< Memory address offset
+	unsigned short nBytes; ///< Number of bytes per bank
+	unsigned short nBanks; ///< Number of banks
+	unsigned short bs; ///< Bank select
 
-	unsigned int size; // Total size of memory block
+	unsigned int size; ///< Total size of memory block
 
-	unsigned short writeLoc; //  Location in memory to be written to
-	unsigned short writeBank; // Bank of memory to be written to
-	unsigned char writeVal; // Value to be written to location (writeLoc)
+	unsigned short writeLoc; ///<  Location in memory to be written to
+	unsigned short writeBank; ///< Bank of memory to be written to
+	unsigned char writeVal; ///< Value to be written to location (writeLoc)
 
-	unsigned short readLoc; // Location in memory to be read from
-	unsigned short readBank; // Bank of memory to be read from
+	unsigned short readLoc; ///< Location in memory to be read from
+	unsigned short readBank; ///< Bank of memory to be read from
 
-	std::vector<std::vector<unsigned char> > mem; // Memory blocks
+	std::vector<std::vector<unsigned char> > mem; ///< Memory blocks
 
 	bool setReadOnly(bool state=true){ return (readOnly = state); }
 

@@ -7,7 +7,7 @@ class Register;
 
 class SerialController : public SystemComponent {
 public:
-	SerialController() : SystemComponent() { }
+	SerialController() : SystemComponent("Serial") { }
 
 	virtual void defineRegisters();
 

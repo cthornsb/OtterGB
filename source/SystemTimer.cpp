@@ -17,7 +17,7 @@
 #define VERTICAL_SYNC_CYCLES   17556 // CPU cycles per VSYNC (~59.73 Hz)
 #define HORIZONTAL_SYNC_CYCLES 114   // CPU cycles per HSYNC (per 154 scanlines)
 
-SystemClock::SystemClock() : SystemComponent(), vsync(false), frequencyMultiplier(1.0), cyclesSinceLastVSync(0), lcdDriverMode(2), framerate(0) {
+SystemClock::SystemClock() : SystemComponent("Clock"), vsync(false), frequencyMultiplier(1.0), cyclesSinceLastVSync(0), lcdDriverMode(2), framerate(0) {
 	timeOfInitialization = sclock::now();
 	timeOfLastVSync = sclock::now();
 }
@@ -171,7 +171,7 @@ void SystemClock::mode2Interrupt(){
 // class SystemTimer
 /////////////////////////////////////////////////////////////////////
 
-SystemTimer::SystemTimer() : SystemComponent(), ComponentTimer(), nDividerCycles(0) {
+SystemTimer::SystemTimer() : SystemComponent("Timer"), ComponentTimer(), nDividerCycles(0) {
 }
 
 bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &val){

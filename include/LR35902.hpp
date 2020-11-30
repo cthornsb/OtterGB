@@ -66,7 +66,7 @@ public:
 		void setImmediateData(const unsigned short &d16){ data = d16; }
 	};
 
-	LR35902() : SystemComponent(), halfCarry(false), fullCarry(false), 
+	LR35902() : SystemComponent("CPU"), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
 	            d8(0), d16h(0), d16l(0), SP(0), PC(0), nCyclesRemaining(0) { }
 

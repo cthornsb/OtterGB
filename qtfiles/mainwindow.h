@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <memory>
+#include <vector>
+#include <map>
 
 #include <QMainWindow>
 
@@ -57,6 +59,8 @@ private slots:
 	void on_lineEdit_Breakpoint_Read_editingFinished();
 
 	void on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1);
+
+	void on_comboBox_Registers_currentIndexChanged(int arg1);
 
     void on_spinBox_BGP_valueChanged(int arg1);
 
@@ -126,6 +130,8 @@ private:
 	ComponentList *components;
 
 	const unsigned char *memory[128];
+	
+	std::map<std::string, std::vector<Register*> > registers;
 
     void setLineEditText(QLineEdit *line, const std::string &str);
     

@@ -46,7 +46,7 @@ bool SpriteAttributes::compareCGB(const SpriteAttributes &s1, const SpriteAttrib
 // class SpriteHandler
 /////////////////////////////////////////////////////////////////////
 
-SpriteHandler::SpriteHandler() : SystemComponent(160) { 
+SpriteHandler::SpriteHandler() : SystemComponent("OAM", 160) { 
 	reset();
 }
 
@@ -137,7 +137,7 @@ void SpriteHandler::getSpriteData(unsigned char *ptr, SpriteAttributes *attr){
 // class GPU
 /////////////////////////////////////////////////////////////////////
 
-GPU::GPU() : SystemComponent(8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
+GPU::GPU() : SystemComponent("GPU", 8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	// Set default GB palettes
 	for(unsigned short i = 0; i < 3; i++){
 		ngbcPaletteColor[i][0] = 0x0;

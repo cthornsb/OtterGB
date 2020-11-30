@@ -7,7 +7,7 @@
 #include "Sound.hpp"
 
 // 512 Hz sequencer
-SoundProcessor::SoundProcessor() : SystemComponent(), ComponentTimer(512) { 
+SoundProcessor::SoundProcessor() : SystemComponent("APU"), ComponentTimer(512) { 
 	masterSoundEnable = false;
 }
 

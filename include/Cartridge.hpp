@@ -7,7 +7,7 @@
 
 class Cartridge : public SystemComponent {
 public:
-	Cartridge() : SystemComponent(), ramSelect(false), extRamEnabled(false) { }
+	Cartridge() : SystemComponent("Cartridge"), ramSelect(false), extRamEnabled(false) { }
 
 	// ROM is read-only, so return false to prevent writing to it.
 	virtual bool preWriteAction(){ return false; }

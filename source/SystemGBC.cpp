@@ -86,6 +86,7 @@ SystemGBC::~SystemGBC(){
 
 void SystemGBC::initialize(){ 
 	hram.initialize(127);
+	hram.setName("HRAM");
 
 	// Define system registers
 	addSystemRegister(0x0, 0x0F, rIF,   "IF",   "33333000");

@@ -105,6 +105,8 @@ public:
 	void clear(){ value = 0x0; }
 
 	bool zero() const { return (value == 0); }
+
+	bool set() const { return (comp != 0x0); }
 	
 	std::string dump() const ;
 

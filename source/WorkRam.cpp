@@ -11,7 +11,7 @@
 #define WRAM_ECHO_LOW  0xE000
 #define WRAM_ECHO_HIGH 0xFE00
 
-WorkRam::WorkRam() : SystemComponent(4096, 8) { 
+WorkRam::WorkRam() : SystemComponent("WRAM", 4096, 8) { 
 	bs = 1; // Lowest WRAM swap bank is bank 1
 }
 

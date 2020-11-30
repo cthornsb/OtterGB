@@ -7,7 +7,7 @@ class Window;
 
 class JoystickController : public SystemComponent {
 public:
-	JoystickController() : SystemComponent(), window(0x0) { }
+	JoystickController() : SystemComponent("Joypad"), window(0x0) { }
 	
 	void setWindow(Window *win){ window = win; }
 	

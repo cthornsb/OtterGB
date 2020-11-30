@@ -7,7 +7,7 @@ class Register;
 
 class DmaController : public SystemComponent {
 public:
-	DmaController() : SystemComponent(), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
+	DmaController() : SystemComponent("DMA"), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
 
 	bool active() const { return (nBytesRemaining != 0); }
 

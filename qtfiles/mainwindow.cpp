@@ -46,6 +46,13 @@ void MainWindow::update()
 		if(cart->getRomSize() <= 32){
 			ui->lineEdit_ROM_Bank->setEnabled(false);
 		}
+		for(unsigned short i = 0; i < 128; i++){
+			Register *reg = sys->getPtrToRegister(0xFF00+i); 
+			if(!reg->set())
+				continue;
+			registers["ALL"].push_back(reg);
+			registers[reg->getSystemComponent()->getName()].push_back(reg);
+		}
 	    firstUpdate = false;
 	}
 	switch(ui->tabWidget->currentIndex()){
@@ -197,12 +204,12 @@ void MainWindow::updateCartridgeTab(){
 
 void MainWindow::updateRegistersTab(){
 	QString str;
-	unsigned char byte;
-	for(unsigned short i = 0xFF00; i <= 0xFF80; i++){
-		Register *reg = sys->getPtrToRegister(i);
-		if(!reg) 
-			continue;
-		str.append(getQString(reg->dump()+"\n"));
+	std::string component = ui->comboBox_Registers->currentText().toStdString();
+	std::map<std::string, std::vector<Register*> >::iterator iter = registers.find(component);
+	if(iter != registers.end()){
+		for(auto reg = iter->second.begin(); reg != iter->second.end(); reg++){
+			str.append(getQString((*reg)->dump()+"\n"));
+		}
 	}
 	ui->textBrowser_Registers->setPlainText(str);
 }
@@ -269,8 +276,9 @@ void MainWindow::setDmgMode(){
 void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){ 
 	sys = ptr; 
 	components = comp;
+	ui->comboBox_Registers->addItem("ALL");
 	for(auto component = components->list.begin(); component != components->list.end(); component++)
-		ui->comboBox_Registers->addItem(getQString(component->first));
+		ui->comboBox_Registers->addItem(getQString(component->second->getName()));
     LR35902::Opcode *opcodes = components->cpu->getOpcodes();
     for(unsigned short i = 0; i < 256; i++)
     	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
@@ -433,6 +441,11 @@ void MainWindow::on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1)
 		on_checkBox_Breakpoint_Opcode_stateChanged(1);
 	else
 		ui->checkBox_Breakpoint_Opcode->setChecked(true);
+}
+
+void MainWindow::on_comboBox_Registers_currentIndexChanged(int arg1)
+{
+	//updateRegistersTab();
 }
 
 void MainWindow::on_spinBox_BGP_valueChanged(int arg1)
