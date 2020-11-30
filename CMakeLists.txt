@@ -59,6 +59,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
+#Add the include directories.
+include_directories(include)
+include_directories(graphics/include)
+
 if(BUILD_DEBUG)
 	#Find qt install.
 	#sudo apt-get install libqt4-dev
@@ -69,8 +73,10 @@ endif()
 
 #Set the graphics library
 if(NOT GRAPHICS_LIBRARY)
+	# To install OpenGL:
+	#sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
 	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
-endif(NOT GRAPHICS_LIBRARY)
+endif()
 
 #Set the Gameboy boot ROM
 if(NOT GB_BOOT_ROM)
@@ -82,8 +88,19 @@ if(NOT GBC_BOOT_ROM)
 	set(GBC_BOOT_ROM "" CACHE STRING "Gameboy Color boot program" FORCE)
 endif(NOT GBC_BOOT_ROM)
 
-#Add the include directory.
-include_directories(include)
+#Definitions
+if(BUILD_DEBUG)
+	add_definitions(-DUSE_QT_DEBUGGER)
+endif()
+
+add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
+
+if(GRAPHICS_LIBRARY MATCHES "OpenGL")
+	add_definitions(-DUSE_OPENGL)
+endif()
+
+#Add the graphics directory.
+add_subdirectory(graphics/source)
 
 #Add the source directory.
 add_subdirectory(source)

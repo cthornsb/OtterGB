@@ -6,6 +6,7 @@
 # QT_LIB_DIR      PATH to the qt install directory
 # QT_GUI_LIB      Path to libQtGui.so
 # QT_CORE_LIB     Path to libQtCore.so
+# QT_OPENGL_LIB   Path to libQtOpenGL.so
 # QT_INC_DIR      Path to Qt include directory
 # QT_CORE_INC_DIR Path to QtCore include directory
 # QT_GUI_INC_DIR  Path to QtGui include directory
@@ -23,6 +24,7 @@ find_path(QT_LIB_DIR
 if(QT_LIB_DIR)
 	set(QT_GUI_LIB ${QT_LIB_DIR}/libQtGui.so)
 	set(QT_CORE_LIB ${QT_LIB_DIR}/libQtCore.so)
+	set(QT_OPENGL_LIB ${QT_LIB_DIR}/libQtOpenGL.so)
 
 	find_path(QT_INC_DIR
 		NAMES QtCore QtGui
