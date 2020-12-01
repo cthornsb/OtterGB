@@ -331,19 +331,32 @@ void GPU::drawTileMaps(Window *win){
 	int W = win->getWidth();
 	int H = win->getHeight();
 	win->setCurrent();
-	//std::cout << W << "\t" << H << std::endl;
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
 	const unsigned short tilesPerRow = W/8;
 	unsigned short tileX, tileY;
 	unsigned char pixelColor;
 	for(unsigned short i = 0; i < 384; i++){
 		tileY = i / tilesPerRow;
-		//std::cout << i << "\t" << tileY << std::endl;
 		for(unsigned short dy = 0; dy < 8; dy++){
 			tileX = i % tilesPerRow;
 			for(unsigned short dx = 0; dx < 8; dx++){
 				pixelColor = getBitmapPixel(16*i, (7-dx), dy);
-				win->setDrawColor(gbcPaletteColors[0][pixelColor]);
+				switch(pixelColor){
+					case 0:
+						win->setDrawColor(Colors::WHITE);
+						break;
+					case 1:
+						win->setDrawColor(Colors::LTGRAY);
+						break;
+					case 2:
+						win->setDrawColor(Colors::DKGRAY);
+						break;
+					case 3:
+						win->setDrawColor(Colors::BLACK);
+						break;
+					default:
+						break;
+				}
 				win->drawPixel(tileX*8+dx, tileY*8+dy);
 			}
 		}
