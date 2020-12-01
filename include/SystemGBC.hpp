@@ -219,9 +219,13 @@ public:
 	
 	void quit(){ userQuitting = true; }
 
-	/** Resume emulation and 
+	/** Resume emulation until the next instruction is executed.
 	  */	
 	void stepThrough();
+	
+	/** Resume emulation until the next clock cycle.
+	  */	
+	void advanceClock();
 	
 	/** Resume emulation until the next HBlank period.
 	  */
@@ -267,6 +271,7 @@ private:
 	Breakpoint breakpointOpcode;
 
 	bool pauseAfterNextInstruction;
+	bool pauseAfterNextClock;
 	bool pauseAfterNextHBlank;
 	bool pauseAfterNextVBlank;
 

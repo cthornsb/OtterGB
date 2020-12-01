@@ -5,6 +5,10 @@
 #include "SystemRegisters.hpp"
 #include "Support.hpp"
 
+bool DmaController::active() const { 
+	return (nBytesRemaining != 0); 
+}
+
 void DmaController::startTransferOAM(){
 	// Source:      XX00-XX9F with XX in range [00,F1]
 	// Destination: FE00-FE9F
@@ -13,6 +17,7 @@ void DmaController::startTransferOAM(){
 	destStart = 0xFE00;
 	srcStart = rDMA->getValue() << 8;
 	nBytes = 1;
+	length = 160;
 	nCyclesRemaining = 160;
 	nBytesRemaining = 160;
 	transferMode = false;
@@ -20,22 +25,23 @@ void DmaController::startTransferOAM(){
 }
 
 void DmaController::startTransferVRAM(){
-	unsigned char dmaSourceH = rHDMA1->getValue();
-	unsigned char dmaSourceL = rHDMA2->getBits(4,7); // Bits (4-7) of LSB of source address
-	unsigned char dmaDestinationH = rHDMA3->getBits(0,4); // Bits (0-4) of MSB of destination address
-	unsigned char dmaDestinationL = rHDMA4->getBits(4,7); // Bits (4-7) of LSB of destination address
-					
 	// Start a VRAM DMA transfer
 	// source:      0000-7FF0 or A000-DFF0
 	// destination: 8000-9FF0 (VRAM)
+
+	// Bits 0-3 are ignored.	
+	srcStart = getUShort(rHDMA1->getValue(), rHDMA2->getValue());
+
+	// Bits 0-3 and 13-15 are ignored.					
+	destStart = 0x8000 + getUShort(rHDMA3->getValue(), rHDMA4->getValue());
+
 	index = 0;
-	destStart = 0x8000 + ((dmaDestinationH & 0x00FF) << 8) + dmaDestinationL;
-	srcStart = ((dmaSourceH & 0x00FF) << 8) + dmaSourceL;
-	nBytes = 2; // VRAM DMA takes ~1 us per two bytes transferred
+	nBytes = 2; // VRAM DMA takes 1 machine cycle (~1 us) per two bytes transferred
 
 	// Number of bytes to transfer.
-	nBytesRemaining = (rHDMA5->getBits(0,6) + 1) * 0x10;
+	nBytesRemaining = (rHDMA5->getBits(0,6) + 1) * 16;
 	nCyclesRemaining = nBytesRemaining / nBytes;
+	length = nBytesRemaining;
 	
 	// Transfer mode:
 	// 0: Transfer all bytes at once
@@ -64,8 +70,8 @@ bool DmaController::onClockUpdate(){
 	if(!oldDMA){ // Update registers
 		if(nBytesRemaining){
 			// Number of bytes remaining
-			rHDMA5->setValue(nBytesRemaining/16 - 1);
-			(*rHDMA5) |= 0x80; // Set bit 7, indicating transfer still active
+			rHDMA5->setValue(nBytesRemaining/16);
+			rHDMA5->resetBit(7); // Set bit 7, indicating transfer still active
 		}
 		else
 			rHDMA5->setValue(0xFF); // Transfer complete
@@ -109,8 +115,7 @@ bool DmaController::writeRegister(const unsigned short &reg, const unsigned char
 			break;
 		case 0xFF55: // HDMA5 - new DMA source, length/mode/start (GBC only)
 			// Start a VRAM DMA transfer
-			if(active() && !rHDMA5->getBit(7)){
-				(*rHDMA5) |= 0x80; // ???
+			if(active()){
 				terminateTransfer();
 			}
 			else{ // Start a transfer
@@ -144,10 +149,10 @@ bool DmaController::readRegister(const unsigned short &reg, unsigned char &dest)
 }
 
 void DmaController::defineRegisters(){
-	sys->addSystemRegister(this, 0x46, rDMA,   "DMA",   "22222222");
-	sys->addSystemRegister(this, 0x51, rHDMA1, "HDMA1", "33333333");
-	sys->addSystemRegister(this, 0x52, rHDMA2, "HDMA2", "33333333");
-	sys->addSystemRegister(this, 0x53, rHDMA3, "HDMA3", "33333333");
-	sys->addSystemRegister(this, 0x54, rHDMA4, "HDMA4", "33333333");
-	sys->addSystemRegister(this, 0x55, rHDMA5, "HDMA5", "33333333");
+	sys->addSystemRegister(this, 0x46, rDMA,   "DMA",   "22222222"); // OAM DMA
+	sys->addSystemRegister(this, 0x51, rHDMA1, "HDMA1", "33333333"); // Source high
+	sys->addSystemRegister(this, 0x52, rHDMA2, "HDMA2", "00003333"); // Source low
+	sys->addSystemRegister(this, 0x53, rHDMA3, "HDMA3", "33333000"); // Destination high
+	sys->addSystemRegister(this, 0x54, rHDMA4, "HDMA4", "00003333"); // Destination low
+	sys->addSystemRegister(this, 0x55, rHDMA5, "HDMA5", "33333333"); // Length/mode/start
 }

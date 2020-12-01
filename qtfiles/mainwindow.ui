@@ -686,7 +686,7 @@
     </widget>
     <widget class="QWidget" name="tab_4">
      <attribute name="title">
-      <string>Graphics</string>
+      <string>PPU</string>
      </attribute>
      <widget class="QRadioButton" name="radioButton_BackgroundEnabled">
       <property name="geometry">
@@ -2454,6 +2454,324 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="tab_9">
+     <attribute name="title">
+      <string>DMA</string>
+     </attribute>
+     <widget class="QRadioButton" name="radioButton_DMA_OAM">
+      <property name="geometry">
+       <rect>
+        <x>356</x>
+        <y>140</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>OAM</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_DMA_General">
+      <property name="geometry">
+       <rect>
+        <x>356</x>
+        <y>170</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>General</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_DMA_HBlank">
+      <property name="geometry">
+       <rect>
+        <x>356</x>
+        <y>200</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>HBlank</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_62">
+      <property name="geometry">
+       <rect>
+        <x>356</x>
+        <y>110</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Transfer Type</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_BytesRemaining">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_CyclesRemaining">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_BytesPerCycle">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>90</y>
+        <width>113</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_SourceStart">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>130</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_DestStart">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>170</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_63">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>14</y>
+        <width>101</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Bytes Remaining</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_64">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>54</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Cycles Remaining</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_65">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>94</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Bytes Per Cycle</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_DestStop">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>170</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_SourceStop">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>130</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_66">
+      <property name="geometry">
+       <rect>
+        <x>150</x>
+        <y>134</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Source Range</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_67">
+      <property name="geometry">
+       <rect>
+        <x>150</x>
+        <y>174</y>
+        <width>121</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Desitnation Range</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_68">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>134</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>-&gt;</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_69">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>174</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>-&gt;</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_DMA_TransferActive">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>220</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Transfer Active</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QProgressBar" name="progressBar_DMA">
+      <property name="geometry">
+       <rect>
+        <x>297</x>
+        <y>20</y>
+        <width>201</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="value">
+       <number>100</number>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_DMA_CurrentIndex">
+      <property name="geometry">
+       <rect>
+        <x>320</x>
+        <y>60</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_70">
+      <property name="geometry">
+       <rect>
+        <x>380</x>
+        <y>64</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Current Index</string>
+      </property>
+     </widget>
+    </widget>
    </widget>
    <widget class="QPushButton" name="pushButton_PauseResume">
     <property name="geometry">
@@ -2485,7 +2803,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>90</y>
+      <y>120</y>
       <width>71</width>
       <height>28</height>
      </rect>
@@ -2498,7 +2816,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>550</x>
-      <y>130</y>
+      <y>160</y>
       <width>90</width>
       <height>28</height>
      </rect>
@@ -2511,13 +2829,39 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>550</x>
-      <y>160</y>
+      <y>190</y>
       <width>90</width>
       <height>28</height>
      </rect>
     </property>
     <property name="text">
      <string>Next Frame</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_RedrawFrame">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>230</y>
+      <width>90</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Redraw</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_Advance">
+    <property name="geometry">
+     <rect>
+      <x>560</x>
+      <y>90</y>
+      <width>71</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Advance</string>
     </property>
    </widget>
   </widget>

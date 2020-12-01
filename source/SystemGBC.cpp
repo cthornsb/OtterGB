@@ -138,6 +138,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	}
 
 	pauseAfterNextInstruction = false;
+	pauseAfterNextClock = false;
 	pauseAfterNextHBlank = false;
 	pauseAfterNextVBlank = false;
 }
@@ -231,6 +232,12 @@ bool SystemGBC::execute(){
 
 			// Tick the system clock.
 			clock.onClockUpdate();
+#ifdef USE_QT_DEBUGGER
+			if(pauseAfterNextClock){
+				pauseAfterNextClock = false;					
+				pause();
+			}
+#endif
 
 			// Sync with the framerate.	
 			if(clock.pollVSync()){
@@ -946,6 +953,11 @@ void SystemGBC::help(){
 void SystemGBC::stepThrough(){
 	unpause();
 	pauseAfterNextInstruction = true;
+}
+
+void SystemGBC::advanceClock(){
+	unpause();
+	pauseAfterNextClock = true;
 }
 
 void SystemGBC::resumeUntilNextHBlank(){

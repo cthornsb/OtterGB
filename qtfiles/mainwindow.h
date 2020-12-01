@@ -75,6 +75,8 @@ private slots:
 
     void on_pushButton_Step_pressed();
 
+	void on_pushButton_Advance_pressed();
+
     void on_pushButton_Reset_pressed();
 
     void on_pushButton_NextScanline_pressed();
@@ -171,6 +173,8 @@ private:
 	void updateMemoryTab();
 	
 	void updateClockTab();
+	
+	void updateDmaTab();
 	
 	void updateMemoryArray();
 	

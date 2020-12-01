@@ -9,7 +9,30 @@ class DmaController : public SystemComponent {
 public:
 	DmaController() : SystemComponent("DMA"), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
 
-	bool active() const { return (nBytesRemaining != 0); }
+	bool active() const ;
+
+	/** Get the current DMA transfer mode.
+	  * @return 0 for OAM transfer, 1 for General VRAM transfer, 2 for HBlank VRAM transfer.
+	  */
+	unsigned char getTransferMode() const { return (oldDMA ? 0 : (!transferMode ? 1 : 2)); }
+	
+	unsigned short getNumBytesRemaining() const { return nBytesRemaining; }
+
+	unsigned short getNumCyclesRemaining() const { return nCyclesRemaining; }
+
+	unsigned short getNumBytesPerCycle() const { return nBytes; }
+	
+	unsigned short getCurrentMemoryIndex() const { return index; }
+
+	unsigned short getTotalLength() const { return length; }
+
+	unsigned short getSourceStartAddress() const { return srcStart; }
+	
+	unsigned short getSourceEndAddress() const { return srcStart+length; }
+
+	unsigned short getDestinationStartAddress() const { return destStart; }
+	
+	unsigned short getDestinationEndAddress() const { return destStart+length; }
 
 	void startTransferOAM();
 	
@@ -46,7 +69,8 @@ private:
 	unsigned short nBytes; ///< The number of bytes transferred per cycle.
 	unsigned short srcStart; ///< Start location of the source block in memory.
 	unsigned short destStart; ///< Start location of the destination block in memory.
-
+	unsigned short length; ///< Total number of bytes to transfer.
+	
 	/** Transfer the next chunk of bytes. Increment the memory index by nBytes.
 	  */
 	void transferByte();

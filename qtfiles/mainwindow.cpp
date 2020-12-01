@@ -8,6 +8,7 @@
 #include "SystemTimer.hpp"
 #include "LR35902.hpp"
 #include "GPU.hpp"
+#include "DmaController.hpp"
 
 unsigned char ZERO = 0;
 
@@ -85,6 +86,8 @@ void MainWindow::update()
 		case 7: // Clock tab
 			updateClockTab();
 			break;
+		case 8: // DMA tab
+			updateDmaTab();
 		default:
 			break;
 	}
@@ -238,7 +241,8 @@ void MainWindow::updateMemoryTab(){
 	ui->textBrowser_Memory->setPlainText(str);
 }
 
-void MainWindow::updateClockTab(){
+void MainWindow::updateClockTab()
+{
 	SystemClock *sclk = components->sclk;
 
 	setLineEditText(ui->lineEdit_Clock_Frequency, sclk->getFrequency()/1E6);
@@ -253,6 +257,35 @@ void MainWindow::updateClockTab(){
 	setRadioButtonState(ui->radioButton_Clock_Mode2, driverMode == 2);
 	setRadioButtonState(ui->radioButton_Clock_Mode3, driverMode == 3);
 	setLineEditText(ui->lineEdit_rLY, *sys->getPtrToRegisterValue(0xFF44));
+}
+
+void MainWindow::updateDmaTab()
+{
+	DmaController *dma = components->dma;
+
+	//if(dma->active()){
+		setLineEditText(ui->lineEdit_DMA_BytesRemaining, dma->getNumBytesRemaining());
+		setLineEditText(ui->lineEdit_DMA_CyclesRemaining, dma->getNumCyclesRemaining());
+		setLineEditText(ui->lineEdit_DMA_BytesPerCycle, dma->getNumBytesPerCycle());
+		
+		setLineEditHex(ui->lineEdit_DMA_SourceStart, dma->getSourceStartAddress());
+		setLineEditHex(ui->lineEdit_DMA_SourceStop, dma->getSourceEndAddress());
+		setLineEditHex(ui->lineEdit_DMA_DestStart, dma->getDestinationStartAddress());
+		setLineEditHex(ui->lineEdit_DMA_DestStop, dma->getDestinationEndAddress());
+		setLineEditHex(ui->lineEdit_DMA_CurrentIndex, dma->getCurrentMemoryIndex());
+
+		setRadioButtonState(ui->radioButton_DMA_TransferActive, dma->active());
+		
+		unsigned char type = dma->getTransferMode();
+		setRadioButtonState(ui->radioButton_DMA_OAM, (type == 0));
+		setRadioButtonState(ui->radioButton_DMA_General, (type == 1));
+		setRadioButtonState(ui->radioButton_DMA_HBlank, (type == 2));
+		
+		ui->progressBar_DMA->setValue(100*(1.0 - 1.0*dma->getNumBytesRemaining()/dma->getTotalLength()));
+	/*}
+	else{
+		setRadioButtonState(ui->radioButton_DMA_TransferActive, false);	
+	}*/
 }
 
 void MainWindow::updateMemoryArray()
@@ -493,6 +526,11 @@ void MainWindow::on_pushButton_PauseResume_pressed()
 void MainWindow::on_pushButton_Step_pressed()
 {
 	sys->stepThrough();
+}
+
+void MainWindow::on_pushButton_Advance_pressed()
+{
+	sys->advanceClock();
 }
 
 void MainWindow::on_pushButton_Reset_pressed()
