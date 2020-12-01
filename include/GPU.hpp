@@ -79,9 +79,9 @@ private:
 /////////////////////////////////////////////////////////////////////
 
 class GPU : public SystemComponent {
-//#ifdef USE_QT_DEBUGGER
+#ifdef USE_QT_DEBUGGER
 	friend class MainWindow;
-//#endif
+#endif
 public:
 	GPU();
 
@@ -89,7 +89,7 @@ public:
 	
 	void initialize();
 
-	void drawTileMaps();
+	void drawTileMaps(Window *win);
 
 	void disableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = false; }
 	
@@ -98,6 +98,8 @@ public:
 	void drawNextScanline(SpriteHandler *oam);
 
 	void render();
+
+	void processEvents();
 
 	Window *getWindow(){ return window.get(); }
 

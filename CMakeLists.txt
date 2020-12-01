@@ -59,6 +59,17 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
+#Compiler definitions
+if(BUILD_DEBUG)
+	add_definitions(-DUSE_QT_DEBUGGER)
+endif()
+
+add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
+
+if(GRAPHICS_LIBRARY MATCHES "OpenGL")
+	add_definitions(-DUSE_OPENGL)
+endif()
+
 #Add the include directories.
 include_directories(include)
 include_directories(graphics/include)
@@ -87,17 +98,6 @@ endif(NOT GB_BOOT_ROM)
 if(NOT GBC_BOOT_ROM)
 	set(GBC_BOOT_ROM "" CACHE STRING "Gameboy Color boot program" FORCE)
 endif(NOT GBC_BOOT_ROM)
-
-#Definitions
-if(BUILD_DEBUG)
-	add_definitions(-DUSE_QT_DEBUGGER)
-endif()
-
-add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
-
-if(GRAPHICS_LIBRARY MATCHES "OpenGL")
-	add_definitions(-DUSE_OPENGL)
-endif()
 
 #Add the graphics directory.
 add_subdirectory(graphics/source)

@@ -12,10 +12,6 @@ endif()
 add_library(CORE_OBJECTS OBJECT ${CORE_SOURCES})
 add_library(CORE_LIB STATIC $<TARGET_OBJECTS:CORE_OBJECTS>)
 
-message(STATUS ${GRAPHICS_LIB})
-message(STATUS ${GRAPHICS_LIBS})
-message(STATUS ${TEST_VAR})
-
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
 if(NOT BUILD_DEBUG)

@@ -11,6 +11,7 @@
 
 class QLineEdit;
 class QRadioButton;
+class Window;
 
 namespace Ui {
 class MainWindow;
@@ -27,7 +28,7 @@ public:
 
 	void update();
 
-	void connectToSystem(SystemGBC *ptr, ComponentList *comp);
+	void connectToSystem(SystemGBC *ptr);
 
 	void processEvents();
 	
@@ -67,6 +68,8 @@ private slots:
     void on_spinBox_OBP_valueChanged(int arg1);
 
     void on_spinBox_Frameskip_valueChanged(int arg1);
+    
+    void on_spinBox_ScreenScale_valueChanged(int arg1);
 
     void on_pushButton_PauseResume_pressed();
 
@@ -127,11 +130,13 @@ private:
     
     SystemGBC *sys;
 
-	ComponentList *components;
-
 	const unsigned char *memory[128];
 	
 	std::map<std::string, std::vector<Register*> > registers;
+
+	std::unique_ptr<ComponentList> components;
+
+	std::unique_ptr<Window> paletteViewer;
 
     void setLineEditText(QLineEdit *line, const std::string &str);
     

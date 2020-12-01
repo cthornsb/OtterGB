@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "GraphicsOpenGL.hpp"
 #include "Support.hpp"
 #include "SystemTimer.hpp"
 #include "LR35902.hpp"
@@ -53,6 +54,10 @@ void MainWindow::update()
 			registers["ALL"].push_back(reg);
 			registers[reg->getSystemComponent()->getName()].push_back(reg);
 		}
+		// Initialize palette viewer
+		paletteViewer = std::unique_ptr<Window>(new Window(160, 160));
+		paletteViewer->setParent(ui->widget_PaletteViewer);
+		paletteViewer->initialize();
 	    firstUpdate = false;
 	}
 	switch(ui->tabWidget->currentIndex()){
@@ -159,6 +164,11 @@ void MainWindow::updateGraphicsTab(){
 	
 	// VRAM bank select
 	setLineEditHex(ui->lineEdit_VRAM_Bank, gpu->getBankSelect());
+	
+	// Update palette viewer
+	paletteViewer->setCurrent();
+	gpu->drawTileMaps(paletteViewer.get());
+	paletteViewer->render();
 }
 
 void MainWindow::updateSpritesTab(){
@@ -273,9 +283,9 @@ void MainWindow::setDmgMode(){
 	ui->lineEdit_VRAM_Bank->setEnabled(false);
 }
 
-void MainWindow::connectToSystem(SystemGBC *ptr, ComponentList *comp){ 
+void MainWindow::connectToSystem(SystemGBC *ptr){ 
 	sys = ptr; 
-	components = comp;
+	components = std::unique_ptr<ComponentList>(new ComponentList(ptr));
 	ui->comboBox_Registers->addItem("ALL");
 	for(auto component = components->list.begin(); component != components->list.end(); component++)
 		ui->comboBox_Registers->addItem(getQString(component->second->getName()));
@@ -461,6 +471,11 @@ void MainWindow::on_spinBox_OBP_valueChanged(int arg1)
 void MainWindow::on_spinBox_Frameskip_valueChanged(int arg1)
 {
 	sys->setFrameSkip(arg1);
+}
+
+void MainWindow::on_spinBox_ScreenScale_valueChanged(int arg1)
+{
+	components->gpu->getWindow()->setScalingFactor(arg1);
 }
 
 void MainWindow::on_pushButton_PauseResume_pressed()

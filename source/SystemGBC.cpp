@@ -7,6 +7,7 @@
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
+#include "optionHandler.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
@@ -61,21 +62,81 @@ ComponentList::ComponentList(SystemGBC *sys){
 		list["WRAM"]      = (wram = &sys->wram);
 }
 	
-SystemGBC::SystemGBC() : nFrames(0), frameSkip(1), verboseMode(false), debugMode(false), cpuStopped(false), cpuHalted(false), 
-                         emulationPaused(false), bootSequence(false), forceColor(false), prepareSpeedSwitch(false), currentClockSpeed(false), displayFramerate(false),
-                         userQuitting(false), dmaSourceH(0), dmaSourceL(0), dmaDestinationH(0), dmaDestinationL(0), romFilename() { 
+SystemGBC::SystemGBC(int &argc, char *argv[]) : 
+	nFrames(0), 
+	frameSkip(1), 
+	verboseMode(false), 
+	debugMode(false), 
+	cpuStopped(false), 
+	cpuHalted(false), 
+	emulationPaused(false), 
+	bootSequence(false), 
+	forceColor(false), 
+	prepareSpeedSwitch(false), 
+	currentClockSpeed(false),
+	 displayFramerate(false),
+	userQuitting(false), 
+	dmaSourceH(0),
+	dmaSourceL(0), 
+	dmaDestinationH(0), 
+	dmaDestinationL(0), 
+	romFilename() 
+{ 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
 	memoryAccessRead[0] = 1; 
 	memoryAccessRead[1] = 0;
 
+#ifdef USE_QT_DEBUGGER			
+	app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
+#endif
+
 	// Add all components to the subsystem list
 	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
 
-	// Initialize system
+	// Initialize system components
 	this->initialize();
-	
+
+	// Handle command line options
+	optionHandler handler;
+	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
+	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
+	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
+	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
+	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
+#ifdef USE_QT_DEBUGGER			
+	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
+#endif
+
+	// Handle user input.
+	if(handler.setup(argc, argv)){
+		if(handler.getOption(0)->active) // Set input filename
+			romFilename = handler.getOption(0)->argument;
+
+		if(handler.getOption(1)->active) // Set CPU frequency multiplier
+			setCpuFrequency(strtod(handler.getOption(1)->argument.c_str(), NULL));
+
+		if(handler.getOption(2)->active) // Toggle verbose flag
+			setVerboseMode(true);
+
+		if(handler.getOption(3)->active) // Set pixel scaling factor
+			gpu.setPixelScale(strtoul(handler.getOption(3)->argument.c_str(), NULL, 10));
+
+		if(handler.getOption(4)->active) // Use GBC mode for original GB games
+			setForceColorMode(true);
+
+#ifdef USE_QT_DEBUGGER			
+		if(handler.getOption(5)->active) // Toggle debug flag
+			setDebugMode(true);
+#endif
+	}
+
+	// Check for ROM filename.
+	if(romFilename.empty()){
+		std::cout << " Warning! Input gb/gbc ROM file not specified!\n";
+	}
+
 	pauseAfterNextInstruction = false;
 	pauseAfterNextHBlank = false;
 	pauseAfterNextVBlank = false;
@@ -174,7 +235,7 @@ bool SystemGBC::execute(){
 			// Sync with the framerate.	
 			if(clock.pollVSync()){
 				// Process window events
-				gpu.getWindow()->processEvents();
+				gpu.processEvents();
 				checkSystemKeys();
 				
 				// Render the current frame
@@ -205,7 +266,7 @@ bool SystemGBC::execute(){
 			}
 		
 			// Process window events
-			gpu.getWindow()->processEvents();
+			gpu.processEvents();
 			checkSystemKeys();
 
 			// Maintain framerate but do not advance the system clock.
@@ -469,12 +530,8 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 		comp->second->setDebugMode(state);
 #ifdef USE_QT_DEBUGGER
 	if(debugMode){
-		int dummyARGC = 1;
-		char *dummyARGV[1] = {0};
-		std::unique_ptr<ComponentList>(new ComponentList(this));
-		app = std::unique_ptr<QApplication>(new QApplication(dummyARGC, dummyARGV));
 		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
-		gui->connectToSystem(this, subsystems.get());
+		gui->connectToSystem(this);
 	}
 #endif
 }

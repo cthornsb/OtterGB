@@ -78,7 +78,7 @@ private:
 class SystemGBC{
 	friend class ComponentList;
 public:
-	SystemGBC();
+	SystemGBC(int &argc, char *argv[]);
 	
 	~SystemGBC();
 
@@ -123,6 +123,12 @@ public:
 	WorkRam *getWRAM(){ return &wram; }
 	
 	ComponentList *getListOfComponents(){ return subsystems.get(); }
+	
+#ifdef USE_QT_DEBUGGER
+	QApplication *getQtApplication(){ return app.get(); }
+	
+	MainWindow *getQtGui(){ return gui.get(); }
+#endif
 	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);

@@ -138,6 +138,12 @@ void SpriteHandler::getSpriteData(unsigned char *ptr, SpriteAttributes *attr){
 /////////////////////////////////////////////////////////////////////
 
 GPU::GPU() : SystemComponent("GPU", 8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
+}
+
+GPU::~GPU(){
+}
+
+void GPU::initialize(){
 	// Set default GB palettes
 	for(unsigned short i = 0; i < 3; i++){
 		ngbcPaletteColor[i][0] = 0x0;
@@ -158,14 +164,10 @@ GPU::GPU() : SystemComponent("GPU", 8192, VRAM_LOW, 2) { // 2 8kB banks of VRAM
 	cmap = std::unique_ptr<CharacterMap>(new CharacterMap());
 	cmap->setWindow(window.get());
 	cmap->setTransparency(false);
-}
 
-GPU::~GPU(){
-}
-
-void GPU::initialize(){
 	// Setup the window
 	window->initialize();
+	window->setupKeyboardHandler();
 	window->clear();
 
 	// Set default palettes
@@ -325,41 +327,32 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	return true;
 }
 
-void GPU::drawTileMaps(){
+void GPU::drawTileMaps(Window *win){
+	int W = win->getWidth();
+	int H = win->getHeight();
+	win->setCurrent();
+	//std::cout << W << "\t" << H << std::endl;
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
-	unsigned char tileX, tileY;
+	const unsigned short tilesPerRow = W/8;
+	unsigned short tileX, tileY;
 	unsigned char pixelColor;
 	for(unsigned short i = 0; i < 384; i++){
-		tileY = i/32;
+		tileY = i / tilesPerRow;
+		//std::cout << i << "\t" << tileY << std::endl;
 		for(unsigned short dy = 0; dy < 8; dy++){
-			tileX = i%32;
+			tileX = i % tilesPerRow;
 			for(unsigned short dx = 0; dx < 8; dx++){
 				pixelColor = getBitmapPixel(16*i, (7-dx), dy);
-				window->setDrawColor(gbcPaletteColors[0][pixelColor]);
-				window->drawPixel(tileX*8+dx, tileY*8+dy);
+				win->setDrawColor(gbcPaletteColors[0][pixelColor]);
+				win->drawPixel(tileX*8+dx, tileY*8+dy);
 			}
-		}
-	}
-	ColorGBC current[160];
-	ColorGBC *currentPixel;
-	ColorRGB *currentPixelRGB;
-	for(unsigned short dy = 0; dy < 144; dy++){
-		for(unsigned short dx = 0; dx < 20; dx++){
-			drawTile(dx*8, dy, rSCX->getValue(), rSCY->getValue(), (bgTileMapSelect ? 0x1C00 : 0x1800), current);
-		}
-		for(unsigned short x = 0; x < 160; x++){
-			currentPixel = &current[x];
-			if(bGBCMODE)
-				currentPixelRGB = &gbcPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
-			else
-				currentPixelRGB = &gbcPaletteColors[0][ngbcPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
-			window->setDrawColor(currentPixelRGB);
-			window->drawPixel(x, 96+dy);
 		}
 	}
 }
 
 void GPU::drawNextScanline(SpriteHandler *oam){
+	window->setCurrent();
+
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = rLY->getValue() + rSCY->getValue();
@@ -512,9 +505,15 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 
 void GPU::render(){	
 	// Update the screen
+	window->setCurrent();
 	if(lcdDisplayEnable && window->status()){ // Check for events
 		window->render();
 	}
+}
+
+void GPU::processEvents(){
+	window->setCurrent();
+	window->processEvents();
 }
 
 bool GPU::getWindowStatus(){
