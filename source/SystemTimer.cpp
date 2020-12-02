@@ -150,7 +150,6 @@ void SystemClock::waitUntilNextVSync(){
 void SystemClock::mode0Interrupt(){
 	if(rSTAT->getBit(3)){ // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
-		std::cout << " mode 0\n";	
 	}
 }
 
@@ -163,7 +162,6 @@ void SystemClock::mode1Interrupt(){
 void SystemClock::mode2Interrupt(){
 	if(rSTAT->getBit(5)){ // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
-		std::cout << " mode 2\n";
 	}
 }
 
