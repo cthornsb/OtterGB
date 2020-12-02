@@ -107,6 +107,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
 #ifdef USE_QT_DEBUGGER			
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
+	handler.add(optionExt("tile-viewer", no_argument, NULL, 'T', "", "Enable VRAM tile viewer (if debug gui enabled)."));
 #endif
 
 	// Handle user input.
@@ -127,8 +128,11 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 			setForceColorMode(true);
 
 #ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(5)->active) // Toggle debug flag
+		if(handler.getOption(5)->active){ // Toggle debug flag
 			setDebugMode(true);
+			if(handler.getOption(6)->active)
+				gui->openTileViewer();
+		}
 #endif
 	}
 

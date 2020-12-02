@@ -55,10 +55,6 @@ void MainWindow::update()
 			registers["ALL"].push_back(reg);
 			registers[reg->getSystemComponent()->getName()].push_back(reg);
 		}
-		// Initialize palette viewer
-		paletteViewer = std::unique_ptr<Window>(new Window(160, 160));
-		paletteViewer->setParent(ui->widget_PaletteViewer);
-		paletteViewer->initialize();
 	    firstUpdate = false;
 	}
 	switch(ui->tabWidget->currentIndex()){
@@ -90,6 +86,12 @@ void MainWindow::update()
 			updateDmaTab();
 		default:
 			break;
+	}
+	// Update tile viewer (if enabled)
+	if(tileViewer){
+		tileViewer->setCurrent();
+		components->gpu->drawTileMaps(tileViewer.get());
+		tileViewer->render();
 	}
 }
 
@@ -167,11 +169,6 @@ void MainWindow::updateGraphicsTab(){
 	
 	// VRAM bank select
 	setLineEditHex(ui->lineEdit_VRAM_Bank, gpu->getBankSelect());
-	
-	// Update palette viewer
-	paletteViewer->setCurrent();
-	gpu->drawTileMaps(paletteViewer.get());
-	paletteViewer->render();
 }
 
 void MainWindow::updateSpritesTab(){
@@ -263,29 +260,24 @@ void MainWindow::updateDmaTab()
 {
 	DmaController *dma = components->dma;
 
-	//if(dma->active()){
-		setLineEditText(ui->lineEdit_DMA_BytesRemaining, dma->getNumBytesRemaining());
-		setLineEditText(ui->lineEdit_DMA_CyclesRemaining, dma->getNumCyclesRemaining());
-		setLineEditText(ui->lineEdit_DMA_BytesPerCycle, dma->getNumBytesPerCycle());
-		
-		setLineEditHex(ui->lineEdit_DMA_SourceStart, dma->getSourceStartAddress());
-		setLineEditHex(ui->lineEdit_DMA_SourceStop, dma->getSourceEndAddress());
-		setLineEditHex(ui->lineEdit_DMA_DestStart, dma->getDestinationStartAddress());
-		setLineEditHex(ui->lineEdit_DMA_DestStop, dma->getDestinationEndAddress());
-		setLineEditHex(ui->lineEdit_DMA_CurrentIndex, dma->getCurrentMemoryIndex());
+	setLineEditText(ui->lineEdit_DMA_BytesRemaining, dma->getNumBytesRemaining());
+	setLineEditText(ui->lineEdit_DMA_CyclesRemaining, dma->getNumCyclesRemaining());
+	setLineEditText(ui->lineEdit_DMA_BytesPerCycle, dma->getNumBytesPerCycle());
+	
+	setLineEditHex(ui->lineEdit_DMA_SourceStart, dma->getSourceStartAddress());
+	setLineEditHex(ui->lineEdit_DMA_SourceStop, dma->getSourceEndAddress());
+	setLineEditHex(ui->lineEdit_DMA_DestStart, dma->getDestinationStartAddress());
+	setLineEditHex(ui->lineEdit_DMA_DestStop, dma->getDestinationEndAddress());
+	setLineEditHex(ui->lineEdit_DMA_CurrentIndex, dma->getCurrentMemoryIndex());
 
-		setRadioButtonState(ui->radioButton_DMA_TransferActive, dma->active());
-		
-		unsigned char type = dma->getTransferMode();
-		setRadioButtonState(ui->radioButton_DMA_OAM, (type == 0));
-		setRadioButtonState(ui->radioButton_DMA_General, (type == 1));
-		setRadioButtonState(ui->radioButton_DMA_HBlank, (type == 2));
-		
-		ui->progressBar_DMA->setValue(100*(1.0 - 1.0*dma->getNumBytesRemaining()/dma->getTotalLength()));
-	/*}
-	else{
-		setRadioButtonState(ui->radioButton_DMA_TransferActive, false);	
-	}*/
+	setRadioButtonState(ui->radioButton_DMA_TransferActive, dma->active());
+	
+	unsigned char type = dma->getTransferMode();
+	setRadioButtonState(ui->radioButton_DMA_OAM, (type == 0));
+	setRadioButtonState(ui->radioButton_DMA_General, (type == 1));
+	setRadioButtonState(ui->radioButton_DMA_HBlank, (type == 2));
+	
+	ui->progressBar_DMA->setValue(100*(1.0 - 1.0*dma->getNumBytesRemaining()/dma->getTotalLength()));
 }
 
 void MainWindow::updateMemoryArray()
@@ -348,6 +340,13 @@ void MainWindow::updatePausedState(bool state/*=true*/){
 		ui->pushButton_PauseResume->setText("Resume");
 	else
 		ui->pushButton_PauseResume->setText("Pause");
+}
+
+void MainWindow::openTileViewer(){
+	// Initialize palette viewer
+	tileViewer = std::unique_ptr<Window>(new Window(160, 160));
+	tileViewer->setParent(ui->widget_TileViewer);
+	tileViewer->initialize();
 }
 
 void MainWindow::setLineEditText(QLineEdit *line, const std::string &str){

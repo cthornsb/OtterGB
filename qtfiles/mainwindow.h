@@ -35,6 +35,8 @@ public:
 	void closeAllWindows();
 	
 	void updatePausedState(bool state=true);
+	
+	void openTileViewer();
 
 private slots:
     void on_checkBox_Background_stateChanged(int arg1);
@@ -138,7 +140,7 @@ private:
 
 	std::unique_ptr<ComponentList> components;
 
-	std::unique_ptr<Window> paletteViewer;
+	std::unique_ptr<Window> tileViewer;
 
     void setLineEditText(QLineEdit *line, const std::string &str);
     

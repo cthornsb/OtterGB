@@ -1213,7 +1213,7 @@
        <string>3</string>
       </property>
      </widget>
-     <widget class="QWidget" name="widget_PaletteViewer" native="true">
+     <widget class="QWidget" name="widget_TileViewer" native="true">
       <property name="geometry">
        <rect>
         <x>10</x>
