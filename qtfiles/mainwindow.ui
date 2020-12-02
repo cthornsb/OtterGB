@@ -257,7 +257,7 @@
        <rect>
         <x>140</x>
         <y>134</y>
-        <width>21</width>
+        <width>31</width>
         <height>16</height>
        </rect>
       </property>
@@ -413,6 +413,9 @@
         <height>21</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show &lt;span style=&quot; font-weight:600;&quot;&gt;Frames Per Second&lt;/span&gt; (FPS) on screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string>Show FPS</string>
       </property>
@@ -517,6 +520,9 @@
         <height>28</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Program Counter Breakpoint &lt;/span&gt;(base-16)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string/>
       </property>
@@ -533,6 +539,9 @@
         <height>28</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Memory Write Breakpoint &lt;/span&gt;(base-16)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string/>
       </property>
@@ -548,6 +557,9 @@
         <width>51</width>
         <height>28</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Memory Read Breakpoint &lt;/span&gt;(base-16)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
        <string/>
@@ -669,6 +681,9 @@
         <height>24</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Opcode Breakpoint&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
      </widget>
      <widget class="QCheckBox" name="checkBox_Show_Instructions">
       <property name="geometry">
@@ -678,6 +693,9 @@
         <width>121</width>
         <height>21</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Display most recently executed &lt;span style=&quot; font-weight:600;&quot;&gt;CPU Instruction&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
        <string>Show CPU Instr</string>
@@ -942,6 +960,9 @@
         <height>26</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which &lt;span style=&quot; font-weight:600;&quot;&gt;Background Palette&lt;/span&gt; to display (0-7)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="maximum">
        <number>7</number>
       </property>
@@ -954,6 +975,9 @@
         <width>46</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which &lt;span style=&quot; font-weight:600;&quot;&gt;Sprite Palette &lt;/span&gt;to display (0-7)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="maximum">
        <number>7</number>
@@ -1068,6 +1092,9 @@
         <height>21</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enable or disable &lt;span style=&quot; font-weight:600;&quot;&gt;Background&lt;/span&gt; layer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string>Background</string>
       </property>
@@ -1084,6 +1111,9 @@
         <height>21</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enable or disable &lt;span style=&quot; font-weight:600;&quot;&gt;Sprite&lt;/span&gt; layer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string>Sprites</string>
       </property>
@@ -1099,6 +1129,9 @@
         <width>87</width>
         <height>21</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enable or disable &lt;span style=&quot; font-weight:600;&quot;&gt;Window&lt;/span&gt; layer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
        <string>Window</string>
@@ -1144,6 +1177,9 @@
         <width>46</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of &lt;span style=&quot; font-weight:600;&quot;&gt;Frames&lt;/span&gt; to &lt;span style=&quot; font-weight:600;&quot;&gt;Skip&lt;/span&gt; before drawing the next&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="minimum">
        <number>1</number>
@@ -1231,6 +1267,9 @@
         <width>46</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the &lt;span style=&quot; font-weight:600;&quot;&gt;Scaling Factor&lt;/span&gt; for the LCD display&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="minimum">
        <number>1</number>
@@ -1374,6 +1413,9 @@
         <width>46</width>
         <height>26</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which &lt;span style=&quot; font-weight:600;&quot;&gt;SpriteIndex&lt;/span&gt; to display (0-39)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="maximum">
        <number>39</number>
@@ -1942,6 +1984,9 @@ p, li { white-space: pre-wrap; }
         <height>24</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select which &lt;span style=&quot; font-weight:600;&quot;&gt;System Component&lt;/span&gt; registers to display&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_7">
@@ -2018,6 +2063,9 @@ p, li { white-space: pre-wrap; }
         <height>26</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select current &lt;span style=&quot; font-weight:600;&quot;&gt;Page&lt;/span&gt; of 128 B of system memory&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="maximum">
        <number>511</number>
       </property>
@@ -2030,6 +2078,9 @@ p, li { white-space: pre-wrap; }
         <width>113</width>
         <height>28</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show the page of system memory containing a given &lt;span style=&quot; font-weight:600;&quot;&gt;Address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="maxLength">
        <number>4</number>
@@ -2782,6 +2833,9 @@ p, li { white-space: pre-wrap; }
       <height>28</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Pause&lt;/span&gt; or &lt;span style=&quot; font-weight:600;&quot;&gt;Resume&lt;/span&gt; emulation &lt;span style=&quot; font-style:italic;&quot;&gt;F2&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="text">
      <string>Pause</string>
     </property>
@@ -2794,6 +2848,9 @@ p, li { white-space: pre-wrap; }
       <width>71</width>
       <height>28</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Step Through&lt;/span&gt; to next instruction in program&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Step</string>
@@ -2808,6 +2865,9 @@ p, li { white-space: pre-wrap; }
       <height>28</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Reset Execution&lt;/span&gt; of current program&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="text">
      <string>Reset</string>
     </property>
@@ -2820,6 +2880,9 @@ p, li { white-space: pre-wrap; }
       <width>90</width>
       <height>28</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Advance to the &lt;span style=&quot; font-weight:600;&quot;&gt;Next Horizontal Blank&lt;/span&gt; (HBlank) period&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Next Scanline</string>
@@ -2834,6 +2897,9 @@ p, li { white-space: pre-wrap; }
       <height>28</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Advance to the &lt;span style=&quot; font-weight:600;&quot;&gt;Next Vertical Blank&lt;/span&gt; (VBlank) period&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="text">
      <string>Next Frame</string>
     </property>
@@ -2847,6 +2913,9 @@ p, li { white-space: pre-wrap; }
       <height>28</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Redraw&lt;/span&gt; the current frame&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="text">
      <string>Redraw</string>
     </property>
@@ -2859,6 +2928,9 @@ p, li { white-space: pre-wrap; }
       <width>71</width>
       <height>28</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Advance System Clock&lt;/span&gt; by one tick&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
      <string>Advance</string>
