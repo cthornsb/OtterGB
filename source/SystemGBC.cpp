@@ -218,8 +218,8 @@ bool SystemGBC::execute(){
 						pauseAfterNextInstruction = false;					
 						pause();
 					}
-					else if(breakpointOpcode.check(cpu.getLastOpcode()->index) ||
-					   breakpointProgramCounter.check(cpu.getLastOpcode()->pc))
+					else if(breakpointOpcode.check(cpu.getLastOpcode()->nIndex) ||
+					   breakpointProgramCounter.check(cpu.getLastOpcode()->nPC))
 						pause();
 #endif
 				}
@@ -342,8 +342,8 @@ void SystemGBC::disableInterrupts(){
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
 	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		LR35902::OpcodeData *op = cpu.getLastOpcode();
-		std::cout << " (W) PC=" << getHex(op->pc) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		OpcodeData *op = cpu.getLastOpcode();
+		std::cout << " (W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
 		if(op->op->nBytes == 2)
 			std::cout << "d8=" << getHex(op->getd8());
 		else if(op->op->nBytes == 3)
@@ -439,8 +439,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 
 	// Check for memory access watch
 	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
-		LR35902::OpcodeData *op = cpu.getLastOpcode();
-		std::cout << " (R) PC=" << getHex(op->pc) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
+		OpcodeData *op = cpu.getLastOpcode();
+		std::cout << " (R) PC=" << getHex(op->nPC) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
 	}
 
 	return true; // Successfully read from memory location (loc)

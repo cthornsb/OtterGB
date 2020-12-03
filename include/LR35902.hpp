@@ -15,60 +15,81 @@ extern const unsigned char FLAG_S_MASK;
 extern const unsigned char FLAG_H_MASK;
 extern const unsigned char FLAG_C_MASK;
 
+class LR35902;
+
+typedef unsigned short (LR35902::*addrGetFunc)() const;
+
+class Opcode{
+public:
+	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
+
+	addrGetFunc rptr; ///< Pointer to the function which returns the memory read address.
+	addrGetFunc wptr; ///< Pointer to the function which returns the memory write address.
+
+	unsigned short nCycles; ///< Length of clock cycles required.
+	unsigned short nBytes; ///< Length of instruction in bytes.
+
+	unsigned short nReadCycles; ///< Flag indicating this instruction reads from memory.
+	unsigned short nWriteCycles; ///< Flag indicating this instruction writes to memory.
+
+	std::string sName; ///< The full instruction mnemonic.
+
+	std::string sPrefix; ///< 
+	std::string sSuffix; ///< 
+
+	std::string sOpname; ///< Opcode name.
+	std::string sOperands[2]; ///< Operand names.
+
+	Opcode() : ptr(0x0), rptr(0x0), wptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
+	
+	Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
+};
+
+class OpcodeData{
+public:
+	Opcode *op; ///< Pointer to the opcode instruction.
+	
+	unsigned char nIndex; ///< Opcode index.
+	unsigned short nData; ///< Immediate data.
+	unsigned short nPC; ///< Program counter.
+	unsigned short nCycles; ///< Clock cycles since start of instruction
+	unsigned short nExtraCycles; ///< 
+	unsigned short nReadCycle;
+	unsigned short nWriteCycle;
+	unsigned short nExecuteCycle; ///< Clock cycle on which to execute instruction
+	
+	bool cbPrefix; ///< CB Prefix opcodes.
+	
+	OpcodeData();
+	
+	Opcode * operator () () { return op; }
+	
+	bool executing() const { return (nCycles < (nExecuteCycle + nExtraCycles)); }
+	
+	bool clock(LR35902 *cpu);
+
+	std::string getInstruction() const ;
+	
+	void addCycles(const unsigned short &extra){ nExtraCycles = extra; }
+	
+	unsigned char getd8() const { return (unsigned char)nData; }
+	
+	unsigned short getd16() const { return nData; }
+	
+	void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
+	
+	void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
+
+	void setImmediateData(const unsigned char &d8){ nData = (d8 & 0x00FF); }
+	
+	void setImmediateData(const unsigned short &d16){ nData = d16; }
+};
+
 class LR35902 : public SystemComponent {
 public:
-	class Opcode{
-	public:
-		void (LR35902::*ptr)(); ///< Pointer to the instruction code.
-
-		unsigned short nCycles; ///< Length of clock cycles required.
-		unsigned short nBytes; ///< Length of instruction in bytes.
-
-		unsigned short nReadCycles; ///< Flag indicating this instruction reads from memory.
-		unsigned short nWriteCycles; ///< Flag indicating this instruction writes to memory.
-
-		std::string sName; ///< The instruciton mnemonic.
-
-		std::string sPrefix;
-		std::string sSuffix;
-
-		Opcode() : ptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
-		
-		Opcode(const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
-	};
-
-	class OpcodeData{
-	public:
-		Opcode *op; ///< Pointer to the opcode instruction.
-		
-		unsigned char index; ///< Opcode index.
-		
-		unsigned short data; ///< Immediate data.
-		
-		unsigned short pc; ///< Program counter.
-		
-		bool cbPrefix; ///< CB Prefix opcodes.
-		
-		OpcodeData() : op(0x0), index(0), data(0), pc(0), cbPrefix(false) { }
-		
-		Opcode * operator () () { return op; }
-		
-		unsigned char getd8() const { return (unsigned char)data; }
-		
-		unsigned short getd16() const { return data; }
-		
-		void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-		
-		void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-	
-		void setImmediateData(const unsigned char &d8){ data = (d8 & 0x00FF); }
-		
-		void setImmediateData(const unsigned short &d16){ data = d16; }
-	};
-
 	LR35902() : SystemComponent("CPU"), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
-	            d8(0), d16h(0), d16l(0), SP(0), PC(0), nCyclesRemaining(0) { }
+	            d8(0), d16h(0), d16l(0), SP(0), PC(0) { }
 
 	void initialize();
 
@@ -89,7 +110,7 @@ public:
 
 	OpcodeData *getLastOpcode(){ return &lastOpcode; }
 
-	std::string getInstruction() const { return instruction; }
+	std::string getInstruction() const { return lastOpcode.getInstruction(); }
 
 	unsigned short getProgramCounter() const { return PC; }
 
@@ -107,6 +128,10 @@ public:
 
 	unsigned short getHL() const ;
 
+	unsigned short getAddress_C() const { return (0xFF00 + C); }
+
+	unsigned short getAddress_d8() const { return (0xFF00 + d8); }
+
 	unsigned char getA() const { return A; }
 
 	unsigned char getB() const { return B; }
@@ -123,7 +148,7 @@ public:
 
 	unsigned char getL() const { return L; }
 
-	unsigned short getCyclesRemaining() const { return nCyclesRemaining; }
+	unsigned short getCyclesRemaining() const { return lastOpcode.nCycles; }
 	
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 
@@ -138,6 +163,12 @@ public:
 	unsigned short setDE(const unsigned short &val);
 
 	unsigned short setHL(const unsigned short &val);
+
+	void readMemory(unsigned short (LR35902::*ptr)() const);
+	
+	void writeMemory(unsigned short (LR35902::*ptr)() const);
+
+	addrGetFunc getMemoryAddressFunction(const std::string &target);
 
 	virtual unsigned int writeSavestate(std::ofstream &f);
 
@@ -157,21 +188,22 @@ protected:
 
 	unsigned char F; ///< Flags register
 
+	// Immediate data
 	unsigned char d8; ///< 8-bit immediate data
 	unsigned char d16h; ///< High 8 bits of 16-bit immediate data
 	unsigned char d16l; ///< Low 8 bits of 16-bit immediate data
+
+	// Memory data
+	unsigned char valueWrite; ///< Value which will be written to memory
+	unsigned char valueRead; ///< Value read from memory
 
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
 	
 	OpcodeData lastOpcode; ///< Pointer to the last read opcode.
-	unsigned short nCyclesRemaining; ///< Number of clock cycles remaining for last instruction
-	unsigned short nExtraCyclesRemaining; ///< Number of extra clock cycles remaining for conditional statements
 
 	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
 	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
-
-	std::string instruction; ///< The next instruction which will be executed
 
 	void acknowledgeVBlankInterrupt();
 

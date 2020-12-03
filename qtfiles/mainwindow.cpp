@@ -314,7 +314,7 @@ void MainWindow::connectToSystem(SystemGBC *ptr){
 	ui->comboBox_Registers->addItem("ALL");
 	for(auto component = components->list.begin(); component != components->list.end(); component++)
 		ui->comboBox_Registers->addItem(getQString(component->second->getName()));
-    LR35902::Opcode *opcodes = components->cpu->getOpcodes();
+    Opcode *opcodes = components->cpu->getOpcodes();
     for(unsigned short i = 0; i < 256; i++)
     	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
     opcodes = components->cpu->getOpcodesCB();
