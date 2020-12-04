@@ -145,3 +145,6 @@ Register *rFF77 = 0x0;
 
 // Gameboy Color flag
 bool bGBCMODE = false;
+
+// Double-speed flag
+bool bCPUSPEED = false;

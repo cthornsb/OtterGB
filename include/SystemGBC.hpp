@@ -134,16 +134,11 @@ public:
 	
 	bool cpuIsStopped() const { return cpuStopped; }
 	
-	bool cpuClockSpeed() const { return currentClockSpeed; }
-	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 
 	// Toggle framerate output
 	void setDisplayFramerate(bool state=true){ displayFramerate = state; }
-
-	// Set CPU frequency multiplier
-	void setCpuFrequency(const double &multiplier);
 
 	// Toggle verbose flag
 	void setVerboseMode(bool state=true);
@@ -176,8 +171,12 @@ public:
 	void clearOpcodeBreakpoint();
 
 	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
+
+	void addSystemRegister(const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
 	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
+
+	void addDummyRegister(const unsigned char &reg);
 
 	void clearRegister(const unsigned char &reg);
 	
@@ -242,6 +241,8 @@ public:
 	void resumeUntilNextVBlank();
 	
 private:
+	SystemComponent dummyComponent; ///< Dummy system component used to organize system registers
+
 	unsigned short nFrames;
 	unsigned short frameSkip;
 
@@ -253,8 +254,6 @@ private:
 	bool emulationPaused; ///<
 	bool bootSequence; ///< The gameboy boot ROM is still running
 	bool forceColor; 
-	bool prepareSpeedSwitch;
-	bool currentClockSpeed;
 	bool displayFramerate;
 	bool userQuitting;
 

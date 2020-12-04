@@ -63,6 +63,7 @@ ComponentList::ComponentList(SystemGBC *sys){
 }
 	
 SystemGBC::SystemGBC(int &argc, char *argv[]) : 
+	dummyComponent("System"),
 	nFrames(0), 
 	frameSkip(1), 
 	verboseMode(false), 
@@ -72,9 +73,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	emulationPaused(false), 
 	bootSequence(false), 
 	forceColor(false), 
-	prepareSpeedSwitch(false), 
-	currentClockSpeed(false),
-	 displayFramerate(false),
+	displayFramerate(false),
 	userQuitting(false), 
 	dmaSourceH(0),
 	dmaSourceL(0), 
@@ -101,7 +100,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	// Handle command line options
 	optionHandler handler;
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
-	handler.add(optionExt("frequency", required_argument, NULL, 'F', "<frequency>", "Set the CPU frequency multiplier."));
+	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<multiplier>", "Set target framerate multiplier (default=1)."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
 	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
@@ -115,8 +114,8 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 		if(handler.getOption(0)->active) // Set input filename
 			romFilename = handler.getOption(0)->argument;
 
-		if(handler.getOption(1)->active) // Set CPU frequency multiplier
-			setCpuFrequency(strtod(handler.getOption(1)->argument.c_str(), NULL));
+		if(handler.getOption(1)->active) // Set framerate multiplier
+			clock.setFramerateMultiplier(strtod(handler.getOption(1)->argument.c_str(), NULL));
 
 		if(handler.getOption(2)->active) // Toggle verbose flag
 			setVerboseMode(true);
@@ -155,21 +154,22 @@ void SystemGBC::initialize(){
 	hram.setName("HRAM");
 
 	// Define system registers
-	addSystemRegister(0x0, 0x0F, rIF,   "IF",   "33333000");
-	addSystemRegister(0x0, 0x4D, rKEY1, "KEY1", "30000001");
-	addSystemRegister(0x0, 0x56, rRP,   "RP",   "31000033");
+	addSystemRegister(0x0F, rIF,   "IF",   "33333000");
+	addSystemRegister(0x4D, rKEY1, "KEY1", "30000001");
+	addSystemRegister(0x56, rRP,   "RP",   "31000033");
+	addDummyRegister(0x50); // The "register" used to disable the bootstrap ROM
 	rIE  = new Register("IE",  "33333000");
 	rIME = new Register("IME", "30000000");
 	(*rIME) = 1; // Interrupts enabled by default
 
 	// Undocumented registers
-	addSystemRegister(0x0, 0x6C, rFF6C, "FF6C", "30000000");
-	addSystemRegister(0x0, 0x72, rFF72, "FF72", "33333333");
-	addSystemRegister(0x0, 0x73, rFF73, "FF73", "33333333");
-	addSystemRegister(0x0, 0x74, rFF74, "FF74", "33333333");
-	addSystemRegister(0x0, 0x75, rFF75, "FF75", "00003330");
-	addSystemRegister(0x0, 0x76, rFF76, "FF76", "11111111");
-	addSystemRegister(0x0, 0x77, rFF77, "FF77", "11111111");
+	addSystemRegister(0x6C, rFF6C, "FF6C", "30000000");
+	addSystemRegister(0x72, rFF72, "FF72", "33333333");
+	addSystemRegister(0x73, rFF73, "FF73", "33333333");
+	addSystemRegister(0x74, rFF74, "FF74", "33333333");
+	addSystemRegister(0x75, rFF75, "FF75", "00003330");
+	addSystemRegister(0x76, rFF76, "FF76", "11111111");
+	addSystemRegister(0x77, rFF77, "FF77", "11111111");
 
 	// Define sub-system registers and connect to the system bus.
 	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++){
@@ -547,11 +547,6 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 #endif
 }
 
-// Set CPU frequency multiplier
-void SystemGBC::setCpuFrequency(const double &multiplier){
-	clock.setFrequencyMultiplier(multiplier);
-}
-
 // Toggle verbose flag
 void SystemGBC::setVerboseMode(bool state/*=true*/){
 	verboseMode = state;
@@ -622,8 +617,16 @@ void SystemGBC::addSystemRegister(SystemComponent *comp, const unsigned char &re
 	ptr = &registers[reg];
 }
 
+void SystemGBC::addSystemRegister(const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits){
+	addSystemRegister(&dummyComponent, reg, ptr, name, bits);
+}
+
 void SystemGBC::addDummyRegister(SystemComponent *comp, const unsigned char &reg){
 	registers[reg].setSystemComponent(comp);
+}
+
+void SystemGBC::addDummyRegister(const unsigned char &reg){
+	registers[reg].setSystemComponent(&dummyComponent);
 }
 
 void SystemGBC::clearRegister(const unsigned char &reg){ 
@@ -690,19 +693,18 @@ bool SystemGBC::dumpSRAM(const char *fname){
 
 void SystemGBC::resumeCPU(){ 
 	cpuStopped = false;
-	if(prepareSpeedSwitch){
-		if(!currentClockSpeed){ // Normal speed
-			currentClockSpeed = true;
-			clock.setFrequencyMultiplier(2.0);
+	if(rKEY1->getBit(0)){ // Prepare speed switch
+		if(!bCPUSPEED){ // Normal speed
+			clock.setDoubleSpeedMode();
+			bCPUSPEED = true;
+			rKEY1->clear();
+			rKEY1->setBit(7);
 		}
 		else{ // Double speed
-			currentClockSpeed = false;
-			clock.setFrequencyMultiplier(1.0);
+			clock.setNormalSpeedMode();
+			bCPUSPEED = false;
+			rKEY1->clear();
 		}
-		(*rKEY1) = 0x0; // Zero register bits
-		if(currentClockSpeed)
-			(*rKEY1) |= 0x80;
-		prepareSpeedSwitch = false;
 	}
 }
 
@@ -990,7 +992,6 @@ bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &va
 			case 0xFF0F: // IF (Interrupt Flag)
 				break;
 			case 0xFF4D: // KEY1 (Speed switch register)
-				prepareSpeedSwitch = rKEY1->getBit(0); // Prepare to switch speed [0:No, 1:Yes]
 				break;
 			case 0xFF50: // Enable/disable ROM boot sequence
 				bootSequence = false;

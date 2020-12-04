@@ -7,7 +7,18 @@ class Register;
 
 class DmaController : public SystemComponent {
 public:
-	DmaController() : SystemComponent("DMA"), transferMode(0), oldDMA(1), nCyclesRemaining(0), nBytesRemaining(0), index(0), nBytes(1), srcStart(0), destStart(0) { }
+	DmaController() : 
+		SystemComponent("DMA"), 
+		transferMode(0), 
+		oldDMA(1), 
+		nCyclesRemaining(0), 
+		nBytesRemaining(0), 
+		index(0), 
+		nBytes(1), 
+		srcStart(0), 
+		destStart(0),
+		length(0),
+		currentCycle(0) { }
 
 	bool active() const ;
 
@@ -70,6 +81,7 @@ private:
 	unsigned short srcStart; ///< Start location of the source block in memory.
 	unsigned short destStart; ///< Start location of the destination block in memory.
 	unsigned short length; ///< Total number of bytes to transfer.
+	unsigned short currentCycle; ///< Current clock cycle number since HDMA transfer began.
 	
 	/** Transfer the next chunk of bytes. Increment the memory index by nBytes.
 	  */

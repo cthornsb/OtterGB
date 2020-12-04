@@ -130,7 +130,7 @@ void MainWindow::updateInstructionTab()
 	setLineEditText(ui->lineEdit_Instr_IF, getBinary(rIF->getValue()));
 
 	// CPU state
-	setRadioButtonState(ui->radioButton_CurrentSpeed, sys->cpuClockSpeed());
+	setRadioButtonState(ui->radioButton_CurrentSpeed, bCPUSPEED);
 	setRadioButtonState(ui->radioButton_CpuStopped, sys->cpuIsStopped());
 	setRadioButtonState(ui->radioButton_CpuHalted, sys->cpuIsHalted());
 	
@@ -339,6 +339,7 @@ void MainWindow::connectToSystem(SystemGBC *ptr){
 	sys = ptr; 
 	components = std::unique_ptr<ComponentList>(new ComponentList(ptr));
 	ui->comboBox_Registers->addItem("ALL");
+	ui->comboBox_Registers->addItem("System");
 	for(auto component = components->list.begin(); component != components->list.end(); component++)
 		ui->comboBox_Registers->addItem(getQString(component->second->getName()));
     Opcode *opcodes = components->cpu->getOpcodes();

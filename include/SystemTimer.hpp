@@ -14,9 +14,13 @@ public:
 
 	double getFramerate() const { return framerate; }
 	
-	void setFrequencyMultiplier(const double &mult){ frequencyMultiplier = mult; }
+	void setFramerateMultiplier(const float &freq);
 
-	double getFrequency() const ;
+	void setDoubleSpeedMode();
+	
+	void setNormalSpeedMode();
+
+	double getFrequency() const { return currentClockSpeed; }
 	
 	unsigned int getCyclesSinceVBlank() const { return cyclesSinceLastVSync; }
 	
@@ -48,14 +52,20 @@ public:
 private:
 	bool vsync;
 
-	double frequencyMultiplier;
-	
 	unsigned int cyclesSinceLastVSync; ///< The number of cycles since the last Vertical Sync
 	unsigned int cyclesSinceLastHSync; ///< The number of cycles since the last  Horizontal Sync
+
+	unsigned int currentClockSpeed; ///< The current number of machine clock cycles per second
+	unsigned int cyclesPerVSync; ///< The current number of clock cycles per vertical sync
+	unsigned int cyclesPerHSync; ///< The current number of clock cycles per horizontal sync
 
 	unsigned char lcdDriverMode;
 
 	double framerate;
+	
+	double framePeriod; ///< Wall clock time between successive frames (microseconds)
+
+	unsigned int modeStart[4];
 
 	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed

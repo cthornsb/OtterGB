@@ -51,6 +51,8 @@ void DmaController::startTransferVRAM(){
 		nCyclesRemaining = 0; // Only transfer after an HBlank
 
 	oldDMA = false;
+	
+	currentCycle = 0;
 }
 
 void DmaController::terminateTransfer(){
@@ -65,6 +67,13 @@ void DmaController::terminateTransfer(){
 bool DmaController::onClockUpdate(){
 	if(!nCyclesRemaining)
 		return false;
+	if(bCPUSPEED && !oldDMA){ // Double speed mode
+		// In double CPU speed mode, DMA operates twice as fast as normal but
+		// HDMA works at the same rate as normal mode. So skip every other
+		// cycle when doing HDMA transfers.
+		if(currentCycle++ % 2 == 0)
+			return true;
+	}
 	transferByte();
 	nCyclesRemaining--;
 	if(!oldDMA){ // Update registers
