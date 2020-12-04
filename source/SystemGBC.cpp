@@ -985,7 +985,7 @@ bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &va
 		ptr->getSystemComponent()->writeRegister(reg, val);
 	}
 	else{ // Registers with no associated system component
-		ptr->write(); // Write the new register value.
+		ptr->write(val); // Write the new register value.
 		switch(reg){
 			case 0xFF0F: // IF (Interrupt Flag)
 				break;

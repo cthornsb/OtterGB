@@ -23,8 +23,7 @@ class Opcode{
 public:
 	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
 
-	addrGetFunc rptr; ///< Pointer to the function which returns the memory read address.
-	addrGetFunc wptr; ///< Pointer to the function which returns the memory write address.
+	addrGetFunc addrptr; ///< Pointer to the function which returns the memory address.
 
 	unsigned short nCycles; ///< Length of clock cycles required.
 	unsigned short nBytes; ///< Length of instruction in bytes.
@@ -40,7 +39,7 @@ public:
 	std::string sOpname; ///< Opcode name.
 	std::string sOperands[2]; ///< Operand names.
 
-	Opcode() : ptr(0x0), rptr(0x0), wptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
+	Opcode() : ptr(0x0), addrptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
 	
 	Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
 };
@@ -164,9 +163,9 @@ public:
 
 	unsigned short setHL(const unsigned short &val);
 
-	void readMemory(unsigned short (LR35902::*ptr)() const);
+	void readMemory();
 	
-	void writeMemory(unsigned short (LR35902::*ptr)() const);
+	void writeMemory();
 
 	addrGetFunc getMemoryAddressFunction(const std::string &target);
 
@@ -194,8 +193,8 @@ protected:
 	unsigned char d16l; ///< Low 8 bits of 16-bit immediate data
 
 	// Memory data
-	unsigned char valueWrite; ///< Value which will be written to memory
-	unsigned char valueRead; ///< Value read from memory
+	unsigned char memoryValue; ///< Value read from and/or written to memory
+	unsigned short memoryAddress; ///< Address in memory which will be read/written
 
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
@@ -259,8 +258,6 @@ protected:
 
 	void add_A_d8(const unsigned char &arg);
 
-	void add_A_aHL();
-
 	void add_HL_d16(const unsigned char &addrH, const unsigned char &addrL);
 
 	void adc_A_d8(const unsigned char &arg);
@@ -321,21 +318,19 @@ protected:
 
 	void NOP(){ }
 
-	// INC BC[DE|HL|(HL)]
+	// INC BC[DE|HL]
 
 	void INC_BC(){ inc_d16(&B, &C); }
 	void INC_DE(){ inc_d16(&D, &E); }
 	void INC_HL(){ inc_d16(&H, &L); }
-	void INC_aHL();
 
-	// DEC BC[DE|HL|(HL)]
+	// DEC BC[DE|HL]
 
 	void DEC_BC(){ dec_d16(&B, &C); }
 	void DEC_DE(){ dec_d16(&D, &E); }
 	void DEC_HL(){ dec_d16(&H, &L); }
-	void DEC_aHL();
 
-	// INC A[B|C|D|E|H|L]
+	// INC A[B|C|D|E|H|L|(HL)]
 
 	void INC_A(){ inc_d8(&A); }
 	void INC_B(){ inc_d8(&B); }
@@ -344,8 +339,9 @@ protected:
 	void INC_E(){ inc_d8(&E); }
 	void INC_H(){ inc_d8(&H); }
 	void INC_L(){ inc_d8(&L); }
+	void INC_aHL(){ inc_d8(&memoryValue); }
 
-	// DEC A[B|C|D|E|H|L]
+	// DEC A[B|C|D|E|H|L|(HL)]
 
 	void DEC_A(){ dec_d8(&A); }
 	void DEC_B(){ dec_d8(&B); }
@@ -354,6 +350,7 @@ protected:
 	void DEC_E(){ dec_d8(&E); }
 	void DEC_H(){ dec_d8(&H); }
 	void DEC_L(){ dec_d8(&L); }
+	void DEC_aHL(){ dec_d8(&memoryValue); }
 
 	// RLCA | RLCA | RRA | RRCA
 
@@ -380,7 +377,11 @@ protected:
 
 	// INC SP
 
-	void INC_SP();
+	void INC_SP(){ SP++; }
+
+	// DEC SP
+
+	void DEC_SP(){ SP--; }
 
 	// SCF
 
@@ -392,7 +393,7 @@ protected:
 	
 	// LD d16,A 
 	
-	void LD_a16_A();
+	void LD_a16_A(){ memoryValue = A; }
 	
 	// LD HL,SP+r8 or LDHL SP,r8
 
@@ -436,15 +437,11 @@ protected:
 
 	// LDH d8,A
 
-	void LDH_a8_A();
+	void LDH_a8_A(){ memoryValue = A; }
 
 	// LDH A,d8
 
-	void LDH_A_a8();
-
-	// DEC SP
-
-	void DEC_SP();
+	void LDH_A_a8(){ A = memoryValue; }
 
 	// CCF
 
@@ -474,7 +471,7 @@ protected:
 
 	// LD (C),A
 
-	void LD_aC_A();
+	void LD_aC_A(){ memoryValue = A; }
 
 	// LD D,A[B|C|D|E|H|L|d8]
 
@@ -522,28 +519,24 @@ protected:
 
 	// LD HL,A[B|C|D|E|H|L|d8]
 
-	void ld_aHL_d8(const unsigned char &arg);
-
-	void LD_aHL_A(){ ld_aHL_d8(A); }
-	void LD_aHL_B(){ ld_aHL_d8(B); }
-	void LD_aHL_C(){ ld_aHL_d8(C); }
-	void LD_aHL_D(){ ld_aHL_d8(D); }
-	void LD_aHL_E(){ ld_aHL_d8(E); }
-	void LD_aHL_H(){ ld_aHL_d8(H); }
-	void LD_aHL_L(){ ld_aHL_d8(L); }
-	void LD_aHL_d8(){ ld_aHL_d8(d8); }
-	void LD_aHL_d16();
-
-	void ld_d8_aHL(unsigned char *arg);
+	void LD_aHL_A(){ memoryValue = A; }
+	void LD_aHL_B(){ memoryValue = B; }
+	void LD_aHL_C(){ memoryValue = C; }
+	void LD_aHL_D(){ memoryValue = D; }
+	void LD_aHL_E(){ memoryValue = E; }
+	void LD_aHL_H(){ memoryValue = H; }
+	void LD_aHL_L(){ memoryValue = L; }
+	void LD_aHL_d8(){ memoryValue = d8; }
+	//void LD_aHL_d16();
 
 	// LD B[C|D|E|H|L],(HL)
 
-	void LD_B_aHL(){ ld_d8_aHL(&B); }
-	void LD_C_aHL(){ ld_d8_aHL(&C); }
-	void LD_D_aHL(){ ld_d8_aHL(&D); }
-	void LD_E_aHL(){ ld_d8_aHL(&E); }
-	void LD_H_aHL(){ ld_d8_aHL(&H); }
-	void LD_L_aHL(){ ld_d8_aHL(&L); }
+	void LD_B_aHL(){ B = memoryValue; }
+	void LD_C_aHL(){ C = memoryValue; }
+	void LD_D_aHL(){ D = memoryValue; }
+	void LD_E_aHL(){ E = memoryValue; }
+	void LD_H_aHL(){ H = memoryValue; }
+	void LD_L_aHL(){ L = memoryValue; }
 
 	// LD BC,A[d16]
 
@@ -553,9 +546,13 @@ protected:
 
 	void LD_DE_d16();
 
-	void LD_aBC_A();
+	// LD (BC),A
 
-	void LD_aDE_A();
+	void LD_aBC_A(){ memoryValue = A; }
+
+	// LD (DE),A
+
+	void LD_aDE_A(){ memoryValue = A; }
 
 	// LD A,A[B|C|D|E|H|L|d8]
 
@@ -570,13 +567,13 @@ protected:
 
 	void ld_A_a16(const unsigned char &addrH, const unsigned char &addrL);
 
-	void LD_A_aC();
-	void LD_A_aBC(){ ld_A_a16(B, C); }
-	void LD_A_aDE(){ ld_A_a16(D, E); }
-	void LD_A_aHL(){ ld_A_a16(H, L); }
-	void LD_A_a16(){ ld_A_a16(d16h, d16l); }
+	void LD_A_aC(){ A = memoryValue; }
+	void LD_A_aBC(){ A = memoryValue; }
+	void LD_A_aDE(){ A = memoryValue; }
+	void LD_A_aHL(){ A = memoryValue; }
+	void LD_A_a16(){ A = memoryValue; }
 
-	// ADD A,A[B|C|D|E|H|L]
+	// ADD A,A[B|C|D|E|H|L|(HL)]
 
 	void ADD_A_d8(){ add_A_d8(d8); }
 	void ADD_A_A(){ add_A_d8(A); }
@@ -586,10 +583,9 @@ protected:
 	void ADD_A_E(){ add_A_d8(E); }
 	void ADD_A_H(){ add_A_d8(H); }
 	void ADD_A_L(){ add_A_d8(L); }
+	void ADD_A_aHL(){ add_A_d8(memoryValue); }
 
-	void ADD_A_aHL();
-
-	// ADC A,A[B|C|D|E|H|L]
+	// ADC A,A[B|C|D|E|H|L|(HL)]
 
 	void ADC_A_d8(){ adc_A_d8(d8); }
 	void ADC_A_A(){ adc_A_d8(A); }
@@ -599,10 +595,9 @@ protected:
 	void ADC_A_E(){ adc_A_d8(E); }
 	void ADC_A_H(){ adc_A_d8(H); }
 	void ADC_A_L(){ adc_A_d8(L); }
-	
-	void ADC_A_aHL();
+	void ADC_A_aHL(){ adc_A_d8(memoryValue); }
 
-	// SUB A[B|C|D|E|H|L]
+	// SUB A[B|C|D|E|H|L|(HL)]
 
 	void SUB_d8(){ sub_A_d8(d8); }
 	void SUB_A(){ sub_A_d8(A); }
@@ -612,10 +607,9 @@ protected:
 	void SUB_E(){ sub_A_d8(E); }
 	void SUB_H(){ sub_A_d8(H); }
 	void SUB_L(){ sub_A_d8(L); }
-	
-	void SUB_aHL();
+	void SUB_aHL(){ sub_A_d8(memoryValue); }
 
-	// SBC A,A[B|C|D|E|H|L]
+	// SBC A,A[B|C|D|E|H|L|(HL)]
 
 	void SBC_A_d8(){ sbc_A_d8(d8); }
 	void SBC_A_A(){ sbc_A_d8(A); }
@@ -625,10 +619,9 @@ protected:
 	void SBC_A_E(){ sbc_A_d8(E); }
 	void SBC_A_H(){ sbc_A_d8(H); }
 	void SBC_A_L(){ sbc_A_d8(L); }
-	
-	void SBC_A_aHL();
+	void SBC_A_aHL(){ sbc_A_d8(memoryValue); }
 
-	// AND A[B|C|D|E|H|L]
+	// AND A[B|C|D|E|H|L|(HL)]
 
 	void AND_d8(){ and_d8(d8); }
 	void AND_A(){ and_d8(A); }
@@ -638,10 +631,9 @@ protected:
 	void AND_E(){ and_d8(E); }
 	void AND_H(){ and_d8(H); }
 	void AND_L(){ and_d8(L); }
-	
-	void AND_aHL();
+	void AND_aHL(){ and_d8(memoryValue); }
 
-	// XOR A[B|C|D|E|H|L]
+	// XOR A[B|C|D|E|H|L|(HL)]
 
 	void XOR_d8(){ xor_d8(d8); }
 	void XOR_A(){ xor_d8(A); }
@@ -651,10 +643,9 @@ protected:
 	void XOR_E(){ xor_d8(E); }
 	void XOR_H(){ xor_d8(H); }
 	void XOR_L(){ xor_d8(L); }
-	
-	void XOR_aHL();
+	void XOR_aHL(){ xor_d8(memoryValue); }
 
-	// OR A[B|C|D|E|H|L]
+	// OR A[B|C|D|E|H|L|(HL)]
 
 	void OR_d8(){ or_d8(d8); }
 	void OR_A(){ or_d8(A); }
@@ -664,10 +655,9 @@ protected:
 	void OR_E(){ or_d8(E); }
 	void OR_H(){ or_d8(H); }
 	void OR_L(){ or_d8(L); }
-	
-	void OR_aHL();
+	void OR_aHL(){ or_d8(memoryValue); }
 
-	// CP A[B|C|D|E|H|L]
+	// CP A[B|C|D|E|H|L|(HL)]
 
 	void CP_d8(){ cp_d8(d8); }
 	void CP_A(){ cp_d8(A); }
@@ -677,8 +667,7 @@ protected:
 	void CP_E(){ cp_d8(E); }
 	void CP_H(){ cp_d8(H); }
 	void CP_L(){ cp_d8(L); }
-	
-	void CP_aHL();
+	void CP_aHL(){ cp_d8(memoryValue); }
 
 	// PUSH BC[DE|HL|AF]
 
@@ -701,8 +690,7 @@ protected:
 	void JP_Z_d16(){ if(getFlagZ()) jp_cc_d16(d16h, d16l); }
 	void JP_NC_d16(){ if(!getFlagC()) jp_cc_d16(d16h, d16l); }
 	void JP_C_d16(){ if(getFlagC()) jp_cc_d16(d16h, d16l); }
-
-	void JP_aHL();
+	void JP_aHL(){ jp_d16(H, L); }
 
 	// CALL
 
@@ -749,10 +737,10 @@ protected:
 	void HALT();
 
 	/////////////////////////////////////////////////////////////////////
-	//
+	// CB Prefix Opcodes
 	/////////////////////////////////////////////////////////////////////
 
-	// RLC A[B|C|D|E|H|L]
+	// RLC A[B|C|D|E|H|L|(HL)]
 
 	void RLC_A(){ rlc_d8(&A); }
 	void RLC_B(){ rlc_d8(&B); }
@@ -761,9 +749,9 @@ protected:
 	void RLC_E(){ rlc_d8(&E); }
 	void RLC_H(){ rlc_d8(&H); }
 	void RLC_L(){ rlc_d8(&L); }
-	void RLC_aHL();
+	void RLC_aHL(){ rlc_d8(&memoryValue); }
 
-	// RRC A[B|C|D|E|H|L]
+	// RRC A[B|C|D|E|H|L|(HL)]
 
 	void RRC_A(){ rrc_d8(&A); }
 	void RRC_B(){ rrc_d8(&B); }
@@ -772,9 +760,9 @@ protected:
 	void RRC_E(){ rrc_d8(&E); }
 	void RRC_H(){ rrc_d8(&H); }
 	void RRC_L(){ rrc_d8(&L); }
-	void RRC_aHL();
+	void RRC_aHL(){ rrc_d8(&memoryValue); }
 
-	// RL A[B|C|D|E|H|L]
+	// RL A[B|C|D|E|H|L|(HL)]
 
 	void RL_A(){ rl_d8(&A); }
 	void RL_B(){ rl_d8(&B); }
@@ -783,9 +771,9 @@ protected:
 	void RL_E(){ rl_d8(&E); }
 	void RL_H(){ rl_d8(&H); }
 	void RL_L(){ rl_d8(&L); }
-	void RL_aHL();
+	void RL_aHL(){ rl_d8(&memoryValue); }
 
-	// RR A[B|C|D|E|H|L]
+	// RR A[B|C|D|E|H|L|(HL)]
 
 	void RR_A(){ rr_d8(&A); }
 	void RR_B(){ rr_d8(&B); }
@@ -794,9 +782,9 @@ protected:
 	void RR_E(){ rr_d8(&E); }
 	void RR_H(){ rr_d8(&H); }
 	void RR_L(){ rr_d8(&L); }
-	void RR_aHL();
+	void RR_aHL(){ rr_d8(&memoryValue); }
 
-	// SLA A[B|C|D|E|H|L]
+	// SLA A[B|C|D|E|H|L|(HL)]
 
 	void SLA_A(){ sla_d8(&A); }
 	void SLA_B(){ sla_d8(&B); }
@@ -805,9 +793,9 @@ protected:
 	void SLA_E(){ sla_d8(&E); }
 	void SLA_H(){ sla_d8(&H); }
 	void SLA_L(){ sla_d8(&L); }
-	void SLA_aHL();
+	void SLA_aHL(){ sla_d8(&memoryValue); }
 
-	// SRA A[B|C|D|E|H|L]
+	// SRA A[B|C|D|E|H|L|(HL)]
 
 	void SRA_A(){ sra_d8(&A); }
 	void SRA_B(){ sra_d8(&B); }
@@ -816,9 +804,9 @@ protected:
 	void SRA_E(){ sra_d8(&E); }
 	void SRA_H(){ sra_d8(&H); }
 	void SRA_L(){ sra_d8(&L); }
-	void SRA_aHL();
+	void SRA_aHL(){ sra_d8(&memoryValue); }
 
-	// SWAP A[B|C|D|E|H|L]
+	// SWAP A[B|C|D|E|H|L|(HL)]
 
 	void SWAP_A(){ swap_d8(&A); }
 	void SWAP_B(){ swap_d8(&B); }
@@ -827,9 +815,9 @@ protected:
 	void SWAP_E(){ swap_d8(&E); }
 	void SWAP_H(){ swap_d8(&H); }
 	void SWAP_L(){ swap_d8(&L); }
-	void SWAP_aHL();
+	void SWAP_aHL(){ swap_d8(&memoryValue); }
 
-	// SRL A[B|C|D|E|H|L]
+	// SRL A[B|C|D|E|H|L|(HL)]
 
 	void SRL_A(){ srl_d8(&A); }
 	void SRL_B(){ srl_d8(&B); }
@@ -838,9 +826,9 @@ protected:
 	void SRL_E(){ srl_d8(&E); }
 	void SRL_H(){ srl_d8(&H); }
 	void SRL_L(){ srl_d8(&L); }
-	void SRL_aHL();
+	void SRL_aHL(){ srl_d8(&memoryValue); }
 
-	// BIT 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L]
+	// BIT 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L|(HL)]
 
 	void BIT_0_A(){ bit_d8(A, 0); }
 	void BIT_0_B(){ bit_d8(B, 0); }
@@ -849,7 +837,6 @@ protected:
 	void BIT_0_E(){ bit_d8(E, 0); }
 	void BIT_0_H(){ bit_d8(H, 0); }
 	void BIT_0_L(){ bit_d8(L, 0); }
-	void BIT_0_aHL();
 
 	void BIT_1_A(){ bit_d8(A, 1); }
 	void BIT_1_B(){ bit_d8(B, 1); }
@@ -858,7 +845,6 @@ protected:
 	void BIT_1_E(){ bit_d8(E, 1); }
 	void BIT_1_H(){ bit_d8(H, 1); }
 	void BIT_1_L(){ bit_d8(L, 1); }
-	void BIT_1_aHL();
 
 	void BIT_2_A(){ bit_d8(A, 2); }
 	void BIT_2_B(){ bit_d8(B, 2); }
@@ -867,7 +853,6 @@ protected:
 	void BIT_2_E(){ bit_d8(E, 2); }
 	void BIT_2_H(){ bit_d8(H, 2); }
 	void BIT_2_L(){ bit_d8(L, 2); }
-	void BIT_2_aHL();
 
 	void BIT_3_A(){ bit_d8(A, 3); }
 	void BIT_3_B(){ bit_d8(B, 3); }
@@ -876,7 +861,6 @@ protected:
 	void BIT_3_E(){ bit_d8(E, 3); }
 	void BIT_3_H(){ bit_d8(H, 3); }
 	void BIT_3_L(){ bit_d8(L, 3); }
-	void BIT_3_aHL();
 
 	void BIT_4_A(){ bit_d8(A, 4); }
 	void BIT_4_B(){ bit_d8(B, 4); }
@@ -885,7 +869,6 @@ protected:
 	void BIT_4_E(){ bit_d8(E, 4); }
 	void BIT_4_H(){ bit_d8(H, 4); }
 	void BIT_4_L(){ bit_d8(L, 4); }
-	void BIT_4_aHL();
 
 	void BIT_5_A(){ bit_d8(A, 5); }
 	void BIT_5_B(){ bit_d8(B, 5); }
@@ -894,7 +877,6 @@ protected:
 	void BIT_5_E(){ bit_d8(E, 5); }
 	void BIT_5_H(){ bit_d8(H, 5); }
 	void BIT_5_L(){ bit_d8(L, 5); }
-	void BIT_5_aHL();
 
 	void BIT_6_A(){ bit_d8(A, 6); }
 	void BIT_6_B(){ bit_d8(B, 6); }
@@ -903,7 +885,6 @@ protected:
 	void BIT_6_E(){ bit_d8(E, 6); }
 	void BIT_6_H(){ bit_d8(H, 6); }
 	void BIT_6_L(){ bit_d8(L, 6); }
-	void BIT_6_aHL();
 
 	void BIT_7_A(){ bit_d8(A, 7); }
 	void BIT_7_B(){ bit_d8(B, 7); }
@@ -912,9 +893,17 @@ protected:
 	void BIT_7_E(){ bit_d8(E, 7); }
 	void BIT_7_H(){ bit_d8(H, 7); }
 	void BIT_7_L(){ bit_d8(L, 7); }
-	void BIT_7_aHL();
 
-	// RES 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L]
+	void BIT_0_aHL(){ bit_d8(memoryValue, 0); }
+	void BIT_1_aHL(){ bit_d8(memoryValue, 1); }
+	void BIT_2_aHL(){ bit_d8(memoryValue, 2); }
+	void BIT_3_aHL(){ bit_d8(memoryValue, 3); }
+	void BIT_4_aHL(){ bit_d8(memoryValue, 4); }
+	void BIT_5_aHL(){ bit_d8(memoryValue, 5); }
+	void BIT_6_aHL(){ bit_d8(memoryValue, 6); }
+	void BIT_7_aHL(){ bit_d8(memoryValue, 7); }
+
+	// RES 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L|(HL)]
 
 	void RES_0_A(){ res_d8(&A, 0); }
 	void RES_0_B(){ res_d8(&B, 0); }
@@ -923,7 +912,6 @@ protected:
 	void RES_0_E(){ res_d8(&E, 0); }
 	void RES_0_H(){ res_d8(&H, 0); }
 	void RES_0_L(){ res_d8(&L, 0); }
-	void RES_0_aHL();
 
 	void RES_1_A(){ res_d8(&A, 1); }
 	void RES_1_B(){ res_d8(&B, 1); }
@@ -932,7 +920,6 @@ protected:
 	void RES_1_E(){ res_d8(&E, 1); }
 	void RES_1_H(){ res_d8(&H, 1); }
 	void RES_1_L(){ res_d8(&L, 1); }
-	void RES_1_aHL();
 
 	void RES_2_A(){ res_d8(&A, 2); }
 	void RES_2_B(){ res_d8(&B, 2); }
@@ -941,7 +928,6 @@ protected:
 	void RES_2_E(){ res_d8(&E, 2); }
 	void RES_2_H(){ res_d8(&H, 2); }
 	void RES_2_L(){ res_d8(&L, 2); }
-	void RES_2_aHL();
 
 	void RES_3_A(){ res_d8(&A, 3); }
 	void RES_3_B(){ res_d8(&B, 3); }
@@ -950,7 +936,6 @@ protected:
 	void RES_3_E(){ res_d8(&E, 3); }
 	void RES_3_H(){ res_d8(&H, 3); }
 	void RES_3_L(){ res_d8(&L, 3); }
-	void RES_3_aHL();
 
 	void RES_4_A(){ res_d8(&A, 4); }
 	void RES_4_B(){ res_d8(&B, 4); }
@@ -959,7 +944,6 @@ protected:
 	void RES_4_E(){ res_d8(&E, 4); }
 	void RES_4_H(){ res_d8(&H, 4); }
 	void RES_4_L(){ res_d8(&L, 4); }
-	void RES_4_aHL();
 
 	void RES_5_A(){ res_d8(&A, 5); }
 	void RES_5_B(){ res_d8(&B, 5); }
@@ -968,7 +952,6 @@ protected:
 	void RES_5_E(){ res_d8(&E, 5); }
 	void RES_5_H(){ res_d8(&H, 5); }
 	void RES_5_L(){ res_d8(&L, 5); }
-	void RES_5_aHL();
 
 	void RES_6_A(){ res_d8(&A, 6); }
 	void RES_6_B(){ res_d8(&B, 6); }
@@ -977,7 +960,6 @@ protected:
 	void RES_6_E(){ res_d8(&E, 6); }
 	void RES_6_H(){ res_d8(&H, 6); }
 	void RES_6_L(){ res_d8(&L, 6); }
-	void RES_6_aHL();
 
 	void RES_7_A(){ res_d8(&A, 7); }
 	void RES_7_B(){ res_d8(&B, 7); }
@@ -986,9 +968,17 @@ protected:
 	void RES_7_E(){ res_d8(&E, 7); }
 	void RES_7_H(){ res_d8(&H, 7); }
 	void RES_7_L(){ res_d8(&L, 7); }
-	void RES_7_aHL();
+	
+	void RES_0_aHL(){ res_d8(&memoryValue, 0); }	
+	void RES_1_aHL(){ res_d8(&memoryValue, 1); }
+	void RES_2_aHL(){ res_d8(&memoryValue, 2); }	
+	void RES_3_aHL(){ res_d8(&memoryValue, 3); }
+	void RES_4_aHL(){ res_d8(&memoryValue, 4); }	
+	void RES_5_aHL(){ res_d8(&memoryValue, 5); }	
+	void RES_6_aHL(){ res_d8(&memoryValue, 6); }	
+	void RES_7_aHL(){ res_d8(&memoryValue, 7); }
 
-	// SET 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L]
+	// SET 0[1|2|3|4|5|6|7],A[B|C|D|E|H|L|(HL)]
 
 	void SET_0_A(){ set_d8(&A, 0); }
 	void SET_0_B(){ set_d8(&B, 0); }
@@ -997,7 +987,6 @@ protected:
 	void SET_0_E(){ set_d8(&E, 0); }
 	void SET_0_H(){ set_d8(&H, 0); }
 	void SET_0_L(){ set_d8(&L, 0); }
-	void SET_0_aHL();
 
 	void SET_1_A(){ set_d8(&A, 1); }
 	void SET_1_B(){ set_d8(&B, 1); }
@@ -1006,7 +995,6 @@ protected:
 	void SET_1_E(){ set_d8(&E, 1); }
 	void SET_1_H(){ set_d8(&H, 1); }
 	void SET_1_L(){ set_d8(&L, 1); }
-	void SET_1_aHL();
 
 	void SET_2_A(){ set_d8(&A, 2); }
 	void SET_2_B(){ set_d8(&B, 2); }
@@ -1015,7 +1003,6 @@ protected:
 	void SET_2_E(){ set_d8(&E, 2); }
 	void SET_2_H(){ set_d8(&H, 2); }
 	void SET_2_L(){ set_d8(&L, 2); }
-	void SET_2_aHL();
 
 	void SET_3_A(){ set_d8(&A, 3); }
 	void SET_3_B(){ set_d8(&B, 3); }
@@ -1024,7 +1011,6 @@ protected:
 	void SET_3_E(){ set_d8(&E, 3); }
 	void SET_3_H(){ set_d8(&H, 3); }
 	void SET_3_L(){ set_d8(&L, 3); }
-	void SET_3_aHL();
 
 	void SET_4_A(){ set_d8(&A, 4); }
 	void SET_4_B(){ set_d8(&B, 4); }
@@ -1033,7 +1019,6 @@ protected:
 	void SET_4_E(){ set_d8(&E, 4); }
 	void SET_4_H(){ set_d8(&H, 4); }
 	void SET_4_L(){ set_d8(&L, 4); }
-	void SET_4_aHL();
 
 	void SET_5_A(){ set_d8(&A, 5); }
 	void SET_5_B(){ set_d8(&B, 5); }
@@ -1042,7 +1027,6 @@ protected:
 	void SET_5_E(){ set_d8(&E, 5); }
 	void SET_5_H(){ set_d8(&H, 5); }
 	void SET_5_L(){ set_d8(&L, 5); }
-	void SET_5_aHL();
 
 	void SET_6_A(){ set_d8(&A, 6); }
 	void SET_6_B(){ set_d8(&B, 6); }
@@ -1051,7 +1035,6 @@ protected:
 	void SET_6_E(){ set_d8(&E, 6); }
 	void SET_6_H(){ set_d8(&H, 6); }
 	void SET_6_L(){ set_d8(&L, 6); }
-	void SET_6_aHL();
 
 	void SET_7_A(){ set_d8(&A, 7); }
 	void SET_7_B(){ set_d8(&B, 7); }
@@ -1060,7 +1043,15 @@ protected:
 	void SET_7_E(){ set_d8(&E, 7); }
 	void SET_7_H(){ set_d8(&H, 7); }
 	void SET_7_L(){ set_d8(&L, 7); }
-	void SET_7_aHL();
+
+	void SET_0_aHL(){ set_d8(&memoryValue, 0); }
+	void SET_1_aHL(){ set_d8(&memoryValue, 1); }
+	void SET_2_aHL(){ set_d8(&memoryValue, 2); }
+	void SET_3_aHL(){ set_d8(&memoryValue, 3); }
+	void SET_4_aHL(){ set_d8(&memoryValue, 4); }
+	void SET_5_aHL(){ set_d8(&memoryValue, 5); }
+	void SET_6_aHL(){ set_d8(&memoryValue, 6); }
+	void SET_7_aHL(){ set_d8(&memoryValue, 7); }
 };
 
 #endif

@@ -20,8 +20,7 @@ const unsigned char ZERO = 0x0;
 
 Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
 	ptr(p),
-	rptr(0x0),
-	wptr(0x0),
+	addrptr(0x0),
 	nCycles(cycles), 
 	nBytes(bytes), 
 	nReadCycles(read), 
@@ -71,9 +70,9 @@ Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &
 			}
 		}
 		if(!memRead.empty())
-			rptr = cpu->getMemoryAddressFunction(memRead);
-		if(!memWrite.empty())
-			wptr = cpu->getMemoryAddressFunction(memWrite);
+			addrptr = cpu->getMemoryAddressFunction(memRead);
+		else if(!memWrite.empty())
+			addrptr = cpu->getMemoryAddressFunction(memWrite);
 	}
 }
 
@@ -93,15 +92,16 @@ OpcodeData::OpcodeData() :
 
 bool OpcodeData::clock(LR35902 *cpu){ 
 	nCycles++;
+	bool retval = false;
 	if(nCycles == nReadCycle)
-		cpu->readMemory(op->rptr);
+		cpu->readMemory();
 	if(nCycles == nExecuteCycle){
 		(cpu->*op->ptr)();
-		return true;
+		retval = true;
 	}
 	if(nCycles == nWriteCycle)
-		cpu->writeMemory(op->wptr);
-	return false;
+		cpu->writeMemory();
+	return retval;
 }
 
 std::string OpcodeData::getInstruction() const {
@@ -135,23 +135,6 @@ void OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsi
 /** Read the next instruction from memory and return the number of clock cycles. 
   */
 unsigned short LR35902::evaluate(){
-	if(lastOpcode.executing()) // Not finished executing previous instruction
-		return lastOpcode.nCycles;
-		
-	// Check for pending interrupts.
-	if(!rIME->zero() && ((*rIE) & (*rIF))){
-		if(rIF->getBit(0)) // VBlank
-			acknowledgeVBlankInterrupt();
-		if(rIF->getBit(1)) // LCDC STAT
-			acknowledgeLcdInterrupt();
-		if(rIF->getBit(2)) // Timer
-			acknowledgeTimerInterrupt();
-		if(rIF->getBit(3)) // Serial
-			acknowledgeSerialInterrupt();
-		if(rIF->getBit(4)) // Joypad
-			acknowledgeJoypadInterrupt();
-	}
-
 	// Read an opcode
 	unsigned char op;
 	if(!sys->read(PC++, &op))
@@ -179,6 +162,10 @@ unsigned short LR35902::evaluate(){
 		sys->read(PC++, d16h);
 		lastOpcode.setImmediateData(getUShort(d16h, d16l));
 	}
+	
+	// Set the memory read/write address (if any)
+	if(lastOpcode()->addrptr) // Set memory address
+		memoryAddress = (this->*lastOpcode()->addrptr)();
 
 	return lastOpcode.nCycles;
 }
@@ -187,12 +174,23 @@ unsigned short LR35902::evaluate(){
   * @return True if the current instruction has completed execution (i.e. nCyclesRemaining==0).
   */
 bool LR35902::onClockUpdate(){
-	if(!lastOpcode.executing()) // Previous instruction finished executing, read the next one.
+	if(!lastOpcode.executing()){ // Previous instruction finished executing, read the next one.
+		// Check for pending interrupts.
+		if(!rIME->zero() && ((*rIE) & (*rIF))){
+			if(rIF->getBit(0)) // VBlank
+				acknowledgeVBlankInterrupt();
+			if(rIF->getBit(1)) // LCDC STAT
+				acknowledgeLcdInterrupt();
+			if(rIF->getBit(2)) // Timer
+				acknowledgeTimerInterrupt();
+			if(rIF->getBit(3)) // Serial
+				acknowledgeSerialInterrupt();
+			if(rIF->getBit(4)) // Joypad
+				acknowledgeJoypadInterrupt();
+		}
 		evaluate();
-	if(lastOpcode.clock(this)){ // Execute the instruction on the last cycle
-		return true;
 	}
-	return false;
+	return lastOpcode.clock(this); // Execute the instruction on the last cycle
 }
 
 void LR35902::acknowledgeVBlankInterrupt(){
@@ -278,12 +276,12 @@ unsigned short LR35902::setHL(const unsigned short &val){
 	L = 0x00FF & val;
 }
 
-void LR35902::readMemory(unsigned short (LR35902::*ptr)() const){
-	sys->read((this->*ptr)(), valueRead);
+void LR35902::readMemory(){
+	sys->read(memoryAddress, memoryValue);
 }
 
-void LR35902::writeMemory(unsigned short (LR35902::*ptr)() const){
-	sys->write((this->*ptr)(), valueWrite);
+void LR35902::writeMemory(){
+	sys->write(memoryAddress, memoryValue);
 }
 
 addrGetFunc LR35902::getMemoryAddressFunction(const std::string &target){
@@ -397,10 +395,6 @@ void LR35902::ld_d8(unsigned char *dest, const unsigned char &src){
 void LR35902::ld_SP_d16(const unsigned char &addrH, const unsigned char &addrL){
 	// Load immediate 16-bit value into the stack pointer, SP.
 	SP = getUShort(addrH, addrL);
-}
-
-void LR35902::add_A_aHL(){
-	add_A_d8(sys->getValue(getHL()));
 }
 
 void LR35902::add_HL_d16(const unsigned char &addrH, const unsigned char &addrL){
@@ -651,20 +645,6 @@ void LR35902::RRCA(){
 	setFlag(FLAG_Z_BIT, 0); // RRCA clears Z regardless of result.
 }
 
-// INC (HL)
-
-void LR35902::INC_aHL(){
-	// Incremement memory location (HL).
-	inc_d8(sys->getPtr(getHL()));
-}
-
-// DEC (HL)
-
-void LR35902::DEC_aHL(){
-	// Decrement memory location (HL).
-	dec_d8(sys->getPtr(getHL()));
-}
-
 // DAA
 
 void LR35902::DAA(){
@@ -699,18 +679,6 @@ void LR35902::CPL(){
 	setFlag(FLAG_H_BIT, 1);
 }
 
-// INC SP
-
-void LR35902::INC_SP(){ 
-	SP++; 
-}
-
-// DEC SP
-
-void LR35902::DEC_SP(){ 
-	SP--; 
-}
-
 // SCF
 
 void LR35902::SCF(){ 
@@ -737,13 +705,6 @@ void LR35902::ADD_SP_r8(){
 	fullCarry = (((SP ^ r8) ^ res) & 0x100) == 0x100;
 	SP = res;
 	setFlags(0, 0, halfCarry, fullCarry);
-}
-
-// LD d16,A 
-
-void LR35902::LD_a16_A(){
-	// Set memory location (a16) to register A.
-	sys->write(getd16(), &A);
 }
 
 // LD HL,SP+r8 or LDHL SP,r8
@@ -794,8 +755,7 @@ void LR35902::ADD_HL_SP(){
 
 void LR35902::LDD_aHL_A(){
 	// Write register A to memory address (HL) and decrement HL.
-	unsigned short HL = getHL();
-	sys->write(HL, &A);
+	memoryValue = A;
 	DEC_HL();
 }
 
@@ -803,8 +763,7 @@ void LR35902::LDD_aHL_A(){
 
 void LR35902::LDD_A_aHL(){
 	// Write memory address (HL) into register A and decrement HL.
-	unsigned short HL = getHL();
-	sys->read(HL, &A);
+	A = memoryValue;
 	DEC_HL();
 }
 
@@ -812,8 +771,7 @@ void LR35902::LDD_A_aHL(){
 
 void LR35902::LDI_aHL_A(){
 	// Write register A to memory address (HL) and increment HL.
-	unsigned short HL = getHL();
-	sys->write(HL, &A);
+	memoryValue = A;
 	INC_HL();
 }
 
@@ -821,51 +779,17 @@ void LR35902::LDI_aHL_A(){
 
 void LR35902::LDI_A_aHL(){
 	// Write memory address (HL) into register A and increment HL.
-	unsigned short HL = getHL();
-	sys->read(HL, &A);
+	A = memoryValue;
 	INC_HL();
 }
 
-// LDH d8,A
-
-void LR35902::LDH_a8_A(){
-	// Put register A into high memory location ($FF00+a8).
-	sys->write((0xFF00 + d8), &A);
-}
-
-// LDH A,d8
-
-void LR35902::LDH_A_a8(){
-	// Put high memory location ($FF00+a8) into register A.
-	sys->read((0xFF00 + d8), &A);
-}
-
-// LD (C),A
-
-void LR35902::LD_aC_A(){
-	// Write register A into memory location (0xFF00+C).
-	sys->write((0xFF00 + C), &A); 
-}
-
-// LD HL,A[B|C|D|E|H|L|d8]
-
-void LR35902::ld_aHL_d8(const unsigned char &arg){
-	// Write d8 into memory location (HL).
-	sys->write(getHL(), arg);
-}
-
-void LR35902::LD_aHL_d16(){
+/*void LR35902::LD_aHL_d16(){
 	// Write d16 into memory location (HL).
 	unsigned short val = getd16();
 	unsigned short HL = getHL();
 	sys->write(HL, (0x00FF & val)); // Write the low byte first
 	sys->write(HL+1, (0xFF00 & val) >> 8); // Write the high byte last		
-}
-
-void LR35902::ld_d8_aHL(unsigned char *arg){
-	// Load memory location (HL) into register arg.
-	sys->read(getHL(), arg);
-}
+}*/
 
 // LD BC,A[d16]
 
@@ -883,88 +807,11 @@ void LR35902::LD_DE_d16(){
 	E = d16l;
 }
 
-void LR35902::LD_aBC_A(){
-	// Load A register into memory location (BC).
-	sys->write(getBC(), &A);
-}
-
-void LR35902::LD_aDE_A(){
-	// Load A register into memory location (DE).
-	sys->write(getDE(), &A);
-}
-
-// LD A,A[B|C|D|E|H|L|d8]
-
-void LR35902::ld_A_a16(const unsigned char &addrH, const unsigned char &addrL){
-	// Load memory location (a16) into register A.
-	sys->read(getUShort(addrH, addrL), &A);
-}
-
-void LR35902::LD_A_aC(){ 
-	// Load memory location (0xFF00+C) into register A.
-	sys->read((0xFF00 + C), &A);
-}
-
-// ADD (HL)
-
-void LR35902::ADD_A_aHL(){
-	add_A_d8(sys->getValue(getHL()));
-}
-
-// ADC (HL)
-
-void LR35902::ADC_A_aHL(){
-	adc_A_d8(sys->getValue(getHL()));
-}
-
-// SUB (HL)
-
-void LR35902::SUB_aHL(){
-	sub_A_d8(sys->getValue(getHL()));
-}
-
-// SBC (HL)
-
-void LR35902::SBC_A_aHL(){
-	sbc_A_d8(sys->getValue(getHL()));
-}
-
-// AND (HL)
-
-void LR35902::AND_aHL(){
-	and_d8(sys->getValue(getHL()));
-}
-
-// XOR (HL)
-
-void LR35902::XOR_aHL(){
-	xor_d8(sys->getValue(getHL()));
-}
-
-// OR (HL)
-
-void LR35902::OR_aHL(){
-	or_d8(sys->getValue(getHL()));
-}
-
-// CP (HL)
-
-void LR35902::CP_aHL(){
-	cp_d8(sys->getValue(getHL()));
-}
-
 // POP AF
 
 void LR35902::POP_AF(){ 
 	pop_d16(&A, &F);
 	F &= 0xF0; // Bottom 4 bits of F are always zero
-}
-
-// JP 
-
-void LR35902::JP_aHL(){ 
-	// Jump to memory address (HL).
-	jp_d16(H, L);
 }
 
 // RET NZ[Z|NC|C]
@@ -976,11 +823,15 @@ void LR35902::RETI(){
 
 // DI
 
-void LR35902::DI(){ sys->disableInterrupts(); }
+void LR35902::DI(){ 
+	sys->disableInterrupts(); 
+}
 
 // EI
 
-void LR35902::EI(){ sys->enableInterrupts(); }
+void LR35902::EI(){ 
+	sys->enableInterrupts(); 
+}
 
 // STOP 0
 
@@ -992,160 +843,6 @@ void LR35902::STOP_0(){
 
 void LR35902::HALT(){ 
 	sys->haltCPU();
-}
-
-/////////////////////////////////////////////////////////////////////
-// CB-PREFIX OPCODES
-/////////////////////////////////////////////////////////////////////
-
-// RLC (HL)
-
-void LR35902::RLC_aHL(){
-	rlc_d8(sys->getPtr(getHL()));
-}
-
-// RRC (HL)
-
-void LR35902::RRC_aHL(){
-	rrc_d8(sys->getPtr(getHL()));
-}
-
-// RL (HL)
-
-void LR35902::RL_aHL(){
-	rl_d8(sys->getPtr(getHL()));
-}
-
-// RR (HL)
-
-void LR35902::RR_aHL(){
-	rr_d8(sys->getPtr(getHL()));
-}
-
-// SLA (HL)
-
-void LR35902::SLA_aHL(){
-	sla_d8(sys->getPtr(getHL()));
-}
-
-// SRA (HL)
-
-void LR35902::SRA_aHL(){
-	sra_d8(sys->getPtr(getHL()));
-}
-
-// SWAP (HL)
-
-void LR35902::SWAP_aHL(){
-	swap_d8(sys->getPtr(getHL()));
-}
-
-// SRL (HL)
-
-void LR35902::SRL_aHL(){
-	srl_d8(sys->getPtr(getHL()));
-}
-
-// BIT b,(HL)
-
-void LR35902::BIT_0_aHL(){
-	bit_d8(sys->getValue(getHL()), 0);
-}
-
-void LR35902::BIT_1_aHL(){
-	bit_d8(sys->getValue(getHL()), 1);
-}
-
-void LR35902::BIT_2_aHL(){
-	bit_d8(sys->getValue(getHL()), 2);
-}
-
-void LR35902::BIT_3_aHL(){
-	bit_d8(sys->getValue(getHL()), 3);
-}
-
-void LR35902::BIT_4_aHL(){
-	bit_d8(sys->getValue(getHL()), 4);
-}
-
-void LR35902::BIT_5_aHL(){
-	bit_d8(sys->getValue(getHL()), 5);
-}
-
-void LR35902::BIT_6_aHL(){
-	bit_d8(sys->getValue(getHL()), 6);
-}
-
-void LR35902::BIT_7_aHL(){
-	bit_d8(sys->getValue(getHL()), 7);
-}
-
-// RES b,(HL)
-
-void LR35902::RES_0_aHL(){
-	res_d8(sys->getPtr(getHL()), 0);
-}
-
-void LR35902::RES_1_aHL(){
-	res_d8(sys->getPtr(getHL()), 1);
-}
-
-void LR35902::RES_2_aHL(){
-	res_d8(sys->getPtr(getHL()), 2);
-}
-
-void LR35902::RES_3_aHL(){
-	res_d8(sys->getPtr(getHL()), 3);
-}
-
-void LR35902::RES_4_aHL(){
-	res_d8(sys->getPtr(getHL()), 4);
-}
-
-void LR35902::RES_5_aHL(){
-	res_d8(sys->getPtr(getHL()), 5);
-}
-
-void LR35902::RES_6_aHL(){
-	res_d8(sys->getPtr(getHL()), 6);
-}
-
-void LR35902::RES_7_aHL(){
-	res_d8(sys->getPtr(getHL()), 7);
-}
-
-// SET b,(HL)
-
-void LR35902::SET_0_aHL(){
-	set_d8(sys->getPtr(getHL()), 0);
-}
-
-void LR35902::SET_1_aHL(){
-	set_d8(sys->getPtr(getHL()), 1);
-}
-
-void LR35902::SET_2_aHL(){
-	set_d8(sys->getPtr(getHL()), 2);
-}
-
-void LR35902::SET_3_aHL(){
-	set_d8(sys->getPtr(getHL()), 3);
-}
-
-void LR35902::SET_4_aHL(){
-	set_d8(sys->getPtr(getHL()), 4);
-}
-
-void LR35902::SET_5_aHL(){
-	set_d8(sys->getPtr(getHL()), 5);
-}
-
-void LR35902::SET_6_aHL(){
-	set_d8(sys->getPtr(getHL()), 6);
-}
-
-void LR35902::SET_7_aHL(){
-	set_d8(sys->getPtr(getHL()), 7);
 }
 
 void LR35902::initialize(){
