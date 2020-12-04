@@ -134,7 +134,7 @@ private:
     
     SystemGBC *sys;
 
-	const unsigned char *memory[128];
+	const unsigned char *memoryPtr;
 	
 	std::map<std::string, std::vector<Register*> > registers;
 

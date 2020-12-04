@@ -10,8 +10,6 @@
 #include "GPU.hpp"
 #include "DmaController.hpp"
 
-unsigned char ZERO = 0;
-
 QString getQString(const std::string &str)
 {
 	return QString(str.c_str());
@@ -259,11 +257,12 @@ void MainWindow::updateRegistersTab(){
 
 void MainWindow::updateMemoryTab(){
 	unsigned short currentByte = 0x80*ui->spinBox_MemoryPage->value();
+	memoryPtr = sys->getConstPtr(currentByte);
 	QString str;
 	for(unsigned short i = 0; i < 8; i++){
 		str.append(getQString(getHex(currentByte))+" ");
 		for(unsigned short j = 0; j < 16; j++){
-			str.append(getQString(getHex(*memory[8*i+j]))+" ");
+			str.append(getQString(getHex(memoryPtr[8*i+j]))+" ");
 		}
 		str.append("\n");
 		currentByte += 16;
@@ -319,11 +318,6 @@ void MainWindow::updateMemoryArray()
 	unsigned short memHigh = memLow + 0x80;
 	setLineEditHex(ui->lineEdit_MemoryPageLow, memLow);
 	setLineEditHex(ui->lineEdit_MemoryPageHigh, memHigh);
-	for(unsigned short i = 0; i < 128; i++){
-		memory[i] = sys->getConstPtr(memLow+i);
-		if(!memory[i]) // Inaccessible memory location
-			memory[i] = &ZERO;
-	}	
 }
 
 void MainWindow::setDmgMode(){
