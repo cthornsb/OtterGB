@@ -538,6 +538,11 @@ void MainWindow::on_spinBox_ScreenScale_valueChanged(int arg1)
 	components->gpu->getWindow()->setScalingFactor(arg1);
 }
 
+void MainWindow::on_doubleSpinBox_Clock_Multiplier_valueChanged(double arg1)
+{
+	components->sclk->setFramerateMultiplier(arg1);
+}
+
 void MainWindow::on_pushButton_PauseResume_pressed()
 {
 	if(!sys->getEmulationPaused()){

@@ -72,6 +72,8 @@ private slots:
     void on_spinBox_Frameskip_valueChanged(int arg1);
     
     void on_spinBox_ScreenScale_valueChanged(int arg1);
+    
+    void on_doubleSpinBox_Clock_Multiplier_valueChanged(double arg1);
 
     void on_pushButton_PauseResume_pressed();
 

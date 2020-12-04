@@ -819,7 +819,7 @@
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>60</y>
+        <y>66</y>
         <width>121</width>
         <height>21</height>
        </rect>
@@ -861,25 +861,6 @@
       </property>
       <property name="text">
        <string>PC</string>
-      </property>
-     </widget>
-     <widget class="QRadioButton" name="radioButton_CurrentSpeed">
-      <property name="geometry">
-       <rect>
-        <x>120</x>
-        <y>20</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>CPU Speed</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="autoExclusive">
-       <bool>false</bool>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_rF">
@@ -944,7 +925,7 @@
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>40</y>
+        <y>46</y>
         <width>121</width>
         <height>21</height>
        </rect>
@@ -2747,7 +2728,7 @@ p, li { white-space: pre-wrap; }
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>160</y>
+        <y>150</y>
         <width>104</width>
         <height>21</height>
        </rect>
@@ -2786,6 +2767,60 @@ p, li { white-space: pre-wrap; }
       </property>
       <property name="text">
        <string>rLY</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_CurrentSpeed">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>180</y>
+        <width>141</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Double Speed</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_Clock_Multiplier">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>220</y>
+        <width>64</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the &lt;span style=&quot; font-weight:600;&quot;&gt;Framerate Multiplier&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="maximum">
+       <double>2.000000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>1.000000000000000</double>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_77">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>224</y>
+        <width>131</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Clock Multiplier</string>
       </property>
      </widget>
     </widget>
