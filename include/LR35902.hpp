@@ -67,6 +67,18 @@ public:
 	
 	bool clock(LR35902 *cpu);
 
+	bool onRead() const { return (nCycles == nReadCycle); }
+	
+	bool onWrite() const { return (nCycles == nWriteCycle); }
+
+	bool onExecute() const { return (nCycles == nExecuteCycle); }
+
+	bool onOvertime() const { return (nCycles > nExecuteCycle); }
+
+	bool memoryAccess() const { return (nReadCycle || nWriteCycle); }
+
+	unsigned short cyclesRemaining() const { return (nExecuteCycle + nExtraCycles - nCycles); }
+
 	std::string getInstruction() const ;
 	
 	void addCycles(const unsigned short &extra){ nExtraCycles = extra; }
@@ -148,6 +160,10 @@ public:
 	unsigned char getL() const { return L; }
 
 	unsigned short getCyclesRemaining() const { return lastOpcode.nCycles; }
+	
+	unsigned short getMemoryAddress() const { return memoryAddress; }
+	
+	unsigned char getMemoryValue() const { return memoryValue; }
 	
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
 

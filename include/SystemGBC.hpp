@@ -130,6 +130,12 @@ public:
 	MainWindow *getQtGui(){ return gui.get(); }
 #endif
 	
+	bool cpuIsHalted() const { return cpuHalted; }
+	
+	bool cpuIsStopped() const { return cpuStopped; }
+	
+	bool cpuClockSpeed() const { return currentClockSpeed; }
+	
 	 // Toggle CPU debug flag
 	void setDebugMode(bool state=true);
 

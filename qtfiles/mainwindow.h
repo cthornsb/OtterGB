@@ -161,6 +161,8 @@ private:
     void setRadioButtonState(QRadioButton *button, const bool &state);
     
 	void updateMainTab();
+
+	void updateInstructionTab();
 	
 	void updateGraphicsTab();
 	

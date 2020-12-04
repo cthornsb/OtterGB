@@ -62,27 +62,30 @@ void MainWindow::update()
 			updateMainTab();
 			break;
 		case 1: // Graphics tab
+			updateInstructionTab();
+			break;
+		case 2:
 			updateGraphicsTab();
 			break;
-		case 2: // Sprites tab
+		case 3: // Sprites tab
 			updateSpritesTab();
 			break;
-		case 3: // Sound tab
+		case 4: // Sound tab
 			updateSoundTab();
 			break;
-		case 4: // Cartridge tab
+		case 5: // Cartridge tab
 			updateCartridgeTab();
 			break;
-		case 5: // Registers tab
+		case 6: // Registers tab
 			updateRegistersTab();
 			break;
-		case 6: // Memory tab
+		case 7: // Memory tab
 			updateMemoryTab();
 			break;
-		case 7: // Clock tab
+		case 8: // Clock tab
 			updateClockTab();
 			break;
-		case 8: // DMA tab
+		case 9: // DMA tab
 			updateDmaTab();
 		default:
 			break;
@@ -96,24 +99,6 @@ void MainWindow::update()
 }
 
 void MainWindow::updateMainTab(){
-	LR35902 *cpu = components->cpu;
-
-	// CPU registers
-	setLineEditHex(ui->lineEdit_rA, cpu->getA());
-	setLineEditHex(ui->lineEdit_rB, cpu->getB());
-	setLineEditHex(ui->lineEdit_rC, cpu->getC());
-	setLineEditHex(ui->lineEdit_rD, cpu->getD());
-	setLineEditHex(ui->lineEdit_rE, cpu->getE());
-	setLineEditHex(ui->lineEdit_rH, cpu->getH());
-	setLineEditHex(ui->lineEdit_rL, cpu->getL());
-	
-	// CPU flags
-	setLineEditText(ui->lineEdit_rF, getBinary(cpu->getF(), 4));
-	
-	// Program counter and stack pointer
-	setLineEditHex(ui->lineEdit_PC, cpu->getProgramCounter());
-	setLineEditHex(ui->lineEdit_SP, cpu->getStackPointer());
-	
 	// Memory bank indicators
 	setLineEditHex(ui->lineEdit_WRAM_Bank, components->wram->getBankSelect());
 	
@@ -131,10 +116,58 @@ void MainWindow::updateMainTab(){
 		}
 		else
 			instructions++;
-		std::string newinstr = cpu->getInstruction();
+		std::string newinstr = components->cpu->getInstruction();
 		history.append(getQString(newinstr+"\n"));
 		ui->plainText_Instr_History->setPlainText(history);
 	}
+}
+
+void MainWindow::updateInstructionTab()
+{
+	LR35902 *cpu = components->cpu;
+
+	// Interrupt registers
+	setRadioButtonState(ui->radioButton_Instr_IME, (*rIME == 1));
+	setLineEditText(ui->lineEdit_Instr_IE, getBinary(rIE->getValue()));
+	setLineEditText(ui->lineEdit_Instr_IF, getBinary(rIF->getValue()));
+
+	// CPU state
+	setRadioButtonState(ui->radioButton_CurrentSpeed, sys->cpuClockSpeed());
+	setRadioButtonState(ui->radioButton_CpuStopped, sys->cpuIsStopped());
+	setRadioButtonState(ui->radioButton_CpuHalted, sys->cpuIsHalted());
+	
+	// Current instruction being executed
+	OpcodeData *op = cpu->getLastOpcode();
+	setLineEditText(ui->lineEdit_Instr_Instruction, op->getInstruction());
+	setRadioButtonState(ui->radioButton_Instr_Execute, op->onExecute());
+	setRadioButtonState(ui->radioButton_Instr_Overtime, op->onOvertime());
+	ui->lcdNumber_Instr_Cycles->display(op->cyclesRemaining());
+	if(op->memoryAccess()){
+		setLineEditHex(ui->lineEdit_Instr_MemAddress, cpu->getMemoryAddress());
+		setLineEditHex(ui->lineEdit_Instr_MemValue, cpu->getMemoryValue());
+	}
+	else{
+		setLineEditText(ui->lineEdit_Instr_MemAddress, "");
+		setLineEditText(ui->lineEdit_Instr_MemValue, "");
+	}
+	setRadioButtonState(ui->radioButton_Instr_MemRead, op->onRead());
+	setRadioButtonState(ui->radioButton_Instr_MemWrite, op->onWrite());
+
+	// CPU registers
+	setLineEditHex(ui->lineEdit_rA, cpu->getA());
+	setLineEditHex(ui->lineEdit_rB, cpu->getB());
+	setLineEditHex(ui->lineEdit_rC, cpu->getC());
+	setLineEditHex(ui->lineEdit_rD, cpu->getD());
+	setLineEditHex(ui->lineEdit_rE, cpu->getE());
+	setLineEditHex(ui->lineEdit_rH, cpu->getH());
+	setLineEditHex(ui->lineEdit_rL, cpu->getL());
+	
+	// CPU flags
+	setLineEditText(ui->lineEdit_rF, getBinary(cpu->getF(), 4));
+	
+	// Program counter and stack pointer
+	setLineEditHex(ui->lineEdit_PC, cpu->getProgramCounter());
+	setLineEditHex(ui->lineEdit_SP, cpu->getStackPointer());
 }
 
 void MainWindow::updateGraphicsTab(){

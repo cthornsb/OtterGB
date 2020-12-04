@@ -30,35 +30,6 @@
      <attribute name="title">
       <string>Main</string>
      </attribute>
-     <widget class="QLineEdit" name="lineEdit_rB">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>60</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_2">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>34</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>A</string>
-      </property>
-     </widget>
      <widget class="QLabel" name="label_18">
       <property name="geometry">
        <rect>
@@ -85,107 +56,17 @@
        <string>WRAM Bank</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label_8">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>214</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>L</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_SP">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>96</y>
-        <width>51</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$0000</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rA">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>30</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rC">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>90</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
      <widget class="QLineEdit" name="lineEdit_FPS">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>130</y>
+        <x>50</x>
+        <y>90</y>
         <width>51</width>
         <height>28</height>
        </rect>
       </property>
       <property name="text">
        <string>60.0</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_3">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>64</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>B</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rD">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>120</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -207,56 +88,11 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QLabel" name="label_7">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>184</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>H</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rF">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>30</y>
-        <width>41</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>0000</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rH">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>180</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
      <widget class="QLabel" name="label_19">
       <property name="geometry">
        <rect>
-        <x>140</x>
-        <y>134</y>
+        <x>110</x>
+        <y>94</y>
         <width>31</width>
         <height>16</height>
        </rect>
@@ -265,150 +101,11 @@
        <string>FPS</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_rL">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>210</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_PC">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>66</y>
-        <width>51</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$0000</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_12">
-      <property name="geometry">
-       <rect>
-        <x>130</x>
-        <y>34</y>
-        <width>61</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>CPU Flags</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_10">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>70</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>PC</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_rE">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>150</y>
-        <width>31</width>
-        <height>28</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>$00</string>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>10</y>
-        <width>58</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Registers</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_4">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>94</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>C</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_5">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>124</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>D</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_11">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>100</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>SP</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_6">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>154</y>
-        <width>16</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>E</string>
-      </property>
-     </widget>
      <widget class="QCheckBox" name="checkBox_Show_Framerate">
       <property name="geometry">
        <rect>
-        <x>90</x>
-        <y>160</y>
+        <x>60</x>
+        <y>120</y>
         <width>91</width>
         <height>21</height>
        </rect>
@@ -439,76 +136,6 @@
       </property>
       <property name="plainText">
        <string/>
-      </property>
-     </widget>
-     <widget class="QRadioButton" name="radioButton_CurrentSpeed">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>190</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>CPU Speed</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="autoExclusive">
-       <bool>false</bool>
-      </property>
-     </widget>
-     <widget class="QRadioButton" name="radioButton_CpuStopped">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>210</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>CPU Stopped</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="autoExclusive">
-       <bool>false</bool>
-      </property>
-     </widget>
-     <widget class="QRadioButton" name="radioButton_CpuHalted">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>230</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>CPU Halted</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="autoExclusive">
-       <bool>false</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_39">
-      <property name="geometry">
-       <rect>
-        <x>84</x>
-        <y>10</y>
-        <width>41</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>ZSHC</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_Breakpoint_PC">
@@ -699,6 +326,663 @@
       </property>
       <property name="text">
        <string>Show CPU Instr</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_10">
+     <attribute name="title">
+      <string>Instr</string>
+     </attribute>
+     <widget class="QLineEdit" name="lineEdit_Instr_IE">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>71</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Ubuntu Mono</family>
+       </font>
+      </property>
+      <property name="text">
+       <string>00000000</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Instr_IF">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>70</y>
+        <width>71</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Ubuntu Mono</family>
+       </font>
+      </property>
+      <property name="text">
+       <string>00000000</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_71">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>40</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>IE</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_72">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>70</y>
+        <width>21</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>IF</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Instr_IME">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>10</y>
+        <width>51</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>IME</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Instr_Instruction">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>120</y>
+        <width>141</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Ubuntu Mono</family>
+       </font>
+      </property>
+      <property name="text">
+       <string>00000000000000</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_73">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>124</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Instruction</string>
+      </property>
+     </widget>
+     <widget class="QLCDNumber" name="lcdNumber_Instr_Cycles">
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>160</y>
+        <width>41</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="digitCount">
+       <number>2</number>
+      </property>
+      <property name="segmentStyle">
+       <enum>QLCDNumber::Flat</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_74">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>162</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Cycles Left</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Instr_MemRead">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>200</y>
+        <width>91</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mem Read</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Instr_MemWrite">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>220</y>
+        <width>101</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Mem Write</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Instr_MemAddress">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>210</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Program Counter Breakpoint &lt;/span&gt;(base-16)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_75">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>190</y>
+        <width>51</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Address</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Instr_Execute">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>160</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Execute</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_Instr_Overtime">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>180</y>
+        <width>101</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Overtime</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_Instr_MemValue">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>210</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set current &lt;span style=&quot; font-weight:600;&quot;&gt;Program Counter Breakpoint &lt;/span&gt;(base-16)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_76">
+      <property name="geometry">
+       <rect>
+        <x>196</x>
+        <y>190</y>
+        <width>41</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Value</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rH">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>180</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>124</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>D</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rE">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>150</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rB">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>60</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_8">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>214</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>L</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rD">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>120</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_4">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>94</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>C</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rL">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>210</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_6">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>154</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>E</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>34</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>A</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>64</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>B</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rC">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>90</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rA">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>30</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_7">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>184</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>H</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>10</y>
+        <width>58</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Registers</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_CpuHalted">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>60</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Halted</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_SP">
+      <property name="geometry">
+       <rect>
+        <x>340</x>
+        <y>96</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_10">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>70</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>PC</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_CurrentSpeed">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>20</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Speed</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_rF">
+      <property name="geometry">
+       <rect>
+        <x>340</x>
+        <y>30</y>
+        <width>41</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_11">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>100</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>SP</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_PC">
+      <property name="geometry">
+       <rect>
+        <x>340</x>
+        <y>66</y>
+        <width>51</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$0000</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_12">
+      <property name="geometry">
+       <rect>
+        <x>390</x>
+        <y>34</y>
+        <width>61</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Flags</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_CpuStopped">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>40</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CPU Stopped</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_39">
+      <property name="geometry">
+       <rect>
+        <x>344</x>
+        <y>10</y>
+        <width>41</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>ZSHC</string>
+      </property>
+     </widget>
+     <widget class="Line" name="line">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>100</y>
+        <width>241</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </widget>
@@ -1629,7 +1913,7 @@
     </widget>
     <widget class="QWidget" name="tab">
      <attribute name="title">
-      <string>Sound</string>
+      <string>APU</string>
      </attribute>
      <widget class="QCheckBox" name="checkBox_SoundEnabled">
       <property name="geometry">
@@ -1647,7 +1931,7 @@
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
-      <string>Cartridge</string>
+      <string>ROM</string>
      </attribute>
      <widget class="QLineEdit" name="lineEdit_ROM_Bank">
       <property name="geometry">
