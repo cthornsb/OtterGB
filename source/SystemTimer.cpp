@@ -145,7 +145,8 @@ void SystemClock::resetScanline(){
 		lcdDriverMode = 1;
 		rSTAT->setBits(0,1,1); // Mode 1
 	}
-	(*rLY) = 0;
+	rLY->clear();
+	rWLY->clear();
 }
 
 /** Increment the current scanline (register LY).

@@ -123,24 +123,13 @@ void MainWindow::update()
 				layerViewer->drawLine(x1, 0, x1, y1);
 				layerViewer->drawLine(x1, y0, x1, 255);
 			}			
-			x0 += rWX->getValue()-7;
-			y0 += rWY->getValue();
-			if(rLCDC->getBit(5)){ // Draw the window box
+			x0 = rWX->getValue()-7;
+			y0 = rWY->getValue();
+			if(rLCDC->getBit(5) && x0 < 160 && y0 < 144){ // Draw the window box
+				x1 = 159 - x0;
+				y1 = 143 - y0;
 				layerViewer->setDrawColor(Colors::GREEN);
-				if(x0 < x1){ // Window does not wrap horiontally
-					layerViewer->drawLine(x0, y0, x1, y0);
-				}
-				else{ // Window wraps horizontally
-					layerViewer->drawLine(0, y0, x1, y0);
-					layerViewer->drawLine(x0, y0, 255, y0);
-				}
-				if(y0 < y1){ // Window does not wrap vertically
-					layerViewer->drawLine(x0, y0, x0, y1);
-				}
-				else{ // Window wraps vertically
-					layerViewer->drawLine(x0, 0, x0, y1);
-					layerViewer->drawLine(x0, y0, x0, 255);
-				}
+				layerViewer->drawRectangle(0, 0, x1, y1);
 			}
 		}
 		layerViewer->render();
@@ -222,19 +211,19 @@ void MainWindow::updateInstructionTab()
 void MainWindow::updateGraphicsTab(){
 	GPU *gpu = components->gpu;
 
-	// LCD status
-	setRadioButtonState(ui->radioButton_LcdEnabled, gpu->bgDisplayEnable);
-	setRadioButtonState(ui->radioButton_BackgroundEnabled, gpu->bgDisplayEnable);
-	setRadioButtonState(ui->radioButton_WindowEnabled, gpu->winDisplayEnable);
-	setRadioButtonState(ui->radioButton_SpritesEnabled, gpu->objDisplayEnable);
-	setRadioButtonState(ui->radioButton_SpriteSizeSelect, gpu->objSizeSelect);
-	setRadioButtonState(ui->radioButton_BackgroundTilemap, gpu->bgTileMapSelect);
-	setRadioButtonState(ui->radioButton_WindowTilemap, gpu->winTileMapSelect);
-	setRadioButtonState(ui->radioButton_BgWinTileData, gpu->bgWinTileDataSelect);
+	// LCD control register (LCDC)
+	setRadioButtonState(ui->radioButton_BackgroundEnabled, rLCDC->getBit(0));
+	setRadioButtonState(ui->radioButton_SpritesEnabled,    rLCDC->getBit(1));
+	setRadioButtonState(ui->radioButton_SpriteSizeSelect,  rLCDC->getBit(2));
+	setRadioButtonState(ui->radioButton_BackgroundTilemap, rLCDC->getBit(3));
+	setRadioButtonState(ui->radioButton_BgWinTileData,     rLCDC->getBit(4));
+	setRadioButtonState(ui->radioButton_WindowEnabled,     rLCDC->getBit(5));
+	setRadioButtonState(ui->radioButton_WindowTilemap,     rLCDC->getBit(6));
+	setRadioButtonState(ui->radioButton_LcdEnabled,        rLCDC->getBit(7));
 
 	// Color palettes
 	//gpu->getDmgPaletteColorHex(bgp*4)
-	if(bGBCMODE){
+	/*if(bGBCMODE){
 		int bgp = ui->spinBox_BGP->value();
 		int obp = ui->spinBox_OBP->value();
 		setLineEditHex(ui->lineEdit_BGP_0, gpu->getBgPaletteColorHex(bgp*4));
@@ -247,7 +236,7 @@ void MainWindow::updateGraphicsTab(){
 		setLineEditHex(ui->lineEdit_OBP_3, gpu->getObjPaletteColorHex(obp*4+3));
 		//QPalette pal(QColor());
 		//setPalette(pal);
-	}
+	}*/
 	
 	// VRAM bank select
 	setLineEditHex(ui->lineEdit_VRAM_Bank, gpu->getBankSelect());
@@ -257,6 +246,10 @@ void MainWindow::updateGraphicsTab(){
 	setLineEditHex(ui->lineEdit_PPU_rSCY, rSCY->getValue());
 	setLineEditHex(ui->lineEdit_PPU_rWX, (unsigned char)(rWX->getValue()-7));
 	setLineEditHex(ui->lineEdit_PPU_rWY, rWY->getValue());
+	
+	// Set scanline registers
+	setLineEditText(ui->lineEdit_PPU_rLY, rLY->getValue());
+	setLineEditText(ui->lineEdit_PPU_rWLY, rWLY->getValue());
 }
 
 void MainWindow::updateSpritesTab(){
@@ -379,7 +372,7 @@ void MainWindow::updateMemoryArray()
 
 void MainWindow::setDmgMode(){
 	ui->radioButton_CurrentSpeed->setEnabled(false);
-	ui->lineEdit_BGP_0->setEnabled(false);
+	/*ui->lineEdit_BGP_0->setEnabled(false);
 	ui->lineEdit_BGP_1->setEnabled(false);
 	ui->lineEdit_BGP_2->setEnabled(false);
 	ui->lineEdit_BGP_3->setEnabled(false);
@@ -388,7 +381,7 @@ void MainWindow::setDmgMode(){
 	ui->lineEdit_OBP_2->setEnabled(false);
 	ui->lineEdit_OBP_3->setEnabled(false);
 	ui->spinBox_BGP->setEnabled(false);
-	ui->spinBox_OBP->setEnabled(false);
+	ui->spinBox_OBP->setEnabled(false);*/
 	ui->lineEdit_VRAM_Bank->setEnabled(false);
 }
 
@@ -486,17 +479,26 @@ void MainWindow::setRadioButtonState(QRadioButton *button, const bool &state)
 
 void MainWindow::on_checkBox_Background_stateChanged(int arg1)
 {
-	components->gpu->userLayerEnable[0] = (arg1 != 0);
+	if(arg1)
+		components->gpu->enableRenderLayer(0);
+	else
+		components->gpu->disableRenderLayer(0);
 }
 
 void MainWindow::on_checkBox_Window_stateChanged(int arg1)
 {
-	components->gpu->userLayerEnable[1] = (arg1 != 0);
+	if(arg1)
+		components->gpu->enableRenderLayer(1);
+	else
+		components->gpu->disableRenderLayer(1);
 }
 
 void MainWindow::on_checkBox_Sprites_stateChanged(int arg1)
 {
-	components->gpu->userLayerEnable[2] = (arg1 != 0);
+	if(arg1)
+		components->gpu->enableRenderLayer(2);
+	else
+		components->gpu->disableRenderLayer(2);
 }
 
 void MainWindow::on_checkBox_Show_Framerate_stateChanged(int arg1)
@@ -582,16 +584,6 @@ void MainWindow::on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1)
 void MainWindow::on_comboBox_Registers_currentIndexChanged(int arg1)
 {
 	//updateRegistersTab();
-}
-
-void MainWindow::on_spinBox_BGP_valueChanged(int arg1)
-{
-
-}
-
-void MainWindow::on_spinBox_OBP_valueChanged(int arg1)
-{
-
 }
 
 void MainWindow::on_spinBox_Frameskip_valueChanged(int arg1)

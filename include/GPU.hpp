@@ -79,9 +79,6 @@ private:
 /////////////////////////////////////////////////////////////////////
 
 class GPU : public SystemComponent {
-#ifdef USE_QT_DEBUGGER
-	friend class MainWindow;
-#endif
 public:
 	GPU();
 
@@ -181,7 +178,6 @@ private:
 	  * @return The number of pixels drawn.
 	  */
 	unsigned char drawTile(const unsigned char &x, const unsigned char &y, 
-	                       const unsigned char &x0, const unsigned char &y0,
 	                       const unsigned short &offset, ColorGBC *line);
 
 	/** Draw the current sprite.
@@ -206,6 +202,8 @@ private:
 	  * The color pointed to by the current objPaletteIndex (register 0xFF6B) will be udpated.
 	  */
 	void updateObjectPalette();
+	
+	bool checkWindowVisible();
 };
 
 #endif

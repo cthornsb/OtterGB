@@ -67,10 +67,6 @@ private slots:
 
 	void on_comboBox_Registers_currentIndexChanged(int arg1);
 
-    void on_spinBox_BGP_valueChanged(int arg1);
-
-    void on_spinBox_OBP_valueChanged(int arg1);
-
     void on_spinBox_Frameskip_valueChanged(int arg1);
     
     void on_spinBox_ScreenScale_valueChanged(int arg1);

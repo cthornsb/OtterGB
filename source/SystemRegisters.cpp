@@ -148,3 +148,6 @@ bool bGBCMODE = false;
 
 // Double-speed flag
 bool bCPUSPEED = false;
+
+// Window scanline
+Register *rWLY = 0x0;

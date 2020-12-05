@@ -1062,4 +1062,6 @@ void SystemGBC::checkSystemKeys(){
 		frameSkip++;
 	else if(keys->poll(0x66)) // 'f' Display framerate
 		displayFramerate = !displayFramerate;
+	else if(keys->poll(0x6E)) // 'n' next scanline
+		resumeUntilNextHBlank();
 }

@@ -196,15 +196,15 @@ unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned ch
 	return pixelColor; // [0,3]
 }
 
-/** Draw a background or window tile.
-  * @param x The current LCD screen horizontal pixel [0,256).
-  * @param y The current LCD screen scanline [0,256).
+/** Draw a background tile.
+  * @param x The current horizontal pixel [0,256).
+  * @param y The vertical pixel row of the tile to draw.
   * @param offset The memory offset of the selected tilemap in VRAM.
+  * @param line Array of all pixels for the current scanline.
   * @return The number of pixels drawn.
   */
 unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, 
-                             const unsigned char &x0, const unsigned char &y0,
-                             const unsigned short &offset, ColorGBC *line){
+                            const unsigned short &offset, ColorGBC *line){
 	unsigned char tileY, tileX;
 	unsigned char pixelY, pixelX;
 	unsigned char tileID;
@@ -212,22 +212,11 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	unsigned char pixelColor;
 	unsigned short bmpLow;
 	
-	if(y0 <= y){
-		tileY = (y-y0) / 8; // Current vertical BG tile [0,32)
-		pixelY = (y-y0) % 8; // Vertical pixel in the tile [0,8)
-	}
-	else{ // Screen wrap
-		tileY = (0xFF-(y0-y)+1) / 8;
-		pixelY = (0xFF-(y0-y)+1) % 8;
-	}
-	if(x0 <= x){
-		tileX = (x-x0) / 8; // Current horizontal BG tile [0,32)
-		pixelX = (x-x0) % 8; // Horizontal pixel in the tile [0,8)
-	}
-	else{ // Screen wrap
-		tileX = (0xFF-(x0-x)+1) / 8;
-		pixelX = (0xFF-(x0-x)+1) % 8;
-	}
+	tileY = y / 8; // Current vertical BG tile [0,32)
+	pixelY = y % 8; // Vertical pixel in the tile [0,8)
+
+	tileX = x / 8; // Current horizontal BG tile [0,32)
+	pixelX = x % 8; // Horizontal pixel in the tile [0,8)
 	
 	// Draw the background tile
 	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
@@ -368,7 +357,7 @@ void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 	ColorGBC line[256];
 	for(unsigned short y = 0; y < 256; y++){
 		for(unsigned short x = 0; x <= 32; x++) // Draw the layer
-			pixelX += drawTile(pixelX, y, 0, 0, (mapSelect ? 0x1C00 : 0x1800), line);
+			pixelX += drawTile(pixelX, y, (mapSelect ? 0x1C00 : 0x1800), line);
 		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
 			switch(line[px].getColor()){
 				case 0:
@@ -415,7 +404,7 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 	rx = rSCX->getValue();
 	if((bGBCMODE || bgDisplayEnable) && userLayerEnable[0]){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
-			rx += drawTile(rx, ry, 0, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+			rx += drawTile(rx, ry, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
 	}
 	else{ // Background disabled (white)
 		for(unsigned short x = 0; x < 160; x++) // Draw a "white" line
@@ -424,18 +413,16 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 
 	// Handle the window layer
 	bool windowVisible = false; // Is the window visible on this line?
-	if(userLayerEnable[1]){
-		if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
-			unsigned char rwy = rWY->getValue() + rSCY->getValue(); // Real Y coordinate of the top left corner of the window
-			unsigned char rwx = (rWX->getValue()-7) + rSCX->getValue(); // Real X coordinate of the top left corner of the window
-			rx = rwx;
-			for(unsigned short x = 0; x <= 20; x++){
-				// The window is visible if WX=[0,167) and WY=[0,144)
-				// WX=7, WY=0 locates the window at the upper left of the screen
-				rx += drawTile(rx, ry, rwx, rwy, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+	if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
+		if(userLayerEnable[1]){
+			rx = 0;
+			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
+			for(unsigned short x = 0; x <= nTiles; x++){
+				rx += drawTile(rx, rWLY->getValue(), (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
 			}
 			windowVisible = true;
 		}
+		(*rWLY)++; // Increment the scanline in the window region
 	}
 
 	// Handle the OBJ (sprite) layer
@@ -526,7 +513,7 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 				currentPixel = &currentLineBackground[rx];
 				break;
 			case 1: // Draw window
-				currentPixel = &currentLineWindow[rx];
+				currentPixel = &currentLineWindow[x];
 				break;
 			case 2: // Draw sprite
 				currentPixel = &currentLineSprite[rx];
@@ -615,6 +602,8 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			lcdDisplayEnable    = rLCDC->getBit(7); // (0:off, 1:on);
 			if(!lcdDisplayEnable) // LY is reset if LCD goes from on to off
 				sys->getClock()->resetScanline();
+			if(winDisplayEnable) // Allow the window layer
+				checkWindowVisible();
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
 			break;
@@ -659,8 +648,10 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			ngbcPaletteColor[2][3] = rOBP1->getBits(6,7);
 			break;
 		case 0xFF4A: // WY (Window Y Position)
+			checkWindowVisible();
 			break;
 		case 0xFF4B: // WX (Window X Position (minus 7))
+			checkWindowVisible();
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
 			bs = rVBK->getBit(0) ? 1 : 0;
@@ -792,9 +783,16 @@ void GPU::defineRegisters(){
 	sys->addSystemRegister(this, 0x49, rOBP1, "OBP1", "33333333");
 	sys->addSystemRegister(this, 0x4A, rWY,   "WY",   "33333333");
 	sys->addSystemRegister(this, 0x4B, rWX,   "WX",   "33333333");
+	sys->addSystemRegister(this, 0x4C, rWLY,  "WLY",  "33333333"); // Fake window scanline register
 	sys->addSystemRegister(this, 0x4F, rVBK,  "VBK",  "30000000");
 	sys->addSystemRegister(this, 0x68, rBGPI, "BGPI", "33333303");
 	sys->addSystemRegister(this, 0x69, rBGPD, "BGPD", "33333333");
 	sys->addSystemRegister(this, 0x6A, rOBPI, "OBPI", "33333303");
 	sys->addSystemRegister(this, 0x6B, rOBPD, "OBPD", "33333333");
+}
+
+bool GPU::checkWindowVisible(){	
+	// The window is visible if WX=[0,167) and WY=[0,144)
+	// WX=7, WY=0 locates the window at the upper left of the screen
+	return (winDisplayEnable = rLCDC->getBit(5) && (rWX->getValue() < 167) && (rWY->getValue() < 144));
 }

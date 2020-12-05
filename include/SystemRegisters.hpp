@@ -212,4 +212,7 @@ extern bool bGBCMODE;
 // Double-speed flag
 extern bool bCPUSPEED;
 
+// Window scanline
+extern Register *rWLY;
+
 #endif
