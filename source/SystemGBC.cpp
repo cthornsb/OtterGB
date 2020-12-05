@@ -79,7 +79,9 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	dmaSourceL(0), 
 	dmaDestinationH(0), 
 	dmaDestinationL(0), 
-	romFilename() 
+	romPath(),
+	romFilename(),
+	romExtension()
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -113,7 +115,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	// Handle user input.
 	if(handler.setup(argc, argv)){
 		if(handler.getOption(0)->active) // Set input filename
-			romFilename = handler.getOption(0)->argument;
+			romPath = handler.getOption(0)->argument;
 
 		if(handler.getOption(1)->active) // Set framerate multiplier
 			clock.setFramerateMultiplier(strtod(handler.getOption(1)->argument.c_str(), NULL));
@@ -138,11 +140,24 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 #endif
 	}
 
-	// Check for ROM filename.
-	if(romFilename.empty()){
+	// Check for ROM path
+	if(romPath.empty()){
 		std::cout << " Warning! Input gb/gbc ROM file not specified!\n";
+		// Do something to prevent running with no input file
 	}
 
+	// Get the ROM filename and file extension
+	size_t index = romPath.find_last_of('/');
+	if(index != std::string::npos)
+		romFilename = romPath.substr(index+1);
+	else
+		romFilename = romPath;
+	index = romFilename.find_last_of('.');
+	if(index != std::string::npos){
+		romExtension = romFilename.substr(index+1);
+		romFilename = romFilename.substr(0, index);
+	}
+	
 	pauseAfterNextInstruction = false;
 	pauseAfterNextClock = false;
 	pauseAfterNextHBlank = false;
@@ -735,11 +750,14 @@ bool SystemGBC::reset(){
 	cpu.reset();
 	
 	// Read the ROM into memory
-	bool retval = cart.readRom(romFilename, verboseMode);
+	bool retval = cart.readRom(romPath, verboseMode);
 
 	// Check that the ROM is loaded and the window is open
 	if(!retval || !gpu.getWindowStatus())
 		return false;
+
+	// Load save data (if available)
+	
 
 	// Enable GBC features for original GB games.
 	if(forceColor){

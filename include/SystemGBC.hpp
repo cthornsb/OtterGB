@@ -94,7 +94,11 @@ public:
 	
 	bool read(const unsigned short &loc, unsigned char &dest);
 
+	std::string getRomPath() const { return romPath; }
+	
 	std::string getRomFilename() const { return romFilename; }
+
+	std::string getRomExtension() const { return romExtension; }
 	
 	bool getEmulationPaused() const { return emulationPaused; }
 	
@@ -262,7 +266,9 @@ private:
 	unsigned char dmaDestinationH; ///< DMA destination MSB
 	unsigned char dmaDestinationL; ///< DMA destination LSB
 
-	std::string romFilename; ///< Path to input ROM file
+	std::string romPath; ///< Full path to input ROM file
+	std::string romFilename; ///< Input ROM filename (with no path or extension)
+	std::string romExtension; ///< Input ROM file extension
 
 #ifdef USE_QT_DEBUGGER
 	std::unique_ptr<QApplication> app;
