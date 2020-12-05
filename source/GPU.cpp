@@ -22,8 +22,6 @@
 #define SCREEN_WIDTH_PIXELS 160
 #define SCREEN_HEIGHT_PIXELS 144
 
-const ColorGBC GBC_WHITE;
-
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttributes
 /////////////////////////////////////////////////////////////////////
@@ -359,6 +357,36 @@ void GPU::drawTileMaps(Window *win){
 				}
 				win->drawPixel(tileX*8+dx, tileY*8+dy);
 			}
+		}
+	}
+}
+
+void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
+	win->setCurrent();
+	unsigned short pixelX;
+	unsigned char pixelColor;
+	ColorGBC line[256];
+	for(unsigned short y = 0; y < 256; y++){
+		for(unsigned short x = 0; x <= 32; x++) // Draw the layer
+			pixelX += drawTile(pixelX, y, 0, 0, (mapSelect ? 0x1C00 : 0x1800), line);
+		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
+			switch(line[px].getColor()){
+				case 0:
+					win->setDrawColor(Colors::WHITE);
+					break;
+				case 1:
+					win->setDrawColor(Colors::LTGRAY);
+					break;
+				case 2:
+					win->setDrawColor(Colors::DKGRAY);
+					break;
+				case 3:
+					win->setDrawColor(Colors::BLACK);
+					break;
+				default:
+					break;
+			}
+			win->drawPixel(px, y);
 		}
 	}
 }

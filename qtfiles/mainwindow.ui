@@ -1129,19 +1129,6 @@
        <bool>false</bool>
       </property>
      </widget>
-     <widget class="QLabel" name="label_31">
-      <property name="geometry">
-       <rect>
-        <x>54</x>
-        <y>234</y>
-        <width>71</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>TIlemap 0-1</string>
-      </property>
-     </widget>
      <widget class="QLineEdit" name="lineEdit_BGP_0">
       <property name="geometry">
        <rect>
@@ -1514,16 +1501,6 @@
        <string>3</string>
       </property>
      </widget>
-     <widget class="QWidget" name="widget_TileViewer" native="true">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>10</y>
-        <width>160</width>
-        <height>220</height>
-       </rect>
-      </property>
-     </widget>
      <widget class="QSpinBox" name="spinBox_ScreenScale">
       <property name="geometry">
        <rect>
@@ -1557,6 +1534,211 @@
       </property>
       <property name="text">
        <string>Scale</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButton_PPU_TileViewer">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>10</y>
+        <width>111</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Tile Viewer</string>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButton_PPU_LayerViewer">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>50</y>
+        <width>111</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Layer Viewer</string>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_PPU_Map0">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>90</y>
+        <width>111</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Map0 ($9800)</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="radioButton_PPU_Map1">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>120</y>
+        <width>111</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Map1 ($9C00)</string>
+      </property>
+      <property name="autoExclusive">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBox_PPU_DrawViewport">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>150</y>
+        <width>121</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enable or disable &lt;span style=&quot; font-weight:600;&quot;&gt;Background&lt;/span&gt; layer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Draw Viewport</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_31">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>190</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>SCX</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_PPU_rSCX">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>186</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_78">
+      <property name="geometry">
+       <rect>
+        <x>140</x>
+        <y>190</y>
+        <width>41</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>(WX-7)</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_PPU_rWX">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>186</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_79">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>225</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>SCY</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_PPU_rSCY">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>220</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_80">
+      <property name="geometry">
+       <rect>
+        <x>140</x>
+        <y>224</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>WY</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_PPU_rWY">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>220</y>
+        <width>31</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>$00</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>
@@ -3223,7 +3405,7 @@ p, li { white-space: pre-wrap; }
      <string>Next Frame</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_RedrawFrame">
+   <widget class="QPushButton" name="pushButton_Refresh">
     <property name="geometry">
      <rect>
       <x>550</x>
@@ -3236,7 +3418,7 @@ p, li { white-space: pre-wrap; }
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Redraw&lt;/span&gt; the current frame&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Redraw</string>
+     <string>Refresh</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_Advance">

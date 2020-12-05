@@ -37,6 +37,8 @@ public:
 	void updatePausedState(bool state=true);
 	
 	void openTileViewer();
+	
+	void openLayerViewer();
 
 private slots:
     void on_checkBox_Background_stateChanged(int arg1);
@@ -87,9 +89,19 @@ private slots:
 
     void on_pushButton_NextFrame_pressed();
 
+	void on_pushButton_Refresh_pressed();
+
+	void on_pushButton_PPU_TileViewer_pressed();
+	
+	void on_pushButton_PPU_LayerViewer_pressed();
+
     void on_spinBox_SpriteIndex_valueChanged(int arg1);
 
     void on_checkBox_SoundEnabled_stateChanged(int arg1);
+
+	void on_radioButton_PPU_Map0_clicked();
+	
+	void on_radioButton_PPU_Map1_clicked();
 
 	// Menu action slots
 
@@ -143,6 +155,8 @@ private:
 	std::unique_ptr<ComponentList> components;
 
 	std::unique_ptr<Window> tileViewer;
+	
+	std::unique_ptr<Window> layerViewer;
 
     void setLineEditText(QLineEdit *line, const std::string &str);
     

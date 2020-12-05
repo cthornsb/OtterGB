@@ -5,6 +5,7 @@
 
 #include "GraphicsOpenGL.hpp"
 #include "Support.hpp"
+#include "colors.hpp"
 #include "SystemTimer.hpp"
 #include "LR35902.hpp"
 #include "GPU.hpp"
@@ -90,9 +91,59 @@ void MainWindow::update()
 	}
 	// Update tile viewer (if enabled)
 	if(tileViewer){
-		tileViewer->setCurrent();
 		components->gpu->drawTileMaps(tileViewer.get());
 		tileViewer->render();
+	}
+	// Update tile viewer (if enabled)
+	if(layerViewer){
+		components->gpu->drawLayer(layerViewer.get(), ui->radioButton_PPU_Map0->isChecked());
+		if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
+			unsigned char x0 = rSCX->getValue();
+			unsigned char x1 = x0 + 159;
+			unsigned char y0 = rSCY->getValue();
+			unsigned char y1 = y0 + 143;
+			layerViewer->setDrawColor(Colors::RED);
+			if(x0 < x1){ // Viewport does not wrap horiontally
+				layerViewer->drawLine(x0, y0, x1, y0);
+				layerViewer->drawLine(x0, y1, x1, y1);
+			}
+			else{ // Viewport wraps horizontally
+				layerViewer->drawLine(0, y0, x1, y0);
+				layerViewer->drawLine(x0, y0, 255, y0);
+				layerViewer->drawLine(0, y1, x1, y1);
+				layerViewer->drawLine(x0, y1, 255, y1);
+			}
+			if(y0 < y1){ // Viewport does not wrap vertically
+				layerViewer->drawLine(x0, y0, x0, y1);
+				layerViewer->drawLine(x1, y0, x1, y1);
+			}
+			else{ // Viewport wraps vertically
+				layerViewer->drawLine(x0, 0, x0, y1);
+				layerViewer->drawLine(x0, y0, x0, 255);
+				layerViewer->drawLine(x1, 0, x1, y1);
+				layerViewer->drawLine(x1, y0, x1, 255);
+			}			
+			x0 += rWX->getValue()-7;
+			y0 += rWY->getValue();
+			if(rLCDC->getBit(5)){ // Draw the window box
+				layerViewer->setDrawColor(Colors::GREEN);
+				if(x0 < x1){ // Window does not wrap horiontally
+					layerViewer->drawLine(x0, y0, x1, y0);
+				}
+				else{ // Window wraps horizontally
+					layerViewer->drawLine(0, y0, x1, y0);
+					layerViewer->drawLine(x0, y0, 255, y0);
+				}
+				if(y0 < y1){ // Window does not wrap vertically
+					layerViewer->drawLine(x0, y0, x0, y1);
+				}
+				else{ // Window wraps vertically
+					layerViewer->drawLine(x0, 0, x0, y1);
+					layerViewer->drawLine(x0, y0, x0, 255);
+				}
+			}
+		}
+		layerViewer->render();
 	}
 }
 
@@ -200,6 +251,12 @@ void MainWindow::updateGraphicsTab(){
 	
 	// VRAM bank select
 	setLineEditHex(ui->lineEdit_VRAM_Bank, gpu->getBankSelect());
+	
+	// Set screen region registers
+	setLineEditHex(ui->lineEdit_PPU_rSCX, rSCX->getValue());
+	setLineEditHex(ui->lineEdit_PPU_rSCY, rSCY->getValue());
+	setLineEditHex(ui->lineEdit_PPU_rWX, (unsigned char)(rWX->getValue()-7));
+	setLineEditHex(ui->lineEdit_PPU_rWY, rWY->getValue());
 }
 
 void MainWindow::updateSpritesTab(){
@@ -371,10 +428,19 @@ void MainWindow::updatePausedState(bool state/*=true*/){
 }
 
 void MainWindow::openTileViewer(){
-	// Initialize palette viewer
+	// Initialize tile bitmap viewer
+	if(tileViewer)
+		return;
 	tileViewer = std::unique_ptr<Window>(new Window(160, 160));
-	tileViewer->setParent(ui->widget_TileViewer);
 	tileViewer->initialize();
+}
+
+void MainWindow::openLayerViewer(){
+	// Initialize BG/WIN layer viewer
+	if(layerViewer)
+		return;
+	layerViewer = std::unique_ptr<Window>(new Window(256, 256));
+	layerViewer->initialize();
 }
 
 void MainWindow::setLineEditText(QLineEdit *line, const std::string &str){
@@ -580,6 +646,23 @@ void MainWindow::on_pushButton_NextFrame_pressed()
 	sys->resumeUntilNextVBlank();
 }
 
+void MainWindow::on_pushButton_Refresh_pressed()
+{
+	update();
+}
+
+void MainWindow::on_pushButton_PPU_TileViewer_pressed()
+{
+	openTileViewer();
+	ui->pushButton_PPU_TileViewer->setEnabled(false);
+}
+
+void MainWindow::on_pushButton_PPU_LayerViewer_pressed()
+{
+	openLayerViewer();
+	ui->pushButton_PPU_LayerViewer->setEnabled(false);
+}
+
 void MainWindow::on_spinBox_SpriteIndex_valueChanged(int arg1)
 {
 
@@ -588,6 +671,18 @@ void MainWindow::on_spinBox_SpriteIndex_valueChanged(int arg1)
 void MainWindow::on_checkBox_SoundEnabled_stateChanged(int arg1)
 {
 
+}
+
+void MainWindow::on_radioButton_PPU_Map0_clicked()
+{
+	ui->radioButton_PPU_Map0->setChecked(true);
+	ui->radioButton_PPU_Map1->setChecked(false);
+}
+
+void MainWindow::on_radioButton_PPU_Map1_clicked()
+{
+	ui->radioButton_PPU_Map1->setChecked(true);
+	ui->radioButton_PPU_Map0->setChecked(false);
 }
 
 void MainWindow::on_tabWidget_currentChanged(int index)

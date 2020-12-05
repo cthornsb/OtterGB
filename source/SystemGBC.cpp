@@ -107,6 +107,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 #ifdef USE_QT_DEBUGGER			
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
 	handler.add(optionExt("tile-viewer", no_argument, NULL, 'T', "", "Enable VRAM tile viewer (if debug gui enabled)."));
+	handler.add(optionExt("layer-viewer", no_argument, NULL, 'L', "", "Enable BG/WIN layer viewer (if debug gui enabled)."));
 #endif
 
 	// Handle user input.
@@ -131,6 +132,8 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 			setDebugMode(true);
 			if(handler.getOption(6)->active)
 				gui->openTileViewer();
+			if(handler.getOption(7)->active) // Toggle debug flag
+				gui->openLayerViewer();
 		}
 #endif
 	}

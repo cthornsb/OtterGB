@@ -91,6 +91,8 @@ public:
 
 	void drawTileMaps(Window *win);
 
+	void drawLayer(Window *win, bool mapSelect=true);
+
 	void disableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = false; }
 	
 	void enableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = true; }
