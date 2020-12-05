@@ -173,6 +173,14 @@ public:
 	  */
 	static void drawLine(const int *x, const int *y, const size_t &N);
 
+	/** Draw multiple lines to the screen
+	  * @param x1 X coordinate of the upper left corner
+	  * @param y1 Y coordinate of the upper left corner
+	  * @param x2 X coordinate of the bottom right corner
+	  * @param y2 Y coordinate of the bottom right corner
+	  */
+	static void drawRectangle(const int &x1, const int &y1, const int &x2, const int &y2);
+
 	/** Render the current frame
 	  */
 	static void render();

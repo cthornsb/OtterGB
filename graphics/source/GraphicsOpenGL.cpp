@@ -225,6 +225,19 @@ void Window::drawLine(const int *x, const int *y, const size_t &N){
 		drawLine(x[i], y[i], x[i+1], y[i+1]);
 }
 
+/** Draw multiple lines to the screen
+  * @param x1 X coordinate of the upper left corner
+  * @param y1 Y coordinate of the upper left corner
+  * @param x2 X coordinate of the bottom right corner
+  * @param y2 Y coordinate of the bottom right corner
+  */
+void Window::drawRectangle(const int &x1, const int &y1, const int &x2, const int &y2){
+	drawLine(x1, y1, x2, y1); // Top
+	drawLine(x2, y1, x2, y2); // Right
+	drawLine(x2, y2, x1, y2); // Bottom
+	drawLine(x1, y2, x1, y1); // Left
+}
+
 void Window::render(){
 	glFlush();
 }
