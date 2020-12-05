@@ -156,7 +156,7 @@ public:
 	
 	void setFrameSkip(const unsigned short &frames){ frameSkip = frames; }
 
-	void setRomFilename(const std::string &fname){ romFilename = fname; }
+	void setRomPath(const std::string &path){ romPath = path; }
 
 	void setBreakpoint(const unsigned short &pc);
 	
@@ -184,11 +184,13 @@ public:
 
 	void clearRegister(const unsigned char &reg);
 	
-	bool dumpMemory(const char *fname);
+	bool dumpMemory(const std::string &fname);
 	
-	bool dumpVRAM(const char *fname);
+	bool dumpVRAM(const std::string &fname);
 	
-	bool dumpSRAM(const char *fname);
+	bool saveSRAM(const std::string &fname);
+	
+	bool loadSRAM(const std::string &fname);
 	
 	void handleHBlankPeriod();
 	
@@ -223,6 +225,10 @@ public:
 	bool quicksave();
 	
 	bool quickload();
+	
+	bool writeExternalRam();
+
+	bool readExternalRam();
 	
 	void help();
 	
@@ -260,6 +266,7 @@ private:
 	bool forceColor; 
 	bool displayFramerate;
 	bool userQuitting;
+	bool autoLoadExtRam; ///< If set, external cartridge RAM (SRAM) will not be loaded at boot
 
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB

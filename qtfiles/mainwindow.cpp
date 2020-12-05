@@ -744,7 +744,7 @@ void MainWindow::on_actionDump_VRM_triggered()
 
 void MainWindow::on_actionDump_SRAM_triggered()
 {
-	sys->dumpSRAM("sram.dat");
+	sys->saveSRAM("sram.dat");
 }
 
 void MainWindow::on_actionPower_Off_triggered()
@@ -760,6 +760,16 @@ void MainWindow::on_actionSave_State_triggered()
 void MainWindow::on_actionLoad_State_triggered()
 {
 	sys->quickload();
+}
+
+void MainWindow::on_actionWrite_Save_Data_triggered()
+{
+	sys->writeExternalRam();
+}
+
+void MainWindow::on_actionRead_Save_Data_triggered()
+{
+	sys->readExternalRam();
 }
 
 void MainWindow::on_actionDump_Registers_triggered()

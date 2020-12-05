@@ -3309,6 +3309,9 @@ p, li { white-space: pre-wrap; }
     <addaction name="actionSave_State"/>
     <addaction name="actionLoad_State"/>
     <addaction name="separator"/>
+    <addaction name="actionWrite_Save_Data"/>
+    <addaction name="actionRead_Save_Data"/>
+    <addaction name="separator"/>
     <addaction name="actionDump_Memory"/>
     <addaction name="actionDump_VRM"/>
     <addaction name="actionDump_SRAM"/>
@@ -3415,6 +3418,16 @@ p, li { white-space: pre-wrap; }
   <action name="actionHlep">
    <property name="text">
     <string>Help</string>
+   </property>
+  </action>
+  <action name="actionWrite_Save_Data">
+   <property name="text">
+    <string>Write Save Data</string>
+   </property>
+  </action>
+  <action name="actionRead_Save_Data">
+   <property name="text">
+    <string>Read Save Data</string>
    </property>
   </action>
  </widget>

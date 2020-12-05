@@ -121,6 +121,10 @@ private slots:
 
 	void on_actionLoad_State_triggered();
 
+	void on_actionWrite_Save_Data_triggered();
+
+	void on_actionRead_Save_Data_triggered();
+
 	void on_actionDump_Registers_triggered();
 
 	void on_actionDump_HRAM_triggered();

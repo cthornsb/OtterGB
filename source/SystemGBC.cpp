@@ -75,6 +75,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	forceColor(false), 
 	displayFramerate(false),
 	userQuitting(false), 
+	autoLoadExtRam(true),
 	dmaSourceH(0),
 	dmaSourceL(0), 
 	dmaDestinationH(0), 
@@ -106,6 +107,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
 	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
+	handler.add(optionExt("no-load-sram", no_argument, NULL, 'n', "", "Do not load external cartridge RAM (SRAM) at boot."));
 #ifdef USE_QT_DEBUGGER			
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
 	handler.add(optionExt("tile-viewer", no_argument, NULL, 'T', "", "Enable VRAM tile viewer (if debug gui enabled)."));
@@ -129,12 +131,15 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 		if(handler.getOption(4)->active) // Use GBC mode for original GB games
 			setForceColorMode(true);
 
+		if(handler.getOption(5)->active) // Do not automatically save/load external cartridge RAM (SRAM)
+			autoLoadExtRam = false;
+
 #ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(5)->active){ // Toggle debug flag
+		if(handler.getOption(6)->active){ // Toggle debug flag
 			setDebugMode(true);
-			if(handler.getOption(6)->active)
+			if(handler.getOption(7)->active)
 				gui->openTileViewer();
-			if(handler.getOption(7)->active) // Toggle debug flag
+			if(handler.getOption(8)->active) // Toggle debug flag
 				gui->openLayerViewer();
 		}
 #endif
@@ -310,6 +315,8 @@ bool SystemGBC::execute(){
 	}
 	if(debugMode)
 		gui->closeAllWindows(); // Clean up the Qt GUI
+	if(autoLoadExtRam && cart.getRam()->getSize()) // Save save data (if available)
+		writeExternalRam();
 #endif
 	return true;
 }
@@ -651,9 +658,9 @@ void SystemGBC::clearRegister(const unsigned char &reg){
 	registers[reg].clear(); 
 }
 
-bool SystemGBC::dumpMemory(const char *fname){
+bool SystemGBC::dumpMemory(const std::string &fname){
 	std::cout << " Writing system memory to file \"" << fname << "\"... ";
-	std::ofstream ofile(fname, std::ios::binary);
+	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good()){
 		std::cout << "FAILED!\n";
 		return false;
@@ -681,9 +688,9 @@ bool SystemGBC::dumpMemory(const char *fname){
 	return true;
 }
 
-bool SystemGBC::dumpVRAM(const char *fname){
+bool SystemGBC::dumpVRAM(const std::string &fname){
 	std::cout << " Writing VRAM to file \"" << fname << "\"... ";
-	std::ofstream ofile(fname, std::ios::binary);
+	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good() || !gpu.writeMemoryToFile(ofile)){
 		std::cout << "FAILED!\n";
 		return false;
@@ -693,18 +700,34 @@ bool SystemGBC::dumpVRAM(const char *fname){
 	return true;
 }
 
-bool SystemGBC::dumpSRAM(const char *fname){
+bool SystemGBC::saveSRAM(const std::string &fname){
 	if(!cart.getRam()->getSize()){
 		std::cout << " WARNING! Cartridge has no SRAM.\n";
 		return false;
 	}
 	std::cout << " Writing cartridge RAM to file \"" << fname << "\"... ";
-	std::ofstream ofile(fname, std::ios::binary);
+	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good() || !cart.getRam()->writeMemoryToFile(ofile)){
 		std::cout << "FAILED!\n";
 		return false;
 	}
 	ofile.close();
+	std::cout << " DONE\n";
+	return true;
+}
+
+bool SystemGBC::loadSRAM(const std::string &fname){
+	if(!cart.getRam()->getSize()){
+		std::cout << " WARNING! Cartridge has no SRAM.\n";
+		return false;
+	}
+	std::cout << " Reading cartridge RAM from file \"" << fname << "\"... ";
+	std::ifstream ifile(fname.c_str(), std::ios::binary);
+	if(!ifile.good() || !cart.getRam()->readMemoryFromFile(ifile)){
+		std::cout << "FAILED!\n";
+		return false;
+	}
+	ifile.close();
 	std::cout << " DONE\n";
 	return true;
 }
@@ -757,7 +780,8 @@ bool SystemGBC::reset(){
 		return false;
 
 	// Load save data (if available)
-	
+	if(autoLoadExtRam && cart.getRam()->getSize())
+		readExternalRam();
 
 	// Enable GBC features for original GB games.
 	if(forceColor){
@@ -949,6 +973,14 @@ bool SystemGBC::quickload(){
 	return true;
 }
 
+bool SystemGBC::writeExternalRam(){
+	return saveSRAM(romFilename+".sram");
+}
+
+bool SystemGBC::readExternalRam(){
+	return loadSRAM(romFilename+".sram");
+}
+
 void SystemGBC::help(){
 	std::cout << "HELP: Press escape to exit program.\n\n";
 	
@@ -1066,12 +1098,12 @@ void SystemGBC::checkSystemKeys(){
 		screenshot();
 	else if(keys->poll(0xF5)) // Quicksave
 		quicksave();
-	else if(keys->poll(0xF6)) // Dump memory
+	/*else if(keys->poll(0xF6)) // Dump memory
 		dumpMemory("memory.dat");
 	else if(keys->poll(0xF7)) // Dump VRAM
-		dumpVRAM("vram.dat");
-	else if(keys->poll(0xF8)) // Dump cartridge RAM
-		dumpSRAM("sram.dat");
+		dumpVRAM("vram.dat");*/
+	else if(keys->poll(0xF8)) // Save cartridge RAM to file
+		writeExternalRam();
 	else if(keys->poll(0xF9)) // Quickload
 		quickload();
 	else if(keys->poll(0x2D)) // '-'    Decrease frame skip
