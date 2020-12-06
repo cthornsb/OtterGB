@@ -1146,33 +1146,39 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 
 void SystemGBC::checkSystemKeys(){
 	KeyStates *keys = gpu->getWindow()->getKeypress();
-	if(keys->empty()) return;
-	
+	if(keys->empty()) 
+		return;
 	// Function keys
-	if(keys->poll(0xF1)) // Help
-		help();	
-	else if(keys->poll(0xF2)) // Pause emulation
+	if (keys->poll(0xF1))      // F1  Help
+		help();
+	else if (keys->poll(0xF2)) // F2  Pause emulation
 		pause();
-	else if(keys->poll(0xF3)) // Resume emulation
+	else if (keys->poll(0xF3)) // F3  Resume emulation
 		unpause();
-	else if(keys->poll(0xF4)) // Screenshot
-		screenshot();
-	else if(keys->poll(0xF5)) // Quicksave
+	else if (keys->poll(0xF4)) // F4  Reset emulator
+		reset();
+	else if (keys->poll(0xF5)) // F5  Quicksave
 		quicksave();
-	/*else if(keys->poll(0xF6)) // Dump memory
-		dumpMemory("memory.dat");
-	else if(keys->poll(0xF7)) // Dump VRAM
-		dumpVRAM("vram.dat");*/
-	else if(keys->poll(0xF8)) // Save cartridge RAM to file
+	else if (keys->poll(0xF6)) // F6  (No function)
+		return;
+	else if (keys->poll(0xF7)) // F7  (No function)
+		return;
+	else if (keys->poll(0xF8)) // F8  Save cartridge RAM to file
 		writeExternalRam();
-	else if(keys->poll(0xF9)) // Quickload
+	else if (keys->poll(0xF9)) // F9  Quickload
 		quickload();
-	else if(keys->poll(0x2D)) // '-'    Decrease frame skip
+	else if (keys->poll(0xFA)) // F10 (No function)
+		return;
+	else if (keys->poll(0xFA)) // F11 (No function)
+		return;
+	else if (keys->poll(0xFA)) // F12 Screenshot
+		screenshot();
+	else if (keys->poll(0x2D)) // '-'    Decrease frame skip
 		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
-	else if(keys->poll(0x3D)) // '=(+)' Increase frame skip
+	else if (keys->poll(0x3D)) // '=(+)' Increase frame skip
 		frameSkip++;
-	else if(keys->poll(0x66)) // 'f' Display framerate
+	else if (keys->poll(0x66)) // 'f'    Display framerate
 		displayFramerate = !displayFramerate;
-	else if(keys->poll(0x6E)) // 'n' next scanline
+	else if (keys->poll(0x6E)) // 'n'    Next scanline
 		resumeUntilNextHBlank();
 }
