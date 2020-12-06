@@ -3,6 +3,12 @@
 
 #include "Support.hpp"
 
+const unsigned char LOWERCASE_LOW  = 97;
+const unsigned char LOWERCASE_HIGH = 122;
+
+const unsigned char UPPERCASE_LOW  = 65;
+const unsigned char UPPERCASE_HIGH = 90;
+
 // Compute the two's compliment of an unsigned byte
 short twosComp(const unsigned char &n){
 	if((n & 0x80) == 0) // Positive value
@@ -93,6 +99,24 @@ std::string doubleToStr(const double &input, const unsigned short &fixed/*=0*/){
 	}
 	stream << input;
 	return stream.str();
+}
+
+std::string toUppercase(const std::string &str){
+	std::string retval = str;
+	for(size_t i = 0; i < str.length(); i++){
+		if(retval[i] >= LOWERCASE_LOW && str[i] <= LOWERCASE_HIGH)
+			retval[i] = (str[i]-LOWERCASE_LOW)+UPPERCASE_LOW;
+	}
+	return retval;
+}
+
+std::string toLowercase(const std::string &str){
+	std::string retval = str;
+	for(size_t i = 0; i < str.length(); i++){
+		if(retval[i] >= UPPERCASE_LOW && str[i] <= UPPERCASE_HIGH)
+			retval[i] = (str[i]-UPPERCASE_LOW)+LOWERCASE_LOW;
+	}
+	return retval;
 }
 
 unsigned short getUShort(const unsigned char &h, const unsigned char &l){ 

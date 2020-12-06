@@ -17,9 +17,6 @@
 #include "DmaController.hpp"
 #include "SerialController.hpp"
 
-#define REGISTER_LOW  0xFF00
-#define REGISTER_HIGH 0xFF80
-
 #ifdef USE_QT_DEBUGGER
 	class QApplication;
 	class MainWindow;
@@ -127,6 +124,8 @@ public:
 	WorkRam *getWRAM(){ return &wram; }
 	
 	ComponentList *getListOfComponents(){ return subsystems.get(); }
+	
+	std::vector<Register> *getRegisters(){ return &registers; }
 	
 #ifdef USE_QT_DEBUGGER
 	QApplication *getQtApplication(){ return app.get(); }
@@ -296,7 +295,7 @@ private:
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 
 
-	Register registers[REGISTER_HIGH-REGISTER_LOW]; ///< System control registers
+	std::vector<Register> registers; ///< System control registers
 	
 	unsigned short bootLength; ///< Size of the boot ROM
 	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM

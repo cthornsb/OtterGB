@@ -14,18 +14,14 @@
 	#include "mainwindow.h"
 #endif
 
-#define ROM_ZERO_START  0x0000
-#define ROM_SWAP_START  0x4000
 #define VRAM_SWAP_START 0x8000
 #define CART_RAM_START  0xA000
 #define WRAM_ZERO_START 0xC000
-#define WRAM_SWAP_START 0xD000
-#define ECHO_RAM_START  0xE000
 #define OAM_TABLE_START 0xFE00
-#define RESERVED_START  0xFEA0
-#define IO_PORTS_START  0xFF00
 #define HIGH_RAM_START  0xFF80
-#define INTERRUPT_ENABLE 0xFFFF
+
+#define REGISTER_LOW  0xFF00
+#define REGISTER_HIGH 0xFF80
 
 #ifdef GB_BOOT_ROM
 	const std::string gameboyBootRomPath(GB_BOOT_ROM);
@@ -96,6 +92,9 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 
 	// Add all components to the subsystem list
 	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
+
+	// Initialize registers vector
+	registers = std::vector<Register>(REGISTER_HIGH-REGISTER_LOW, Register());
 
 	// Initialize system components
 	this->initialize();
@@ -908,8 +907,8 @@ bool SystemGBC::quicksave(){
 	
 	// Write system registers (128 B)
 	unsigned char byte;
-	for(unsigned int i = 0; i < (REGISTER_HIGH-REGISTER_LOW); i++){
-		byte = registers[i].getValue();
+	for(auto reg = registers.begin(); reg != registers.end(); reg++){
+		byte = reg->getValue();
 		ofile.write((char*)&byte, 1);
 		nBytesWritten++;
 	}
@@ -963,9 +962,9 @@ bool SystemGBC::quickload(){
 	
 	// Write system registers (128 B)
 	unsigned char byte;
-	for(unsigned int i = 0; i < (REGISTER_HIGH-REGISTER_LOW); i++){
+	for(auto reg = registers.begin(); reg != registers.end(); reg++){
 		ifile.read((char*)&byte, 1);
-		registers[i].setValue(byte);
+		reg->setValue(byte);
 		nBytesRead++;
 	}
 		

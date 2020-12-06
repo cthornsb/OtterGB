@@ -78,6 +78,8 @@ public:
 	
 	unsigned char getWriteMask() const { return writeBits; }
 	
+	unsigned short getAddress() const { return address; }
+	
 	std::string getName() const { return sName; }
 	
 	SystemComponent *getSystemComponent(){ return comp; }

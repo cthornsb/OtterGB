@@ -27,6 +27,10 @@ std::string floatToStr(const float &input, const unsigned short &fixed=0);
 
 std::string doubleToStr(const double &input, const unsigned short &fixed=0);
 
+std::string toUppercase(const std::string &str);
+
+std::string toLowercase(const std::string &str);
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 
 bool bitTest(const unsigned char &input, const unsigned char &bit);

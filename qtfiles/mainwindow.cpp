@@ -519,7 +519,14 @@ void MainWindow::on_checkBox_Breakpoint_PC_stateChanged(int arg1)
 void MainWindow::on_checkBox_Breakpoint_Write_stateChanged(int arg1)
 {
 	if(arg1){
-		std::string str = ui->lineEdit_Breakpoint_Write->text().toStdString();
+		std::string str = toUppercase(ui->lineEdit_Breakpoint_Write->text().toStdString());
+		auto registers = sys->getRegisters();
+		for(auto reg = registers->begin(); reg != registers->end(); reg++){
+			if(str == reg->getName()){
+				sys->setMemWriteBreakpoint(reg->getAddress());
+				return;
+			}
+		}
 		sys->setMemWriteBreakpoint((unsigned short)strtoul(str.c_str(), 0, 16));
 	}
 	else
@@ -529,7 +536,14 @@ void MainWindow::on_checkBox_Breakpoint_Write_stateChanged(int arg1)
 void MainWindow::on_checkBox_Breakpoint_Read_stateChanged(int arg1)
 {
 	if(arg1){
-		std::string str = ui->lineEdit_Breakpoint_Read->text().toStdString();
+		std::string str = toUppercase(ui->lineEdit_Breakpoint_Read->text().toStdString());
+		auto registers = sys->getRegisters();
+		for(auto reg = registers->begin(); reg != registers->end(); reg++){
+			if(str == reg->getName()){
+				sys->setMemReadBreakpoint(reg->getAddress());
+				return;
+			}
+		}
 		sys->setMemReadBreakpoint((unsigned short)strtoul(str.c_str(), 0, 16));
 	}
 	else
