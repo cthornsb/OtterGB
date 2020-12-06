@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <string.h>
 
 #include "Support.hpp"
 #include "SystemGBC.hpp"
@@ -179,7 +180,7 @@ void SystemGBC::initialize(){
 	addSystemRegister(0x0F, rIF,   "IF",   "33333000");
 	addSystemRegister(0x4D, rKEY1, "KEY1", "30000001");
 	addSystemRegister(0x56, rRP,   "RP",   "31000033");
-	addDummyRegister(0x50); // The "register" used to disable the bootstrap ROM
+	addDummyRegister(0x0, 0x50); // The "register" used to disable the bootstrap ROM
 	rIE  = new Register("IE",  "33333000");
 	rIME = new Register("IME", "30000000");
 	(*rIME) = 1; // Interrupts enabled by default
@@ -647,10 +648,6 @@ void SystemGBC::addSystemRegister(const unsigned char &reg, Register* &ptr, cons
 
 void SystemGBC::addDummyRegister(SystemComponent *comp, const unsigned char &reg){
 	registers[reg].setSystemComponent(comp);
-}
-
-void SystemGBC::addDummyRegister(const unsigned char &reg){
-	registers[reg].setSystemComponent(&dummyComponent);
 }
 
 void SystemGBC::clearRegister(const unsigned char &reg){ 

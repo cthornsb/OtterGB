@@ -179,8 +179,6 @@ public:
 	
 	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
 
-	void addDummyRegister(const unsigned char &reg);
-
 	void clearRegister(const unsigned char &reg);
 	
 	bool dumpMemory(const std::string &fname);
