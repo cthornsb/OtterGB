@@ -19,14 +19,14 @@
 	#include "mainwindow.h"
 #endif
 
-#define VRAM_SWAP_START 0x8000
-#define CART_RAM_START  0xA000
-#define WRAM_ZERO_START 0xC000
-#define OAM_TABLE_START 0xFE00
-#define HIGH_RAM_START  0xFF80
+constexpr unsigned short VRAM_SWAP_START = 0x8000;
+constexpr unsigned short CART_RAM_START  = 0xA000;
+constexpr unsigned short WRAM_ZERO_START = 0xC000;
+constexpr unsigned short OAM_TABLE_START = 0xFE00;
+constexpr unsigned short HIGH_RAM_START  = 0xFF80;
 
-#define REGISTER_LOW  0xFF00
-#define REGISTER_HIGH 0xFF80
+constexpr unsigned short REGISTER_LOW    = 0xFF00;
+constexpr unsigned short REGISTER_HIGH   = 0xFF80;
 
 #ifdef GB_BOOT_ROM
 	const std::string gameboyBootRomPath(GB_BOOT_ROM);
@@ -375,7 +375,7 @@ bool SystemGBC::execute(){
 	if(debugMode)
 		gui->closeAllWindows(); // Clean up the Qt GUI
 	if(autoLoadExtRam && cart->getRam()->getSize()) // Save save data (if available)
-		writeExternalRam();
+		cart->writeExternalRam();
 #endif
 	return true;
 }

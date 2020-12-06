@@ -11,16 +11,16 @@
 #include "Bitmap.hpp"
 #include "GPU.hpp"
 
-#define VRAM_LOW  0x8000
-#define VRAM_HIGH 0xA000
+constexpr unsigned short VRAM_LOW  = 0x8000;
+constexpr unsigned short VRAM_HIGH = 0xA000;
 
-#define OAM_TABLE_LOW  0xFE00
-#define OAM_TABLE_HIGH 0xFEA0
+constexpr unsigned short OAM_TABLE_LOW  = 0xFE00;
+constexpr unsigned short OAM_TABLE_HIGH = 0xFEA0;
 
-#define MAX_SPRITES_PER_LINE 10
+constexpr int MAX_SPRITES_PER_LINE = 10;
 
-#define SCREEN_WIDTH_PIXELS 160
-#define SCREEN_HEIGHT_PIXELS 144
+constexpr int SCREEN_WIDTH_PIXELS  = 160;
+constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
 /////////////////////////////////////////////////////////////////////
 // class SpriteAttributes

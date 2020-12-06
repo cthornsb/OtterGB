@@ -5,9 +5,9 @@
 #include "SystemRegisters.hpp"
 #include "Cartridge.hpp"
 
-#define ROM_ZERO_LOW  0x0000
-#define ROM_SWAP_LOW  0x4000
-#define ROM_HIGH      0x8000
+constexpr unsigned short ROM_ZERO_LOW = 0x0000;
+constexpr unsigned short ROM_SWAP_LOW = 0x4000;
+constexpr unsigned short ROM_HIGH     = 0x8000;
 
 /////////////////////////////////////////////////////////////////////
 // class Cartridge

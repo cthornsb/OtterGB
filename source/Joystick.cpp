@@ -6,24 +6,24 @@
 #include "Joystick.hpp"
 #include "Graphics.hpp"
 
-// Button map
-#define KEYBOARD_ENTER 0x0D
-#define KEYBOARD_TAB   0x09
-#define KEYBOARD_J     0x6A
-#define KEYBOARD_K     0x6B
-#define KEYBOARD_W     0x77
-#define KEYBOARD_A     0x61
-#define KEYBOARD_S     0x73
-#define KEYBOARD_D     0x64
-#define KEYBOARD_DOWN  0x51
-#define KEYBOARD_UP    0x52
-#define KEYBOARD_LEFT  0x50
-#define KEYBOARD_RIGHT 0x4F
+// Default button map
+constexpr unsigned char KEYBOARD_ENTER = 0x0D;
+constexpr unsigned char KEYBOARD_TAB   = 0x09;
+constexpr unsigned char KEYBOARD_J     = 0x6A;
+constexpr unsigned char KEYBOARD_K     = 0x6B;
+constexpr unsigned char KEYBOARD_W     = 0x77;
+constexpr unsigned char KEYBOARD_A     = 0x61;
+constexpr unsigned char KEYBOARD_S     = 0x73;
+constexpr unsigned char KEYBOARD_D     = 0x64;
+constexpr unsigned char KEYBOARD_DOWN  = 0x51;
+constexpr unsigned char KEYBOARD_UP    = 0x52;
+constexpr unsigned char KEYBOARD_LEFT  = 0x50;
+constexpr unsigned char KEYBOARD_RIGHT = 0x4F;
 
-#define JOYPAD_P13_MASK 0xF7 // Bit 3
-#define JOYPAD_P12_MASK 0xFB // Bit 2
-#define JOYPAD_P11_MASK 0xFD // Bit 1
-#define JOYPAD_P10_MASK 0xFE // Bit 0
+constexpr unsigned char JOYPAD_P13_MASK = 0xF7; // Bit 3
+constexpr unsigned char JOYPAD_P12_MASK = 0xFB; // Bit 2
+constexpr unsigned char JOYPAD_P11_MASK = 0xFD; // Bit 1
+constexpr unsigned char JOYPAD_P10_MASK = 0xFE; // Bit 0
 
 /////////////////////////////////////////////////////////////////////
 // class JoystickController

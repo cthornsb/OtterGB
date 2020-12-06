@@ -5,11 +5,11 @@
 #include "Support.hpp"
 #include "WorkRam.hpp"
 
-#define WRAM_ZERO_LOW 0xC000
-#define WRAM_SWAP_LOW 0xD000
-#define WRAM_HIGH     0xE000
-#define WRAM_ECHO_LOW  0xE000
-#define WRAM_ECHO_HIGH 0xFE00
+constexpr unsigned short WRAM_ZERO_LOW  = 0xC000;
+constexpr unsigned short WRAM_SWAP_LOW  = 0xD000;
+constexpr unsigned short WRAM_HIGH      = 0xE000;
+constexpr unsigned short WRAM_ECHO_LOW  = 0xE000;
+constexpr unsigned short WRAM_ECHO_HIGH = 0xFE00;
 
 WorkRam::WorkRam() : SystemComponent("WRAM", 4096, 8) { 
 	bs = 1; // Lowest WRAM swap bank is bank 1

@@ -10,15 +10,15 @@
 #include "Support.hpp"
 #include "SystemTimer.hpp"
 
-#define SYSTEM_CLOCK_FREQUENCY 1048576 // Hz
+constexpr unsigned int SYSTEM_CLOCK_FREQUENCY = 1048576; // Hz
 
-#define MODE2_START 0 // STAT mode 2 from 0 to 79 (80 cycles)
-#define MODE3_START 20 // STAT mode 3 from 80 to 251 (172 cycles)
-#define MODE0_START 63 // STAT mode 0 from 252 to 456 (204 cycles)
-#define MODE1_START 16416 // STAT mode 1 from 65664 to 70224 (4560 cycles)
+constexpr unsigned int MODE2_START = 0;     // STAT mode 2 from 0 to 79 (80 cycles)
+constexpr unsigned int MODE3_START = 20;    // STAT mode 3 from 80 to 251 (172 cycles)
+constexpr unsigned int MODE0_START = 63;    // STAT mode 0 from 252 to 456 (204 cycles)
+constexpr unsigned int MODE1_START = 16416; // STAT mode 1 from 65664 to 70224 (4560 cycles)
 
-#define VERTICAL_SYNC_CYCLES   17556 // CPU cycles per VSYNC (~59.73 Hz)
-#define HORIZONTAL_SYNC_CYCLES 114   // CPU cycles per HSYNC (per 154 scanlines)
+constexpr unsigned int VERTICAL_SYNC_CYCLES   = 17556; // CPU cycles per VSYNC (~59.73 Hz)
+constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 114;   // CPU cycles per HSYNC (per 154 scanlines)
 
 SystemClock::SystemClock() : 
 	SystemComponent("Clock"), 
