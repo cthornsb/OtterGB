@@ -19,7 +19,6 @@ add_library(CORE_LIB STATIC $<TARGET_OBJECTS:CORE_OBJECTS>)
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
 if(NOT BUILD_DEBUG)
-	message(STATUS ${GRAPHICS_LIBS})
 	target_link_libraries(gbc CORE_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
 else()
 	target_link_libraries(gbc CORE_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${GRAPHICS_LIBS})

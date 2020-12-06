@@ -24,7 +24,6 @@ if(NOT WIN32) # Unix systems (Ubuntu)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 	endif()
 else()
-	add_definitions(-DWIN32)
 	message(STATUS "Compiling for Windows")
 endif()
 

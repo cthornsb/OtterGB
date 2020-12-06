@@ -1,4 +1,4 @@
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 #include <iostream>
@@ -10,7 +10,7 @@
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
 #include "ConfigFile.hpp"
-#ifndef WIN32
+#ifndef _WIN32
 	#include "optionHandler.hpp"
 #endif
 
@@ -105,7 +105,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	// Initialize system components
 	this->initialize();
 
-#ifndef WIN32
+#ifndef _WIN32
 	// Handle command line options
 	optionHandler handler;
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
