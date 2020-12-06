@@ -28,103 +28,97 @@ bool Cartridge::preReadAction(){
 }
 
 bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &val){
-	switch(cartridgeType){
-		case 0x0: // ROM only
-			break;
-		case 0x1 ... 0x3: // MBC1
-			if(reg < 0x2000){ // RAM enable (write only)
-				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-				// Note: Type 0x01 does not have cartridge RAM
-				extRamEnabled = ((val & 0x0F) == 0x0A);
-			}
-			else if(reg < 0x4000){ // ROM bank number register (write only)
-				// 5-bit register [0x01, 0x1F] (write only)
-				// Specify lower 5 bits of ROM bank number
-				bs &= 0xE0; // Clear bits 0-4
-				bs |= (val & 0x1F); // Set bits 0-4
-				// Note: MBC1 translates a 0x0 here as bank 1
-			}
-			else if(reg < 0x6000){
-				// 2-bit register [0,3] (write only)
-				if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
-					bs &= 0x9F; // Clear bits 5-6
-					bs |= ((val & 0x3) << 5); // Set bits 5-6
-				}
-				else // Specify RAM bank number (if in RAM select mode).
-					ram.setBank(val & 0x3);
-			}
-			else if(reg < 0x8000){ // ROM/RAM mode select
-				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
-				// Note: Type 0x01 does not have cartridge RAM
-				ramSelect = (val & 0x1) == 0x1;
-			}
-			break;
-		case 0x5 ... 0x6: // MBC2
-			if(reg < 0x2000){ // RAM enable (write only)
-				if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
-					extRamEnabled = true;
-			}
-			else if(reg < 0x4000){ // ROM bank number (write only)
-				if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
-					bs = (val & 0x0F);
-			}
-			break;
-		case 0xB ... 0xD: // MMM01
-			break;
-		case 0xF ... 0x13: // MBC3
-			break;
-		case 0x15 ... 0x17: // MBC4
-			break;
-		case 0x19 ... 0x1E: // MBC5
-			if(reg < 0x2000){ // RAM enable (write only)
-				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-				extRamEnabled = ((val & 0x0F) == 0x0A);
-			}
-			else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
-				// 9-bit register [0x01, 0x1FF] (write only)
-				// Specify lower 8 bits of ROM bank number
-				bs &= 0xFF00; // Clear bits 0-7
-				bs |= (val & 0x00FF); // Set bits 0-7
-			}
-			else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
-				// 1-bit register [0,3] (write only)
-				// Specify upper 1 bit of ROM bank number
-				bs &= 0xFEFF; // Clear bit 9;
-				bs |= ((val & 0x0001) << 8); // Set bit 9
-			}
-			else if(reg < 0x6000){ // RAM bank number
-				// Select the RAM bank [0,F]
-				ram.setBank(val & 0x0F);
-			}			
-			break;
-		default:
-			return false;
+	if(reg == 0x0){ // ROM only
 	}
-	return true;
+	else if(reg >= 0x1 && reg <= 0x3){ // MBC1
+		if(reg <= 0x2000){ // RAM enable (write only)
+			// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+			// Note: Type 0x01 does not have cartridge RAM
+			extRamEnabled = ((val & 0x0F) == 0x0A);
+		}
+		else if(reg < 0x4000){ // ROM bank number register (write only)
+			// 5-bit register [0x01, 0x1F] (write only)
+			// Specify lower 5 bits of ROM bank number
+			bs &= 0xE0; // Clear bits 0-4
+			bs |= (val & 0x1F); // Set bits 0-4
+			// Note: MBC1 translates a 0x0 here as bank 1
+		}
+		else if(reg < 0x6000){
+			// 2-bit register [0,3] (write only)
+			if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
+				bs &= 0x9F; // Clear bits 5-6
+				bs |= ((val & 0x3) << 5); // Set bits 5-6
+			}
+			else // Specify RAM bank number (if in RAM select mode).
+				ram.setBank(val & 0x3);
+		}
+		else if(reg < 0x8000){ // ROM/RAM mode select
+			// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
+			// Note: Type 0x01 does not have cartridge RAM
+			ramSelect = (val & 0x1) == 0x1;
+		}
+	}
+	else if(reg >= 0x5 && reg <= 0x6){ // MBC2
+		if(reg < 0x2000){ // RAM enable (write only)
+			if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
+				extRamEnabled = true;
+		}
+		else if(reg < 0x4000){ // ROM bank number (write only)
+			if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
+				bs = (val & 0x0F);
+		}
+	}
+	else if(reg >= 0xB && reg <= 0xD){ // MMM01
+	}
+	else if (reg >= 0xF && reg <= 0x13){ // MBC3
+	}
+	else if(reg >= 0x15 && reg <= 0x17){ // MBC4
+	}
+	else if(reg >= 0x19 && reg <= 0x1E){ // MBC5
+		if(reg < 0x2000){ // RAM enable (write only)
+			// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+			extRamEnabled = ((val & 0x0F) == 0x0A);
+		}
+		else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
+			// 9-bit register [0x01, 0x1FF] (write only)
+			// Specify lower 8 bits of ROM bank number
+			bs &= 0xFF00; // Clear bits 0-7
+			bs |= (val & 0x00FF); // Set bits 0-7
+		}
+		else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
+			// 1-bit register [0,3] (write only)
+			// Specify upper 1 bit of ROM bank number
+			bs &= 0xFEFF; // Clear bit 9;
+			bs |= ((val & 0x0001) << 8); // Set bit 9
+		}
+		else if(reg < 0x6000){ // RAM bank number
+			// Select the RAM bank [0,F]
+			ram.setBank(val & 0x0F);
+		}			
+	}
+	return false;
 }
 
 bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
-	switch(cartridgeType){
-		case 0x0: // ROM only
-			break;
-		case 0x1 ... 0x3: // MBC1
-			// MBC1 has no registers which may be read
-			return false;
-		case 0x5 ... 0x6: // MBC2
-			// MBC2 has no registers which may be read
-			return false;
-		case 0xB ... 0xD: // MMM01
-			break;
-		case 0xF ... 0x13: // MBC3
-			break;
-		case 0x15 ... 0x17: // MBC4
-			break;
-		case 0x19 ... 0x1E: // MBC5
-			break;
-		default:
-			return false;
+	if(reg == 0x0){ // ROM only
 	}
-	return true;
+	else if(reg <= 0x1 && reg <= 0x3){ // MBC1
+		// MBC1 has no registers which may be read
+		return false;
+	}
+	else if(reg <= 0x5 && reg <= 0x6){ // MBC2
+		// MBC2 has no registers which may be read
+		return false;
+	}
+	else if(reg <= 0xB && reg <= 0xD){ // MMM01
+	}
+	else if(reg <= 0xF && reg <= 0x13){ // MBC3
+	}
+	else if(reg <= 0x15 && reg <= 0x17){ // MBC4
+	}
+	else if(reg <= 0x19 && reg <= 0x1E){ // MBC5
+	}
+	return false;
 }
 
 bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
@@ -132,7 +126,7 @@ bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	std::ifstream rom(fname.c_str(), std::ios::binary);
 	if(!rom.good())
 		return false;
-		
+
 	// Read the rom header
 	readHeader(rom);
 	
@@ -142,8 +136,8 @@ bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	while(true){
 		// Read an entire bank at a time.
 		rom.read((char*)getPtrToBank(currRomBank++), 16384);
-		
-		if(rom.eof() || !rom.good()) break;
+		if(rom.eof() || !rom.good() || (currRomBank >= nBanks)) 
+			break;
 	}
 	
 	// Make the ROM read-only
@@ -180,7 +174,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	
 	// Initialize ROM storage
 	mem.clear();
-	switch(romSize){
+	switch (romSize) {
 		case 0x00: // 32 kB (2 bank)
 			initialize(16384, 2);
 			break;
@@ -207,7 +201,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 			break;
 		case 0x52: // 1.1 MB (72 banks)
 			initialize(16384, 72);
-			break;		
+			break;
 		case 0x53: // 1.2 MB (80 banks)
 			initialize(16384, 80);
 			break;
@@ -237,7 +231,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	
 	// Set the default ROM bank for SWAP
 	bs = 1;
-	
+
 	return 79;
 }
 

@@ -47,34 +47,44 @@
 
 	void ColorRGB::toGrayscale(){
 		// Based on the sRGB convention
-		r *= 0.2126;
-		g *= 0.7152;
-		b *= 0.0722;
+		r *= 0.2126f;
+		g *= 0.7152f;
+		b *= 0.0722f;
 	}
 
 #endif
 
 ColorRGB ColorRGB::operator + (const ColorRGB &rhs) const {
-	float rprime = (r + rhs.r)/255.0;
-	float gprime = (g + rhs.g)/255.0;
-	float bprime = (b + rhs.b)/255.0;
+	float rprime = (r + rhs.r)/255.0f;
+	float gprime = (g + rhs.g)/255.0f;
+	float bprime = (b + rhs.b)/255.0f;
 	return ColorRGB((rprime <= 1 ? rprime : 1), (gprime <= 1 ? gprime : 1), (bprime <= 1 ? bprime : 1));
 }
 
 ColorRGB ColorRGB::operator - (const ColorRGB &rhs) const {
-	float rprime = (r - rhs.r)/255.0;
-	float gprime = (g - rhs.g)/255.0;
-	float bprime = (b - rhs.b)/255.0;
+	float rprime = (r - rhs.r)/255.0f;
+	float gprime = (g - rhs.g)/255.0f;
+	float bprime = (b - rhs.b)/255.0f;
 	return ColorRGB((rprime > 0 ? rprime : 0), (gprime > 1 ? gprime : 0), (bprime > 1 ? bprime : 0));
 }
 
+#ifdef USE_OPENGL
 ColorRGB ColorRGB::operator * (const float &rhs) const {
-	return ColorRGB(toFloat(r)*rhs, toFloat(g)*rhs, toFloat(b)*rhs);
+	return ColorRGB(r*rhs, g*rhs, b*rhs);
 }
 
 ColorRGB ColorRGB::operator / (const float &rhs) const {
-	return ColorRGB(toFloat(r)/rhs, toFloat(g)/rhs, toFloat(b)/rhs);
+	return ColorRGB(r/rhs, g/rhs, b/rhs);
 }
+#else
+ColorRGB ColorRGB::operator * (const float& rhs) const {
+	return ColorRGB(toFloat(r) * rhs, toFloat(g) * rhs, toFloat(b) * rhs);
+}
+
+ColorRGB ColorRGB::operator / (const float& rhs) const {
+	return ColorRGB(toFloat(r) / rhs, toFloat(g) / rhs, toFloat(b) / rhs);
+}
+#endif
 
 ColorRGB& ColorRGB::operator += (const ColorRGB &rhs){
 	return ((*this) = (*this) + rhs);

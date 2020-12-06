@@ -58,7 +58,7 @@ public:
 
 	virtual bool preWriteAction();
 	
-	SpriteAttributes getSpriteAttributes(const unsigned short &index);
+	SpriteAttributes getSpriteAttributes(const unsigned char &index);
 	
 	bool updateNextSprite(std::vector<SpriteAttributes> &sprites);
 	
@@ -69,7 +69,7 @@ public:
 private:
 	bool bModified[40];
 
-	std::queue<unsigned short> lModified; ///< List of sprites which have been written to.
+	std::queue<unsigned char> lModified; ///< List of sprites which have been written to.
 	
 	void getSpriteData(unsigned char *ptr, SpriteAttributes *attr);
 };

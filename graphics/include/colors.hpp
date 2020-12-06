@@ -122,15 +122,15 @@ private:
 
 namespace Colors{
 	const ColorRGB BLACK(0, 0, 0);
-	const ColorRGB DKGRAY(2/3.0, 2/3.0, 2/3.0);
-	const ColorRGB LTGRAY(1/3.0, 1/3.0, 1/3.0);
+	const ColorRGB DKGRAY(2/3.0f, 2/3.0f, 2/3.0f);
+	const ColorRGB LTGRAY(1/3.0f, 1/3.0f, 1/3.0f);
 	const ColorRGB WHITE(1, 1, 1);
 	
 	// Monochrome colors (GB)
-	const ColorRGB GB_DKSTGREEN(15.0/255,  56.0/255,  15.0/255);
-	const ColorRGB GB_DKGREEN(  48.0/255,  98.0/255,  48.0/255);
-	const ColorRGB GB_LTGREEN(  139.0/255, 172.0/255, 15.0/255);
-	const ColorRGB GB_GREEN(    155.0/255, 188.0/255, 15.0/255);
+	const ColorRGB GB_DKSTGREEN(15.0f/255,  56.0f/255,  15.0f/255);
+	const ColorRGB GB_DKGREEN(  48.0f/255,  98.0f/255,  48.0f/255);
+	const ColorRGB GB_LTGREEN(  139.0f/255, 172.0f/255, 15.0f/255);
+	const ColorRGB GB_GREEN(    155.0f/255, 188.0f/255, 15.0f/255);
 	
 	// Primary colors
 	const ColorRGB RED(1, 0, 0);

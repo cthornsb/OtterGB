@@ -171,13 +171,13 @@ public:
 	
 	void setd16(const unsigned short &dd);
 
-	unsigned short setAF(const unsigned short &val);
+	void setAF(const unsigned short &val);
 
-	unsigned short setBC(const unsigned short &val);
+	void setBC(const unsigned short &val);
 
-	unsigned short setDE(const unsigned short &val);
+	void setDE(const unsigned short &val);
 
-	unsigned short setHL(const unsigned short &val);
+	void setHL(const unsigned short &val);
 
 	void readMemory();
 	

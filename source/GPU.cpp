@@ -52,7 +52,7 @@ bool SpriteHandler::updateNextSprite(std::vector<SpriteAttributes> &sprites){
 	if(lModified.empty())
 		return false;
 
-	unsigned short spriteIndex = lModified.front();
+	unsigned char spriteIndex = lModified.front();
 	bModified[spriteIndex] = false;
 	lModified.pop();
 
@@ -91,14 +91,14 @@ bool SpriteHandler::preWriteAction(){
 
 	unsigned short spriteIndex = (writeLoc-OAM_TABLE_LOW)/4;
 	if(!bModified[spriteIndex]){
-		lModified.push(spriteIndex);
+		lModified.push((unsigned char)spriteIndex);
 		bModified[spriteIndex] = true;
 	}
 
 	return true;
 }
 
-SpriteAttributes SpriteHandler::getSpriteAttributes(const unsigned short &index){
+SpriteAttributes SpriteHandler::getSpriteAttributes(const unsigned char &index){
 	unsigned char *data = &mem[0][index*4];
 	SpriteAttributes attr;
 	getSpriteData(data, &attr);
@@ -324,9 +324,9 @@ void GPU::drawTileMaps(Window *win){
 	unsigned char pixelColor;
 	for(unsigned short i = 0; i < 384; i++){
 		tileY = i / tilesPerRow;
-		for(unsigned short dy = 0; dy < 8; dy++){
+		for(unsigned char dy = 0; dy < 8; dy++){
 			tileX = i % tilesPerRow;
-			for(unsigned short dx = 0; dx < 8; dx++){
+			for(unsigned char dx = 0; dx < 8; dx++){
 				pixelColor = getBitmapPixel(16*i, (7-dx), dy);
 				switch(pixelColor){
 					case 0:
@@ -352,12 +352,12 @@ void GPU::drawTileMaps(Window *win){
 
 void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 	win->setCurrent();
-	unsigned short pixelX;
-	unsigned char pixelColor;
+	unsigned char pixelX;
 	ColorGBC line[256];
 	for(unsigned short y = 0; y < 256; y++){
-		for(unsigned short x = 0; x <= 32; x++) // Draw the layer
-			pixelX += drawTile(pixelX, y, (mapSelect ? 0x1C00 : 0x1800), line);
+		pixelX = 0;
+		for(unsigned short tx = 0; tx <= 32; tx++) // Draw the layer
+			pixelX += drawTile(pixelX, (unsigned char)y, (mapSelect ? 0x1C00 : 0x1800), line);
 		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
 			switch(line[px].getColor()){
 				case 0:
@@ -736,7 +736,7 @@ ColorRGB GPU::getColorRGB(const unsigned char &low, const unsigned char &high){
 	unsigned char r = low & 0x1F;
 	unsigned char g = ((low & 0xE0) >> 5) + ((high & 0x3) << 3);
 	unsigned char b = (high & 0x7C) >> 2;
-	return ColorRGB(r/31.0, g/31.0, b/31.0);
+	return ColorRGB(r/31.0f, g/31.0f, b/31.0f);
 }
 
 /** Update true RGB background palette by converting GBC format colors.

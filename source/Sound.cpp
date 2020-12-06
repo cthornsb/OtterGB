@@ -41,13 +41,13 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF13: // NR13 ([TONE] Channel 1 frequency low)
 			freq16 = (rNR14->getBits(0,2) << 8) + rNR13->getValue();
-			ch1Frequency0 = 131072.0/(2048-freq16); // Hz
+			ch1Frequency0 = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF14: // NR14 ([TONE] Channel 1 frequency high)
 			ch1Restart       = rNR14->getBit(7); // [0: No action, 1: Restart sound]
 			ch1CounterSelect = rNR14->getBit(6); // [0: No action, 1: Stop output when NR11 length expires]
 			freq16 = (rNR14->getBits(0,2) << 8) + rNR13->getValue();
-			ch1Frequency0 = 131072.0/(2048-freq16); // Hz
+			ch1Frequency0 = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF15: // Not used
 			break;
@@ -64,13 +64,13 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF18: // NR23 ([TONE] Channel 2 frequency low)
 			freq16 = (rNR24->getBits(0,2) << 8) + rNR23->getValue();
-			ch2Frequency0 = 131072.0/(2048-freq16); // Hz
+			ch2Frequency0 = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF19: // NR24 ([TONE] Channel 2 frequency high)
 			ch2Restart       = rNR24->getBit(7); // [0: No action, 1: Restart sound]
 			ch2CounterSelect = rNR24->getBit(6); // [0: No action, 1: Stop output when NR21 length expires]
 			freq16 = (rNR24->getBits(0,2) << 8) + rNR23->getValue();
-			ch2Frequency0 = 131072.0/(2048-freq16); // Hz
+			ch2Frequency0 = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF1A: // NR30 ([TONE] Channel 3 sound on/off)
 			ch3Enable = rNR30->getBit(7); // [0:Stop, 1:Enable]
@@ -89,13 +89,13 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF1D: // NR33 ([WAVE] Channel 3 frequency low)
 			freq16 = (rNR34->getBits(0,2) << 8) + rNR33->getValue();
-			ch3Frequency0 = 65536.0/(2048-freq16); // Hz
+			ch3Frequency0 = 65536.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF1E: // NR34 ([WAVE] Channel 3 frequency high)
 			ch3Restart       = rNR34->getBit(7); // [0: No action, 1: Restart sound]
 			ch3CounterSelect = rNR34->getBit(6); // [0: No action, 1: Stop output when NR31 length expires]
 			freq16 = (rNR34->getBits(0,2) << 8) + rNR33->getValue();
-			ch3Frequency0 = 65536.0/(2048-freq16); // Hz
+			ch3Frequency0 = 65536.0f/(2048-freq16); // Hz
 			break;		
 		case 0xFF1F: // Not used
 			break;
@@ -149,14 +149,17 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 				}
 			}
 			break;
-		case 0xFF27 ... 0xFF2F: // Not used
-			break;
-		case 0xFF30 ... 0xFF3F: // [Wave] pattern RAM
-			// Contains 32 4-bit samples played back upper 4 bits first
-			wavePatternRAM[reg-0xFF30] = rWAVE[reg-0xFF30]->getValue();
-			break;
 		default:
-			return false;
+			if (reg >= 0xFF27 && reg <= 0xFF2F) { // Not used
+			}
+			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
+				// Contains 32 4-bit samples played back upper 4 bits first
+				wavePatternRAM[reg - 0xFF30] = rWAVE[reg - 0xFF30]->getValue();
+			}
+			else {
+				return false;
+			}
+			break;
 	}
 	return true;
 }
@@ -232,14 +235,15 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			dest |= 0x70;
 			break;
-		case 0xFF27 ... 0xFF2F: // Not used
-			dest |= 0xFF;
-			break;
-		case 0xFF30 ... 0xFF3F: // [Wave] pattern RAM
-			dest = wavePatternRAM[reg-0xFF30];
-			break;
 		default:
-			return false;
+			if (reg >= 0xFF27 && reg <= 0xFF2F) { // Not used
+			}
+			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
+				dest = wavePatternRAM[reg - 0xFF30];
+			}
+			else {
+				return false;
+			}
 	}
 	return true;
 }
@@ -287,9 +291,9 @@ void SoundProcessor::triggerSweepTimer(){
 	//x(t) = x(t-1) +/- x(t-1)/2^n
 	if(ch1SweepTime){
 		if(!ch1SweepIncDec) // Increase frequency
-			ch1Frequency = ch1Frequency * (1 + 1/std::pow(2, ch1SweepShift));
+			ch1Frequency = ch1Frequency * (1 + 1/std::powf(2, ch1SweepShift));
 		else // Decrease frequency
-			ch1Frequency = ch1Frequency * (1 - 1/std::pow(2, ch1SweepShift));
+			ch1Frequency = ch1Frequency * (1 - 1/std::powf(2, ch1SweepShift));
 		ch1SweepTime--;
 	}
 }

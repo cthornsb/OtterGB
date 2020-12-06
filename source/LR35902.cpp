@@ -255,23 +255,23 @@ unsigned short LR35902::getDE() const { return getUShort(D, E); }
 
 unsigned short LR35902::getHL() const { return getUShort(H, L); }
 
-unsigned short LR35902::setAF(const unsigned short &val){
+void LR35902::setAF(const unsigned short &val){
 	A = (0xFF00 & val) >> 8;
 	F = 0x00FF & val;
 	F &= 0xF0; // Bottom 4 bits of F are always zero
 }
 
-unsigned short LR35902::setBC(const unsigned short &val){
+void LR35902::setBC(const unsigned short &val){
 	B = (0xFF00 & val) >> 8;
 	C = 0x00FF & val;
 }
 
-unsigned short LR35902::setDE(const unsigned short &val){
+void LR35902::setDE(const unsigned short &val){
 	D = (0xFF00 & val) >> 8;
 	E = 0x00FF & val;
 }
 
-unsigned short LR35902::setHL(const unsigned short &val){
+void LR35902::setHL(const unsigned short &val){
 	H = (0xFF00 & val) >> 8;
 	L = 0x00FF & val;
 }

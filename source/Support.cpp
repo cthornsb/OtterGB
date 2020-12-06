@@ -21,16 +21,21 @@ unsigned int splitString(const std::string &input, std::vector<std::string> &out
 	output.clear();
 	size_t start = 0;
 	size_t stop = 0;
+	std::string temp;
 	while(true){
 		stop = input.find(delim, start);
 		if(stop == std::string::npos){
-			output.push_back(input.substr(start));
+			temp = input.substr(start);
+			if (!temp.empty())
+				output.push_back(temp);
 			break;
 		}
-		output.push_back(input.substr(start, stop-start));
+		temp = input.substr(start, stop - start);
+		if(!temp.empty())
+			output.push_back(temp);
 		start = stop+1;
 	}
-	return output.size();
+	return (unsigned int)output.size();
 }
 
 std::string getHex(const unsigned char &input){

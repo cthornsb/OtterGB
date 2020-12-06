@@ -55,12 +55,13 @@ void handleSpecialKeys(int key, int x, int y){
 		case GLUT_KEY_RIGHT:
 			ckey = 0x4F;
 			break;
-		case GLUT_KEY_F1 ... GLUT_KEY_F12: // Function keys
-			ckey = 0xF0;
-			ckey |= (key & 0x0F);
-			break;
 		default:
-			return;
+			if (key >= GLUT_KEY_F1 && key <= GLUT_KEY_F12) { // Function keys
+				ckey = 0xF0;
+				ckey |= (key & 0x0F);
+			}
+			else { return; }
+			break;
 	}
 	if(ckey)
 		handleKeys(ckey, x, y);
@@ -109,11 +110,11 @@ void reshapeScene(GLint width, GLint height){
 	float aspect = float(wprime)/hprime;
 
 	if(aspect > currentWindow->getAspectRatio()){ // Wider window (height constrained)
-		wprime = currentWindow->getAspectRatio() * hprime;
+		wprime = (int)(currentWindow->getAspectRatio() * hprime);
 		glPointSize(float(hprime)/currentWindow->getHeight());
 	}
 	else{ // Taller window (width constrained)
-		hprime = wprime / currentWindow->getAspectRatio();
+		hprime = (int)(wprime / currentWindow->getAspectRatio());
 		glPointSize(float(wprime)/currentWindow->getWidth());
 	}
 
@@ -129,6 +130,10 @@ void reshapeScene(GLint width, GLint height){
 	
 	// Clear the window.
 	currentWindow->clear();
+}
+
+void displayFunction() {
+	// This callback does nothing, but is required on Windows
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -268,6 +273,9 @@ void Window::initialize(){
 
 	// Set window size handler
 	glutReshapeFunc(reshapeScene);
+
+	// Set the display function callback (required for Windows)
+	glutDisplayFunc(displayFunction);
 
 	init = true;
 }

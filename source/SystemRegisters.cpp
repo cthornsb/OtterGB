@@ -15,7 +15,7 @@ unsigned char Register::getBits(const unsigned char &lowBit, const unsigned char
 }
 
 void Register::setMasks(const std::string &masks){
-	for(unsigned short i = 0; i < masks.length(); i++){
+	for(unsigned char i = 0; i < masks.length(); i++){
 		switch(masks[i]){
 			case '0':
 				break;

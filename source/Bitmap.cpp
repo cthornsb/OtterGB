@@ -76,7 +76,6 @@ bool CharacterMap::loadCharacterMap(const std::string &fname){
 		ifile.read((char*)&rgb[x][0], 16); // 16 bytes per bitmap (2 per row)
 	}
 	ifile.close();
-	unsigned char pixelColor;
 	for(unsigned short ch = 0; ch < nVals; ch++){ // Character index
 		for(unsigned short j = 0; j < 8; j++){ // Bitmap row
 			for(unsigned short k = 0; k < 8; k++){ // Bitmap col

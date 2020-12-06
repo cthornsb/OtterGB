@@ -2,25 +2,30 @@ cmake_minimum_required (VERSION 2.8)
 
 project (gbc)
 
-#Compile with c++11 or c++0x depending on the compiler version
-if (CMAKE_COMPILER_IS_GNUCXX)
-	if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.3" AND
-            ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.7")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-    elseif(${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.6")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    endif(${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.3" AND
-            ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.7")
+if(NOT WIN32) # Unix systems (Ubuntu)
+	#Compile with c++11 or c++0x depending on the compiler version
+	if (CMAKE_COMPILER_IS_GNUCXX)
+		if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.3" AND
+				${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.7")
+				set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+		elseif(${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.6")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+		else()
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		endif(${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.3" AND
+				${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.7")
 
-    #Make compiler messages nice with colored tags.
-	if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.9")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
+		#Make compiler messages nice with colored tags.
+		if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.9")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
+		endif()
+
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 	endif()
-
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
+else()
+	add_definitions(-DWIN32)
+	message(STATUS "Compiling for Windows")
 endif()
 
 #if user does not specify prefix we assign it to the exec directory
@@ -43,7 +48,9 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 #Add additional CXX flags if we use the Debug option
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+	if(NOT WIN32)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+	endif()
 endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
 #------------------------------------------------------------------------------
@@ -66,8 +73,41 @@ endif()
 
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
+#Set the graphics library
+if(NOT GRAPHICS_LIBRARY)
+	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
+endif()
+
 if(GRAPHICS_LIBRARY MATCHES "OpenGL")
+	# To install OpenGL and freeglut:
+	#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
+	#(Windows) https://www.transmissionzero.co.uk/software/freeglut-devel/
+	if(NOT WIN32)
+		set(GRAPHICS_LIBS -lglut -lGLU -lGL)
+	else()
+		#Find OpenGL install on Windows
+		if(NOT GRAPHICS_LIBRARY)
+			set(FREEGLUT_DIRECTORY "" CACHE STRING "Freeglut install directory" FORCE)
+		endif(NOT GRAPHICS_LIBRARY)
+		set(FREEGLUT_INCLUDE ${FREEGLUT_DIRECTORY}/include)
+		if(CMAKE_CL_64)
+			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/x64/freeglut.lib)
+			set(FREEGLUT_DLL ${FREEGLUT_DIRECTORY}/bin/x64/freeglut.dll)
+		else()
+			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/freeglut.lib)
+			set(FREEGLUT_DLL ${FREEGLUT_DIRECTORY}/bin/freeglut.dll)
+		endif(CMAKE_CL_64)
+		include_directories(${FREEGLUT_INCLUDE})
+		set(GRAPHICS_LIBS ${FREEGLUT_LIBRARY} opengl32.lib)
+		#It is necessary to copy freeglut.dll to the build directory containing the executable.
+		#Alternatively it may be copied to the Windows system directory.
+		#This is necessary so that the freeglut headers point to the correct library
+		add_definitions(-DNDEBUG)
+	endif()
 	add_definitions(-DUSE_OPENGL)
+elseif(GRAPHICS_LIBRARY MATCHES "SDL")
+	#Fix this at some point for Windows!
+	set(GRAPHICS_LIBS -lSDL2)
 endif()
 
 #Add the include directories.
@@ -80,13 +120,6 @@ if(BUILD_DEBUG)
 	find_package (QT REQUIRED)
 	include_directories(qtfiles ${QT_INC_DIR} ${QT_CORE_INC_DIR} ${QT_GUI_INC_DIR})
 	add_subdirectory(qtfiles)
-endif()
-
-#Set the graphics library
-if(NOT GRAPHICS_LIBRARY)
-	# To install OpenGL:
-	#sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
-	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
 endif()
 
 #Set the Gameboy boot ROM

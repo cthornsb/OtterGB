@@ -1,6 +1,9 @@
 
-#include <iostream>
+#ifndef WIN32
 #include <unistd.h>
+#endif
+#include <thread>
+#include <iostream>
 
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
@@ -172,7 +175,7 @@ void SystemClock::waitUntilNextVSync(){
 	std::chrono::duration<double, std::micro> wallTime = sclock::now() - timeOfLastVSync;
 	double timeToSleep = framePeriod - wallTime.count(); // microseconds
 	if(timeToSleep > 0)
-		usleep((int)timeToSleep);
+		std::this_thread::sleep_for(std::chrono::microseconds((long long)timeToSleep));
 	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
 	if((++frameCount % 60) == 0){
 		framerate = frameCount/totalRenderTime;

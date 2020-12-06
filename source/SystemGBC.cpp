@@ -1,5 +1,6 @@
-
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <iostream>
 #include <string>
 #include <string.h>
@@ -8,7 +9,10 @@
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
-#include "optionHandler.hpp"
+#include "ConfigFile.hpp"
+#ifndef WIN32
+	#include "optionHandler.hpp"
+#endif
 
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
@@ -73,6 +77,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	displayFramerate(false),
 	userQuitting(false), 
 	autoLoadExtRam(true),
+	initSuccessful(false),
 	dmaSourceH(0),
 	dmaSourceL(0), 
 	dmaDestinationH(0), 
@@ -100,6 +105,7 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 	// Initialize system components
 	this->initialize();
 
+#ifndef WIN32
 	// Handle command line options
 	optionHandler handler;
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
@@ -144,7 +150,41 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 		}
 #endif
 	}
+#else
+	std::cout << " Reading from configuration file\n";
+	ConfigFile cfgFile;
+	if (!cfgFile.read("gbc.cfg"))
+		std::cout << " Warning! Failed to load configuration file \"gbc.cfg\". Using default settings.";
 
+	// Get the ROM filename
+	romPath = cfgFile.getFirstValue("ROM_DIRECTORY") + "/" + cfgFile.getFirstValue("ROM_FILENAME");
+
+	// Handle user input.
+	if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
+		clock.setFramerateMultiplier(cfgFile.getFloat());
+
+	if (cfgFile.search("VERBOSE_MODE")) // Toggle verbose flag
+		setVerboseMode(true);
+
+	if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
+		gpu.setPixelScale(cfgFile.getUInt());
+
+	if (cfgFile.search("FORCE_COLOR")) // Use GBC mode for original GB games
+		setForceColorMode(true);
+
+	if (cfgFile.search("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
+		autoLoadExtRam = false;
+
+#ifdef USE_QT_DEBUGGER			
+	if (cfgFile.search("DEBUG_MODE")) { // Toggle debug flag
+		setDebugMode(true);
+		if (cfgFile.search("OPEN_TILE_VIEWER")) // Open tile viewer window
+			gui->openTileViewer();
+		if (cfgFile.search("OPEN_LAYER_VIEWER")) // Open layer viewer window
+			gui->openLayerViewer();
+	}
+#endif
+#endif
 	// Check for ROM path
 	if(romPath.empty()){
 		std::cout << " Warning! Input gb/gbc ROM file not specified!\n";
@@ -216,6 +256,9 @@ void SystemGBC::initialize(){
 	// Initialize the window and link it to the joystick controller	
 	gpu.initialize();
 	joy.setWindow(gpu.getWindow());
+
+	// Initialization was successful
+	initSuccessful = true;
 }
 
 bool SystemGBC::execute(){
@@ -383,38 +426,33 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
-		unsigned char wramBank;
 		if(!writeRegister(loc, src))
 			return false;
 	}
-	else{ // Attempt to write to memory
-		switch(loc){
-			case 0x0000 ... 0x7FFF: // Cartridge ROM 
-				cart.writeRegister(loc, src); // Write to cartridge MBC (if present)
-				break;
-			case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
-				gpu.write(loc, src);
-				break;
-			case 0xA000 ... 0xBFFF: // External (cartridge) RAM
-				cart.getRam()->write(loc, src);
-				break;
-			case 0xC000 ... 0xFDFF: // Work RAM (WRAM) 0-1 and ECHO
-				wram.write(loc, src);
-				break;
-			case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
-				oam.write(loc, src);
-				break;
-			case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
-				hram.write(loc, src);
-				break;
-			case 0xFFFF: // Interrupt enable
-				rIE->write(src);
-				break;
-			default:
-				return false;
+	else if(loc <= 0x7FFF){ // Cartridge ROM 
+			cart.writeRegister(loc, src); // Write to cartridge MBC (if present)
 		}
+	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
+		gpu.write(loc, src);
 	}
-
+	else if(loc <= 0xBFFF){ // External (cartridge) RAM
+		cart.getRam()->write(loc, src);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
+		wram.write(loc, src);
+	}
+	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		oam.write(loc, src);
+	}
+	else if (loc <= 0xFF7F){ // System registers / Inaccessible
+		return false;
+	}
+	else if(loc <= 0xFFFE){ // High RAM (HRAM)
+		hram.write(loc, src);
+	}
+	else if(loc == 0xFFFF){ // Interrupt enable (IE)
+		rIE->write(src);
+	}
 	return true; // Successfully wrote to memory location (loc)
 }
 
@@ -429,37 +467,34 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		if(!readRegister(loc, dest))
 			return false;
 	}
-	else{ // Attempt to read from memory
-		switch(loc){
-			case 0x0000 ... 0x7FFF: // Cartridge ROM 
-				if(bootSequence && (loc < 0x100 || loc >= 0x200)){ // Startup sequence. 
-					//Ignore bytes between 0x100 and 0x200 where the cartridge header lives.
-					dest = bootROM[loc];
-				}
-				else
-					cart.read(loc, dest);
-				break;
-			case 0x8000 ... 0x9FFF:
-				gpu.read(loc, dest);
-				break;
-			case 0xA000 ... 0xBFFF:
-				cart.getRam()->read(loc, dest);
-				break;
-			case 0xC000 ... 0xFDFF:
-				wram.read(loc, dest);
-				break;
-			case 0xFE00 ... 0xFE9F:
-				oam.read(loc, dest);
-				break;
-			case 0xFF80 ... 0xFFFE:
-				hram.read(loc, dest);
-				break;
-			case 0xFFFF: // Interrupt enable
-				dest = rIE->read();
-				break;
-			default:
-				return false;
+	else if(loc <= 0x7FFF){ // Cartridge ROM 
+		if(bootSequence && (loc < 0x100 || loc >= 0x200)){ // Startup sequence. 
+			//Ignore bytes between 0x100 and 0x200 where the cartridge header lives.
+			dest = bootROM[loc];
 		}
+		else
+			cart.read(loc, dest);
+	}
+	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
+		gpu.read(loc, dest);
+	}
+	else if(loc <= 0xBFFF){ // External RAM (SRAM)
+		cart.getRam()->read(loc, dest);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM)
+		wram.read(loc, dest);
+	}
+	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		oam.read(loc, dest);
+	}
+	else if (loc <= 0xFF7F) { // System registers / Inaccessible
+		return false;
+	}
+	else if(loc <= 0xFFFE){ // High RAM (HRAM)
+		hram.read(loc, dest);
+	}
+	else if(loc == 0xFFFF){ // Interrupt enable (IE)
+		dest = rIE->read();
 	}
 
 	// Check for memory access watch
@@ -481,29 +516,26 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 	// Note: Direct access to ROM banks is restricted. 
 	// Use write() and read() methods to access instead.
 	unsigned char *retval = 0x0;
-	switch(loc){
-		case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
-			retval = gpu.getPtr(loc);
-			break;
-		case 0xA000 ... 0xBFFF: // External (cartridge) RAM (if available)
-			retval = cart.getRam()->getPtr(loc);
-			break;
-		case 0xC000 ... 0xFDFF: // Work RAM (WRAM) 0-1 and ECHO
-			retval = wram.getPtr(loc);
-			break;
-		case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
-			retval = oam.getPtr(loc);
-			break;
-		case 0xFF00 ... 0xFF7F: // System registers
-			retval = getPtrToRegisterValue(loc);
-			break;
-		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
-			retval = hram.getPtr(loc);
-			break;
-		case 0xFFFF:
-			retval = rIE->getPtr();
-		default:
-			break;
+	if(loc >= 0x8000 && loc <= 0x9FFF){ // Video RAM (VRAM)
+		retval = gpu.getPtr(loc);
+	}
+	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
+		retval = cart.getRam()->getPtr(loc);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
+		retval = wram.getPtr(loc);
+	}
+	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		retval = oam.getPtr(loc);
+	}
+	else if(loc >= 0xFF00 && loc <= 0xFF7F){ // System registers
+		retval = getPtrToRegisterValue(loc);
+	}
+	else if(loc <= 0xFFFE){ // High RAM (HRAM)
+		retval = hram.getPtr(loc);
+	}
+	else if (loc >= 0xFFFF){ // Interrupt enable (IE)
+		retval = rIE->getPtr();
 	}
 	return retval;
 }
@@ -512,32 +544,29 @@ const unsigned char *SystemGBC::getConstPtr(const unsigned short &loc){
 	// Note: Direct access to ROM banks is restricted. 
 	// Use write() and read() methods to access instead.
 	const unsigned char *retval = 0x0;
-	switch(loc){
-		case 0x0000 ... 0x7FFF: // ROM
-			retval = cart.getConstPtr(loc);
-			break;
-		case 0x8000 ... 0x9FFF: // Video RAM (VRAM)
-			retval = gpu.getConstPtr(loc);
-			break;
-		case 0xA000 ... 0xBFFF: // External (cartridge) RAM (if available)
-			retval = cart.getRam()->getConstPtr(loc);
-			break;
-		case 0xC000 ... 0xFDFF: // Work RAM (WRAM) 0-1 and ECHO
-			retval = wram.getConstPtr(loc);
-			break;
-		case 0xFE00 ... 0xFE9F: // Sprite table (OAM)
-			retval = oam.getConstPtr(loc);
-			break;
-		case 0xFF00 ... 0xFF7F: // System registers
-			retval = getConstPtrToRegisterValue(loc);
-			break;
-		case 0xFF80 ... 0xFFFE: // High RAM (HRAM)
-			retval = hram.getConstPtr(loc);
-			break;
-		case 0xFFFF:
-			retval = rIE->getConstPtr();
-		default:
-			break;
+	if(loc <= 0x7FFF){ // ROM
+		retval = cart.getConstPtr(loc);
+	}
+	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
+		retval = gpu.getConstPtr(loc);
+	}
+	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
+		retval = cart.getRam()->getConstPtr(loc);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
+		retval = wram.getConstPtr(loc);
+	}
+	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		retval = oam.getConstPtr(loc);
+	}
+	else if(loc >= 0xFF00 && loc <= 0xFF7F){ // System registers
+		retval = getConstPtrToRegisterValue(loc);
+	}
+	else if(loc <= 0xFFFE){ // High RAM (HRAM)
+		retval = hram.getConstPtr(loc);
+	}
+	else if(loc == 0xFFFF){ // Interrupt enable (IE)
+		retval = rIE->getConstPtr();
 	}
 	return retval;
 }
@@ -764,16 +793,18 @@ void SystemGBC::unpause(){
 #endif
 }
 
-bool SystemGBC::reset(){
+bool SystemGBC::reset() {
 	// Set default register values.
 	cpu.reset();
-	
+
 	// Read the ROM into memory
 	bool retval = cart.readRom(romPath, verboseMode);
 
 	// Check that the ROM is loaded and the window is open
-	if(!retval || !gpu.getWindowStatus())
+	if (!retval || !gpu.getWindowStatus()) {
+		system("pause");
 		return false;
+	}
 
 	// Load save data (if available)
 	if(autoLoadExtRam && cart.getRam()->getSize())
@@ -811,7 +842,7 @@ bool SystemGBC::reset(){
 	
 	if(loadBootROM){
 		bootstrap.seekg(0, bootstrap.end);
-		bootLength = bootstrap.tellg();
+		bootLength = (unsigned short)bootstrap.tellg();
 		bootstrap.seekg(0);
 		bootROM.reserve(bootLength);
 		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
@@ -875,6 +906,7 @@ bool SystemGBC::reset(){
 		// Disable the boot sequence
 		bootSequence = false;
 	}
+
 	return true;
 }
 
