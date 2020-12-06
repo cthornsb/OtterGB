@@ -20,6 +20,8 @@ public:
 
 	SystemComponent *getRam(){ return &ram; }
 
+	char *getRawTitleString(){ return titleString; }
+
 	std::string getTitleString() const { return std::string(titleString); }
 
 	std::string getLanguage() const { return (language == 0x0 ? "Japanese" : "English"); }

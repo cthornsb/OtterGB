@@ -889,7 +889,7 @@ bool SystemGBC::screenshot(){
 
 bool SystemGBC::quicksave(){
 	std::cout << " Quicksaving... ";
-	std::ofstream ofile("quick.sav", std::ios::binary);
+	std::ofstream ofile((romFilename+".sav").c_str(), std::ios::binary);
 	if(!ofile.good()){
 		std::cout << "FAILED!\n";
 		return false;
@@ -897,15 +897,20 @@ bool SystemGBC::quicksave(){
 
 	unsigned int nBytesWritten = 0;
 
-	//cart.writeSavestate(ofile); // Write the ROM
+	// Write the cartridge title
+	ofile.write(cart.getRawTitleString(), 12);
+	nBytesWritten += 12;
+
 	nBytesWritten += gpu.writeSavestate(ofile); // Write VRAM  (16 kB)
 	nBytesWritten += cart.getRam()->writeSavestate(ofile); // Write cartridge RAM (if present)
 	nBytesWritten += wram.writeSavestate(ofile); // Write Work RAM (8 kB)
 	nBytesWritten += oam.writeSavestate(ofile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
-	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++){
-		ofile.write((char*)&registers[i-REGISTER_LOW], 1);
+	unsigned char byte;
+	for(unsigned int i = 0; i < (REGISTER_HIGH-REGISTER_LOW); i++){
+		byte = registers[i].getValue();
+		ofile.write((char*)&byte, 1);
 		nBytesWritten++;
 	}
 		
@@ -932,7 +937,7 @@ bool SystemGBC::quicksave(){
 
 bool SystemGBC::quickload(){
 	std::cout << " Loading quicksave... ";
-	std::ifstream ifile("quick.sav", std::ios::binary);
+	std::ifstream ifile((romFilename+".sav").c_str(), std::ios::binary);
 	if(!ifile.good()){
 		std::cout << "FAILED!\n";
 		return false;
@@ -940,15 +945,27 @@ bool SystemGBC::quickload(){
 
 	unsigned int nBytesRead = 0;
 
-	//cart.readSavestate(ifile); // Write the ROM
+	// Write the cartridge title
+	char readTitle[12];
+	ifile.read(readTitle, 12);
+	nBytesRead += 12;
+	
+	// Check the title against the title of the loaded ROM
+	if(strcmp(readTitle, cart.getRawTitleString()) != 0){
+		std::cout << " Warning! ROM title of quicksave does not match loaded ROM!\n";
+		//return false;
+	}
+
 	nBytesRead += gpu.readSavestate(ifile); // Write VRAM  (16 kB)
 	nBytesRead += cart.getRam()->readSavestate(ifile); // Write cartridge RAM (if present)
 	nBytesRead += wram.readSavestate(ifile); // Write Work RAM (8 kB)
 	nBytesRead += oam.readSavestate(ifile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
-	for(unsigned int i = REGISTER_LOW; i < REGISTER_HIGH; i++){
-		ifile.read((char*)&registers[i-REGISTER_LOW], 1);
+	unsigned char byte;
+	for(unsigned int i = 0; i < (REGISTER_HIGH-REGISTER_LOW); i++){
+		ifile.read((char*)&byte, 1);
+		registers[i].setValue(byte);
 		nBytesRead++;
 	}
 		

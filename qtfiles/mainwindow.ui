@@ -3347,12 +3347,12 @@ p, li { white-space: pre-wrap; }
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionPause_Emulation">
    <property name="text">
-    <string>Pause Emulation</string>
+    <string>Pause Emulation (F2)</string>
    </property>
   </action>
   <action name="actionResume_Emulation">
    <property name="text">
-    <string>Resume Emulation</string>
+    <string>Resume Emulation (F3)</string>
    </property>
   </action>
   <action name="actionDump_Memory">
@@ -3387,12 +3387,12 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="actionSave_State">
    <property name="text">
-    <string>Save State</string>
+    <string>Quicksave (F5)</string>
    </property>
   </action>
   <action name="actionLoad_State">
    <property name="text">
-    <string>Load State</string>
+    <string>Quickload (F9)</string>
    </property>
   </action>
   <action name="actionDump_Registers">
@@ -3412,7 +3412,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>Quit (Esc)</string>
    </property>
   </action>
   <action name="actionHlep">
