@@ -111,17 +111,17 @@ public:
 
 	const unsigned char *getConstPtrToRegisterValue(const unsigned short &reg);
 
-	LR35902 *getCPU(){ return &cpu; }
+	LR35902 *getCPU(){ return cpu.get(); }
 	
-	GPU *getGPU(){ return &gpu; }
+	GPU *getGPU(){ return gpu.get(); }
 	
-	SpriteHandler *getOAM(){ return &oam; }
+	SpriteHandler *getOAM(){ return oam.get(); }
 	
-	SystemClock *getClock(){ return &clock; }
+	SystemClock* getClock() { return sclk.get(); }
 	
-	Cartridge *getCartridge(){ return &cart; }
+	Cartridge *getCartridge(){ return cart.get(); }
 	
-	WorkRam *getWRAM(){ return &wram; }
+	WorkRam *getWRAM(){ return wram.get(); }
 	
 	ComponentList *getListOfComponents(){ return subsystems.get(); }
 	
@@ -275,6 +275,24 @@ private:
 	std::string romFilename; ///< Input ROM filename (with no path or extension)
 	std::string romExtension; ///< Input ROM file extension
 
+	bool pauseAfterNextInstruction;
+	bool pauseAfterNextClock;
+	bool pauseAfterNextHBlank;
+	bool pauseAfterNextVBlank;
+
+	std::unique_ptr<SerialController> serial;
+	std::unique_ptr<DmaController> dma;
+	std::unique_ptr<Cartridge> cart;
+	std::unique_ptr<GPU> gpu;
+	std::unique_ptr<SoundProcessor> sound;
+	std::unique_ptr<SpriteHandler> oam;
+	std::unique_ptr<JoystickController> joy;
+	std::unique_ptr<WorkRam> wram; // 8 4kB banks of RAM
+	std::unique_ptr<SystemComponent> hram; // 127 bytes of high RAM
+	std::unique_ptr<SystemClock> sclk;
+	std::unique_ptr<SystemTimer> timer;
+	std::unique_ptr<LR35902> cpu;
+
 #ifdef USE_QT_DEBUGGER
 	std::unique_ptr<QApplication> app;
 
@@ -286,11 +304,6 @@ private:
 	Breakpoint breakpointMemoryRead;
 	Breakpoint breakpointOpcode;
 
-	bool pauseAfterNextInstruction;
-	bool pauseAfterNextClock;
-	bool pauseAfterNextHBlank;
-	bool pauseAfterNextVBlank;
-
 	unsigned short memoryAccessWrite[2]; ///< User-set memory 
 	unsigned short memoryAccessRead[2]; ///< 
 
@@ -298,19 +311,6 @@ private:
 	
 	unsigned short bootLength; ///< Size of the boot ROM
 	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM
-
-	SerialController serial;
-	DmaController dma;
-	Cartridge cart;
-	GPU gpu;
-	SoundProcessor sound;
-	SpriteHandler oam;
-	JoystickController joy;
-	WorkRam wram; // 8 4kB banks of RAM
-	SystemComponent hram; // 127 bytes of high RAM
-	SystemClock clock;
-	SystemTimer timer;
-	LR35902 cpu;
 
 	std::unique_ptr<ComponentList> subsystems;
 

@@ -49,42 +49,58 @@
 **/
 	
 ComponentList::ComponentList(SystemGBC *sys){
-		list["APU"]       = (apu = &sys->sound);
-		list["Cartridge"] = (cart = &sys->cart);
-		list["CPU"]       = (cpu = &sys->cpu);
-		list["DMA"]       = (dma = &sys->dma);
-		list["GPU"]       = (gpu = &sys->gpu);
-		list["HRAM"]      = (hram = &sys->hram);
-		list["Joypad"]    = (joy = &sys->joy);
-		list["OAM"]       = (oam = &sys->oam);
-		list["Clock"]     = (sclk = &sys->clock);
-		list["Serial"]    = (serial = &sys->serial);
-		list["Timer"]     = (timer = &sys->timer);
-		list["WRAM"]      = (wram = &sys->wram);
+		list["APU"]       = (apu  = sys->sound.get());
+		list["Cartridge"] = (cart = sys->cart.get());
+		list["CPU"]       = (cpu = sys->cpu.get());
+		list["DMA"]       = (dma = sys->dma.get());
+		list["GPU"]       = (gpu = sys->gpu.get());
+		list["HRAM"]      = (hram = sys->hram.get());
+		list["Joypad"]    = (joy = sys->joy.get());
+		list["OAM"]       = (oam = sys->oam.get());
+		list["Clock"]     = (sclk = sys->sclk.get());
+		list["Serial"]    = (serial = sys->serial.get());
+		list["Timer"]     = (timer = sys->timer.get());
+		list["WRAM"]      = (wram = sys->wram.get());
 }
 	
-SystemGBC::SystemGBC(int &argc, char *argv[]) : 
+SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	dummyComponent("System"),
-	nFrames(0), 
-	frameSkip(1), 
-	verboseMode(false), 
-	debugMode(false), 
-	cpuStopped(false), 
-	cpuHalted(false), 
-	emulationPaused(false), 
-	bootSequence(false), 
-	forceColor(false), 
+	nFrames(0),
+	frameSkip(1),
+	verboseMode(false),
+	debugMode(false),
+	cpuStopped(false),
+	cpuHalted(false),
+	emulationPaused(false),
+	bootSequence(false),
+	forceColor(false),
 	displayFramerate(false),
-	userQuitting(false), 
+	userQuitting(false),
 	autoLoadExtRam(true),
 	initSuccessful(false),
 	dmaSourceH(0),
-	dmaSourceL(0), 
-	dmaDestinationH(0), 
-	dmaDestinationL(0), 
+	dmaSourceL(0),
+	dmaDestinationH(0),
+	dmaDestinationL(0),
 	romPath(),
 	romFilename(),
-	romExtension()
+	romExtension(),
+	pauseAfterNextInstruction(false),
+	pauseAfterNextClock(false),
+	pauseAfterNextHBlank(false),
+	pauseAfterNextVBlank(false),
+	serial(new SerialController()),
+	dma(new DmaController),
+	cart(new Cartridge),
+	gpu(new GPU),
+	sound(new SoundProcessor),
+	oam(new SpriteHandler),
+	joy(new JoystickController),
+	wram(new WorkRam),
+	hram(new SystemComponent),
+	sclk(new SystemClock),
+	timer(new SystemTimer),
+	cpu(new LR35902)
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -126,13 +142,13 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 			romPath = handler.getOption(0)->argument;
 
 		if(handler.getOption(1)->active) // Set framerate multiplier
-			clock.setFramerateMultiplier(strtod(handler.getOption(1)->argument.c_str(), NULL));
+			sclk->setFramerateMultiplier(strtod(handler.getOption(1)->argument.c_str(), NULL));
 
 		if(handler.getOption(2)->active) // Toggle verbose flag
 			setVerboseMode(true);
 
 		if(handler.getOption(3)->active) // Set pixel scaling factor
-			gpu.setPixelScale(strtoul(handler.getOption(3)->argument.c_str(), NULL, 10));
+			gpu->setPixelScale(strtoul(handler.getOption(3)->argument.c_str(), NULL, 10));
 
 		if(handler.getOption(4)->active) // Use GBC mode for original GB games
 			setForceColorMode(true);
@@ -161,13 +177,13 @@ SystemGBC::SystemGBC(int &argc, char *argv[]) :
 
 	// Handle user input.
 	if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
-		clock.setFramerateMultiplier(cfgFile.getFloat());
+		sclk->setFramerateMultiplier(cfgFile.getFloat());
 
 	if (cfgFile.search("VERBOSE_MODE")) // Toggle verbose flag
 		setVerboseMode(true);
 
 	if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
-		gpu.setPixelScale(cfgFile.getUInt());
+		gpu->setPixelScale(cfgFile.getUInt());
 
 	if (cfgFile.search("FORCE_COLOR")) // Use GBC mode for original GB games
 		setForceColorMode(true);
@@ -213,8 +229,8 @@ SystemGBC::~SystemGBC(){
 }
 
 void SystemGBC::initialize(){ 
-	hram.initialize(127);
-	hram.setName("HRAM");
+	hram->initialize(127);
+	hram->setName("HRAM");
 
 	// Define system registers
 	addSystemRegister(0x0F, rIF,   "IF",   "33333000");
@@ -241,21 +257,21 @@ void SystemGBC::initialize(){
 	}
 
 	// Set memory offsets for all components	
-	gpu.setOffset(VRAM_SWAP_START);
-	cart.getRam()->setOffset(CART_RAM_START);
-	wram.setOffset(WRAM_ZERO_START);
-	oam.setOffset(OAM_TABLE_START);
-	hram.setOffset(HIGH_RAM_START);
+	gpu->setOffset(VRAM_SWAP_START);
+	cart->getRam()->setOffset(CART_RAM_START);
+	wram->setOffset(WRAM_ZERO_START);
+	oam->setOffset(OAM_TABLE_START);
+	hram->setOffset(HIGH_RAM_START);
 
 	// Must connect the system bus BEFORE initializing the CPU.
-	cpu.initialize();
+	cpu->initialize();
 	
-	// Disable the system timer.
-	timer.disable();
+	// Disable the system timer->
+	timer->disable();
 
 	// Initialize the window and link it to the joystick controller	
-	gpu.initialize();
-	joy.setWindow(gpu.getWindow());
+	gpu->initialize();
+	joy->setWindow(gpu->getWindow());
 
 	// Initialization was successful
 	initSuccessful = true;
@@ -265,7 +281,7 @@ bool SystemGBC::execute(){
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
-		if(!gpu.getWindowStatus() || userQuitting)
+		if(!gpu->getWindowStatus() || userQuitting)
 			break;
 
 		if(!emulationPaused && !cpuStopped){
@@ -276,32 +292,32 @@ bool SystemGBC::execute(){
 			}
 
 			// Check if the CPU is halted.
-			if(!cpuHalted && !dma.onClockUpdate()){
+			if(!cpuHalted && !dma->onClockUpdate()){
 				// Perform one instruction.
-				if(cpu.onClockUpdate()){
+				if(cpu->onClockUpdate()){
 #ifdef USE_QT_DEBUGGER
 					if(pauseAfterNextInstruction){
 						pauseAfterNextInstruction = false;					
 						pause();
 					}
-					else if(breakpointOpcode.check(cpu.getLastOpcode()->nIndex) ||
-					   breakpointProgramCounter.check(cpu.getLastOpcode()->nPC))
+					else if(breakpointOpcode.check(cpu->getLastOpcode()->nIndex) ||
+					   breakpointProgramCounter.check(cpu->getLastOpcode()->nPC))
 						pause();
 #endif
 				}
 			}
 
-			// Update system timer.
-			timer.onClockUpdate();
+			// Update system timer->
+			timer->onClockUpdate();
 
 			// Update sound processor.
-			sound.onClockUpdate();
+			sound->onClockUpdate();
 
 			// Update joypad handler.
-			joy.onClockUpdate();
+			joy->onClockUpdate();
 
-			// Tick the system clock.
-			clock.onClockUpdate();
+			// Tick the system sclk->
+			sclk->onClockUpdate();
 #ifdef USE_QT_DEBUGGER
 			if(pauseAfterNextClock){
 				pauseAfterNextClock = false;					
@@ -310,16 +326,16 @@ bool SystemGBC::execute(){
 #endif
 
 			// Sync with the framerate.	
-			if(clock.pollVSync()){
+			if(sclk->pollVSync()){
 				// Process window events
-				gpu.processEvents();
+				gpu->processEvents();
 				checkSystemKeys();
 				
 				// Render the current frame
 				if(nFrames++ % frameSkip == 0 && !cpuStopped){
 					if(displayFramerate)
-						gpu.print(doubleToStr(clock.getFramerate(), 1)+" fps", 0, 17);
-					gpu.render();
+						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 17);
+					gpu->render();
 				}
 #ifdef USE_QT_DEBUGGER
 				if(debugMode){
@@ -343,11 +359,11 @@ bool SystemGBC::execute(){
 			}
 		
 			// Process window events
-			gpu.processEvents();
+			gpu->processEvents();
 			checkSystemKeys();
 
-			// Maintain framerate but do not advance the system clock.
-			clock.wait();
+			// Maintain framerate but do not advance the system sclk->
+			sclk->wait();
 #ifndef USE_QT_DEBUGGER
 		}
 	}
@@ -358,7 +374,7 @@ bool SystemGBC::execute(){
 	}
 	if(debugMode)
 		gui->closeAllWindows(); // Clean up the Qt GUI
-	if(autoLoadExtRam && cart.getRam()->getSize()) // Save save data (if available)
+	if(autoLoadExtRam && cart->getRam()->getSize()) // Save save data (if available)
 		writeExternalRam();
 #endif
 	return true;
@@ -367,14 +383,14 @@ bool SystemGBC::execute(){
 void SystemGBC::handleHBlankPeriod(){
 	if(!emulationPaused){
 		if(nFrames % frameSkip == 0)
-			gpu.drawNextScanline(&oam);
-		dma.onHBlank();
+			gpu->drawNextScanline(oam.get());
+		dma->onHBlank();
 	}
 #ifdef USE_QT_DEBUGGER
 	if(debugMode && pauseAfterNextHBlank){
 		pauseAfterNextHBlank = false;
 		pause();
-		gpu.render(); // Show the newly drawn scanline
+		gpu->render(); // Show the newly drawn scanline
 	}
 #endif
 }
@@ -410,7 +426,7 @@ void SystemGBC::disableInterrupts(){
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
 	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		OpcodeData *op = cpu.getLastOpcode();
+		OpcodeData *op = cpu->getLastOpcode();
 		std::cout << " (W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
 		if(op->op->nBytes == 2)
 			std::cout << "d8=" << getHex(op->getd8());
@@ -430,25 +446,25 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 			return false;
 	}
 	else if(loc <= 0x7FFF){ // Cartridge ROM 
-			cart.writeRegister(loc, src); // Write to cartridge MBC (if present)
+			cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
 		}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu.write(loc, src);
+		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
-		cart.getRam()->write(loc, src);
+		cart->getRam()->write(loc, src);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
-		wram.write(loc, src);
+		wram->write(loc, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam.write(loc, src);
+		oam->write(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram.write(loc, src);
+		hram->write(loc, src);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		rIE->write(src);
@@ -473,25 +489,25 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 			dest = bootROM[loc];
 		}
 		else
-			cart.read(loc, dest);
+			cart->read(loc, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu.read(loc, dest);
+		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
-		cart.getRam()->read(loc, dest);
+		cart->getRam()->read(loc, dest);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM)
-		wram.read(loc, dest);
+		wram->read(loc, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam.read(loc, dest);
+		oam->read(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram.read(loc, dest);
+		hram->read(loc, dest);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		dest = rIE->read();
@@ -499,7 +515,7 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 
 	// Check for memory access watch
 	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
-		OpcodeData *op = cpu.getLastOpcode();
+		OpcodeData *op = cpu->getLastOpcode();
 		std::cout << " (R) PC=" << getHex(op->nPC) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
 	}
 
@@ -517,22 +533,22 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 	// Use write() and read() methods to access instead.
 	unsigned char *retval = 0x0;
 	if(loc >= 0x8000 && loc <= 0x9FFF){ // Video RAM (VRAM)
-		retval = gpu.getPtr(loc);
+		retval = gpu->getPtr(loc);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
-		retval = cart.getRam()->getPtr(loc);
+		retval = cart->getRam()->getPtr(loc);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
-		retval = wram.getPtr(loc);
+		retval = wram->getPtr(loc);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		retval = oam.getPtr(loc);
+		retval = oam->getPtr(loc);
 	}
 	else if(loc >= 0xFF00 && loc <= 0xFF7F){ // System registers
 		retval = getPtrToRegisterValue(loc);
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		retval = hram.getPtr(loc);
+		retval = hram->getPtr(loc);
 	}
 	else if (loc >= 0xFFFF){ // Interrupt enable (IE)
 		retval = rIE->getPtr();
@@ -545,25 +561,25 @@ const unsigned char *SystemGBC::getConstPtr(const unsigned short &loc){
 	// Use write() and read() methods to access instead.
 	const unsigned char *retval = 0x0;
 	if(loc <= 0x7FFF){ // ROM
-		retval = cart.getConstPtr(loc);
+		retval = cart->getConstPtr(loc);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		retval = gpu.getConstPtr(loc);
+		retval = gpu->getConstPtr(loc);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
-		retval = cart.getRam()->getConstPtr(loc);
+		retval = cart->getRam()->getConstPtr(loc);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
-		retval = wram.getConstPtr(loc);
+		retval = wram->getConstPtr(loc);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		retval = oam.getConstPtr(loc);
+		retval = oam->getConstPtr(loc);
 	}
 	else if(loc >= 0xFF00 && loc <= 0xFF7F){ // System registers
 		retval = getConstPtrToRegisterValue(loc);
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		retval = hram.getConstPtr(loc);
+		retval = hram->getConstPtr(loc);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		retval = rIE->getConstPtr();
@@ -716,7 +732,7 @@ bool SystemGBC::dumpMemory(const std::string &fname){
 bool SystemGBC::dumpVRAM(const std::string &fname){
 	std::cout << " Writing VRAM to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
-	if(!ofile.good() || !gpu.writeMemoryToFile(ofile)){
+	if(!ofile.good() || !gpu->writeMemoryToFile(ofile)){
 		std::cout << "FAILED!\n";
 		return false;
 	}
@@ -726,13 +742,13 @@ bool SystemGBC::dumpVRAM(const std::string &fname){
 }
 
 bool SystemGBC::saveSRAM(const std::string &fname){
-	if(!cart.getRam()->getSize()){
+	if(!cart->getRam()->getSize()){
 		std::cout << " WARNING! Cartridge has no SRAM.\n";
 		return false;
 	}
 	std::cout << " Writing cartridge RAM to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
-	if(!ofile.good() || !cart.getRam()->writeMemoryToFile(ofile)){
+	if(!ofile.good() || !cart->getRam()->writeMemoryToFile(ofile)){
 		std::cout << "FAILED!\n";
 		return false;
 	}
@@ -742,13 +758,13 @@ bool SystemGBC::saveSRAM(const std::string &fname){
 }
 
 bool SystemGBC::loadSRAM(const std::string &fname){
-	if(!cart.getRam()->getSize()){
+	if(!cart->getRam()->getSize()){
 		std::cout << " WARNING! Cartridge has no SRAM.\n";
 		return false;
 	}
 	std::cout << " Reading cartridge RAM from file \"" << fname << "\"... ";
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
-	if(!ifile.good() || !cart.getRam()->readMemoryFromFile(ifile)){
+	if(!ifile.good() || !cart->getRam()->readMemoryFromFile(ifile)){
 		std::cout << "FAILED!\n";
 		return false;
 	}
@@ -761,13 +777,13 @@ void SystemGBC::resumeCPU(){
 	cpuStopped = false;
 	if(rKEY1->getBit(0)){ // Prepare speed switch
 		if(!bCPUSPEED){ // Normal speed
-			clock.setDoubleSpeedMode();
+			sclk->setDoubleSpeedMode();
 			bCPUSPEED = true;
 			rKEY1->clear();
 			rKEY1->setBit(7);
 		}
 		else{ // Double speed
-			clock.setNormalSpeedMode();
+			sclk->setNormalSpeedMode();
 			bCPUSPEED = false;
 			rKEY1->clear();
 		}
@@ -795,19 +811,19 @@ void SystemGBC::unpause(){
 
 bool SystemGBC::reset() {
 	// Set default register values.
-	cpu.reset();
+	cpu->reset();
 
 	// Read the ROM into memory
-	bool retval = cart.readRom(romPath, verboseMode);
+	bool retval = cart->readRom(romPath, verboseMode);
 
 	// Check that the ROM is loaded and the window is open
-	if (!retval || !gpu.getWindowStatus()) {
+	if (!retval || !gpu->getWindowStatus()) {
 		system("pause");
 		return false;
 	}
 
 	// Load save data (if available)
-	if(autoLoadExtRam && cart.getRam()->getSize())
+	if(autoLoadExtRam && cart->getRam()->getSize())
 		readExternalRam();
 
 	// Enable GBC features for original GB games.
@@ -848,7 +864,7 @@ bool SystemGBC::reset() {
 		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
 		bootstrap.close();
 		std::cout << " Successfully loaded " << bootLength << " B boot ROM.\n";
-		cpu.setProgramCounter(0);
+		cpu->setProgramCounter(0);
 		bootSequence = true;
 	}
 	else{ // Initialize the system registers with default values.
@@ -901,7 +917,7 @@ bool SystemGBC::reset() {
 		(*rFF77)  = 0x00;
 
 		// Set the PC to the entry point of the program. Skip the boot sequence.
-		cpu.setProgramCounter(cart.getProgramEntryPoint());
+		cpu->setProgramCounter(cart->getProgramEntryPoint());
 		
 		// Disable the boot sequence
 		bootSequence = false;
@@ -926,13 +942,13 @@ bool SystemGBC::quicksave(){
 	unsigned int nBytesWritten = 0;
 
 	// Write the cartridge title
-	ofile.write(cart.getRawTitleString(), 12);
+	ofile.write(cart->getRawTitleString(), 12);
 	nBytesWritten += 12;
 
-	nBytesWritten += gpu.writeSavestate(ofile); // Write VRAM  (16 kB)
-	nBytesWritten += cart.getRam()->writeSavestate(ofile); // Write cartridge RAM (if present)
-	nBytesWritten += wram.writeSavestate(ofile); // Write Work RAM (8 kB)
-	nBytesWritten += oam.writeSavestate(ofile); // Write Object Attribute Memory (OAM, 160 B)
+	nBytesWritten += gpu->writeSavestate(ofile); // Write VRAM  (16 kB)
+	nBytesWritten += cart->getRam()->writeSavestate(ofile); // Write cartridge RAM (if present)
+	nBytesWritten += wram->writeSavestate(ofile); // Write Work RAM (8 kB)
+	nBytesWritten += oam->writeSavestate(ofile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
 	unsigned char byte;
@@ -943,7 +959,7 @@ bool SystemGBC::quicksave(){
 	}
 		
 	// Write High RAM (127 B)
-	nBytesWritten += hram.writeSavestate(ofile);
+	nBytesWritten += hram->writeSavestate(ofile);
 	ofile.write((char*)&bGBCMODE, 1); // Gameboy Color mode flag
 	ofile.write((char*)rIE, 1); // Interrupt enable
 	ofile.write((char*)rIME, 1); // Master interrupt enable
@@ -951,11 +967,11 @@ bool SystemGBC::quicksave(){
 	ofile.write((char*)&cpuHalted, 1); // HALT flag
 	nBytesWritten += 5;
 	
-	nBytesWritten += cpu.writeSavestate(ofile); // CPU registers
-	nBytesWritten += timer.writeSavestate(ofile); // System timer status
-	nBytesWritten += clock.writeSavestate(ofile); // System clock status
-	nBytesWritten += sound.writeSavestate(ofile); // Sound processor
-	nBytesWritten += joy.writeSavestate(ofile); // Joypad controller
+	nBytesWritten += cpu->writeSavestate(ofile); // CPU registers
+	nBytesWritten += timer->writeSavestate(ofile); // System timer status
+	nBytesWritten += sclk->writeSavestate(ofile); // System clock status
+	nBytesWritten += sound->writeSavestate(ofile); // Sound processor
+	nBytesWritten += joy->writeSavestate(ofile); // Joypad controller
 
 	ofile.close();
 	std::cout << "DONE! Wrote " << nBytesWritten << " B\n";
@@ -979,15 +995,15 @@ bool SystemGBC::quickload(){
 	nBytesRead += 12;
 	
 	// Check the title against the title of the loaded ROM
-	if(strcmp(readTitle, cart.getRawTitleString()) != 0){
+	if(strcmp(readTitle, cart->getRawTitleString()) != 0){
 		std::cout << " Warning! ROM title of quicksave does not match loaded ROM!\n";
 		//return false;
 	}
 
-	nBytesRead += gpu.readSavestate(ifile); // Write VRAM  (16 kB)
-	nBytesRead += cart.getRam()->readSavestate(ifile); // Write cartridge RAM (if present)
-	nBytesRead += wram.readSavestate(ifile); // Write Work RAM (8 kB)
-	nBytesRead += oam.readSavestate(ifile); // Write Object Attribute Memory (OAM, 160 B)
+	nBytesRead += gpu->readSavestate(ifile); // Write VRAM  (16 kB)
+	nBytesRead += cart->getRam()->readSavestate(ifile); // Write cartridge RAM (if present)
+	nBytesRead += wram->readSavestate(ifile); // Write Work RAM (8 kB)
+	nBytesRead += oam->readSavestate(ifile); // Write Object Attribute Memory (OAM, 160 B)
 	
 	// Write system registers (128 B)
 	unsigned char byte;
@@ -998,7 +1014,7 @@ bool SystemGBC::quickload(){
 	}
 		
 	// Write High RAM (127 B)
-	nBytesRead += hram.readSavestate(ifile);
+	nBytesRead += hram->readSavestate(ifile);
 	ifile.read((char*)&bGBCMODE, 1); // Gameboy Color mode flag
 	ifile.read((char*)rIE, 1); // Interrupt enable
 	ifile.read((char*)rIME, 1); // Master interrupt enable
@@ -1006,11 +1022,11 @@ bool SystemGBC::quickload(){
 	ifile.read((char*)&cpuHalted, 1); // HALT flag
 	nBytesRead += 5;
 	
-	nBytesRead += cpu.readSavestate(ifile); // CPU registers
-	nBytesRead += timer.readSavestate(ifile); // System timer status
-	nBytesRead += clock.readSavestate(ifile); // System clock status
-	nBytesRead += sound.readSavestate(ifile); // Sound processor
-	nBytesRead += joy.readSavestate(ifile); // Joypad controller
+	nBytesRead += cpu->readSavestate(ifile); // CPU registers
+	nBytesRead += timer->readSavestate(ifile); // System timer status
+	nBytesRead += sclk->readSavestate(ifile); // System clock status
+	nBytesRead += sound->readSavestate(ifile); // Sound processor
+	nBytesRead += joy->readSavestate(ifile); // Joypad controller
 
 	ifile.close();
 	std::cout << "DONE! Read " << nBytesRead << " B\n";
@@ -1129,7 +1145,7 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 }
 
 void SystemGBC::checkSystemKeys(){
-	KeyStates *keys = gpu.getWindow()->getKeypress();
+	KeyStates *keys = gpu->getWindow()->getKeypress();
 	if(keys->empty()) return;
 	
 	// Function keys
