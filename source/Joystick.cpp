@@ -1,10 +1,9 @@
-#include <iostream>
-
 #include "Support.hpp"
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Joystick.hpp"
 #include "Graphics.hpp"
+#include "ConfigFile.hpp"
 
 // Default button map
 constexpr unsigned char KEYBOARD_ENTER = 0x0D;
@@ -25,9 +24,69 @@ constexpr unsigned char JOYPAD_P12_MASK = 0xFB; // Bit 2
 constexpr unsigned char JOYPAD_P11_MASK = 0xFD; // Bit 1
 constexpr unsigned char JOYPAD_P10_MASK = 0xFE; // Bit 0
 
+void getKeyFromString(ConfigFile* config, unsigned char& key) {
+	std::string str = toLowercase(config->getCurrentParameterString());
+	if (str == "backspace")
+		key = 0x8;
+	else if (str == "tab")
+		key = 0x9;
+	else if (str == "enter")
+		key = 0xD;
+	else if (str == "escape") // Avoid using this because it's reserved by the graphics handler
+		key = 0x1B;
+	else if (str == "space")
+		key = 0x20;
+	else if (str == "delete")
+		key = 0x7F;
+}
+
 /////////////////////////////////////////////////////////////////////
 // class JoystickController
 /////////////////////////////////////////////////////////////////////
+
+JoystickController::JoystickController() :
+	SystemComponent("Joypad"),
+	selectButtonKeys(false),
+	selectDirectionKeys(false),
+	P13(false),
+	P12(false),
+	P11(false),
+	P10(false),
+	window(0x0) 
+{ 
+	setButtonMap(); // Set default key mapping
+}
+
+void JoystickController::setButtonMap(ConfigFile* config/*=0x0*/) {
+	if (config) { // Read the configuration file
+		if (config->search("KEY_START", true))
+			getKeyFromString(config, keyMapArray[0]);
+		if (config->search("KEY_SELECT", true))
+			getKeyFromString(config, keyMapArray[1]);
+		if (config->search("KEY_B", true))
+			getKeyFromString(config, keyMapArray[2]);
+		if (config->search("KEY_A", true))
+			getKeyFromString(config, keyMapArray[3]);
+		if (config->search("KEY_DOWN", true))
+			getKeyFromString(config, keyMapArray[4]);
+		if (config->search("KEY_UP", true))
+			getKeyFromString(config, keyMapArray[5]);
+		if (config->search("KEY_LEFT", true))
+			getKeyFromString(config, keyMapArray[6]);
+		if (config->search("KEY_RIGHT", true))
+			getKeyFromString(config, keyMapArray[7]);
+	}
+	else { // Set default keys
+		keyMapArray[0] = KEYBOARD_ENTER; // Start
+		keyMapArray[1] = KEYBOARD_TAB;   // Select
+		keyMapArray[2] = KEYBOARD_J;     // B
+		keyMapArray[3] = KEYBOARD_K;     // A
+		keyMapArray[4] = KEYBOARD_S;     // Down
+		keyMapArray[5] = KEYBOARD_W;     // Up
+		keyMapArray[6] = KEYBOARD_A;     // Left
+		keyMapArray[7] = KEYBOARD_D;     // Right
+	}
+}
 
 void JoystickController::clearInput(){
 	(*rJOYP) |= 0x0F;
@@ -72,23 +131,23 @@ bool JoystickController::onClockUpdate(){
 	// P11 - Left or B
 	// P10 - Right or A
 	if(selectButtonKeys){
-		if(keys->check(KEYBOARD_ENTER)) //  START - Enter (P13 - bit3)
+		if(keys->check(keyMapArray[0])) //  START - Enter (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(KEYBOARD_TAB))   // SELECT - Tab   (P12 - bit2)
+		if(keys->check(keyMapArray[1]))   // SELECT - Tab   (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(KEYBOARD_J))     //      B - j     (P11 - bit1)
+		if(keys->check(keyMapArray[2]))     //      B - j     (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(KEYBOARD_K))     //      A - k     (P10 - bit0)
+		if(keys->check(keyMapArray[3]))     //      A - k     (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	else if(selectDirectionKeys){
-		if(keys->check(KEYBOARD_S) || keys->check(KEYBOARD_DOWN))  // P13 - s (down)  (P13 - bit3)
+		if(keys->check(keyMapArray[4]) || keys->check(KEYBOARD_DOWN))  // P13 - s (down)  (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(KEYBOARD_W) || keys->check(KEYBOARD_UP))    // P12 - w (up)    (P12 - bit2)
+		if(keys->check(keyMapArray[5]) || keys->check(KEYBOARD_UP))    // P12 - w (up)    (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(KEYBOARD_A) || keys->check(KEYBOARD_LEFT))  // P11 - a (left)  (P11 - bit1)
+		if(keys->check(keyMapArray[6]) || keys->check(KEYBOARD_LEFT))  // P11 - a (left)  (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(KEYBOARD_D) || keys->check(KEYBOARD_RIGHT)) // P10 - d (right) (P10 - bit0)
+		if(keys->check(keyMapArray[7]) || keys->check(KEYBOARD_RIGHT)) // P10 - d (right) (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	

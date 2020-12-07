@@ -4,13 +4,16 @@
 #include "SystemComponent.hpp"
 
 class Window;
+class ConfigFile;
 
 class JoystickController : public SystemComponent {
 public:
-	JoystickController() : SystemComponent("Joypad"), window(0x0) { }
+	JoystickController();
 	
 	void setWindow(Window *win){ window = win; }
 	
+	void setButtonMap(ConfigFile* config=0x0);
+
 	void clearInput();
 	
 	// The joystick controller has no associated RAM, so return false to avoid trying to access it.
@@ -37,6 +40,8 @@ private:
 	bool P10; // Right or A
 	
 	Window *window; ///< Pointer to the main LCD driver
+
+	unsigned char keyMapArray[8]; ///< Array which maps the 8 gb buttons to keyboard keys
 };
 
 #endif

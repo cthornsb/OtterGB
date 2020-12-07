@@ -200,6 +200,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			gui->openLayerViewer();
 	}
 #endif
+	// Setup key mapping
+	joy->setButtonMap(&cfgFile);
 #endif
 	// Check for ROM path
 	if(romPath.empty()){
