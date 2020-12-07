@@ -169,34 +169,34 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 #else
 	std::cout << " Reading from configuration file\n";
 	ConfigFile cfgFile;
-	if (!cfgFile.read("gbc.cfg"))
-		std::cout << " Warning! Failed to load configuration file \"gbc.cfg\". Using default settings.";
+	if (!cfgFile.read("default.cfg"))
+		std::cout << " Warning! Failed to load configuration file \"default.cfg\". Using default settings.";
 
 	// Get the ROM filename
-	romPath = cfgFile.getFirstValue("ROM_DIRECTORY") + "/" + cfgFile.getFirstValue("ROM_FILENAME");
+	romPath = cfgFile.getValue("ROM_DIRECTORY") + "/" + cfgFile.getValue("ROM_FILENAME");
 
 	// Handle user input.
 	if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
 		sclk->setFramerateMultiplier(cfgFile.getFloat());
 
-	if (cfgFile.search("VERBOSE_MODE")) // Toggle verbose flag
+	if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
 		setVerboseMode(true);
 
 	if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
 		gpu->setPixelScale(cfgFile.getUInt());
 
-	if (cfgFile.search("FORCE_COLOR")) // Use GBC mode for original GB games
+	if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use GBC mode for original GB games
 		setForceColorMode(true);
 
-	if (cfgFile.search("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
+	if (cfgFile.searchBoolFlag("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
 		autoLoadExtRam = false;
 
 #ifdef USE_QT_DEBUGGER			
-	if (cfgFile.search("DEBUG_MODE")) { // Toggle debug flag
+	if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
 		setDebugMode(true);
-		if (cfgFile.search("OPEN_TILE_VIEWER")) // Open tile viewer window
+		if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
 			gui->openTileViewer();
-		if (cfgFile.search("OPEN_LAYER_VIEWER")) // Open layer viewer window
+		if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
 			gui->openLayerViewer();
 	}
 #endif
@@ -377,7 +377,7 @@ bool SystemGBC::execute(){
 	if(debugMode)
 		gui->closeAllWindows(); // Clean up the Qt GUI
 	if(autoLoadExtRam && cart->getRam()->getSize()) // Save save data (if available)
-		cart->writeExternalRam();
+		writeExternalRam();
 #endif
 	return true;
 }
@@ -819,10 +819,8 @@ bool SystemGBC::reset() {
 	bool retval = cart->readRom(romPath, verboseMode);
 
 	// Check that the ROM is loaded and the window is open
-	if (!retval || !gpu->getWindowStatus()) {
-		system("pause");
+	if (!retval || !gpu->getWindowStatus())
 		return false;
-	}
 
 	// Load save data (if available)
 	if(autoLoadExtRam && cart->getRam()->getSize())

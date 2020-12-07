@@ -57,6 +57,9 @@ endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 #Install options
 option(BUILD_TOOLS "Build and install tools." OFF)
 option(BUILD_DEBUG "Build with emulator debug window support (Requires QT)." OFF)
+if(WIN32)
+	option(INSTALL_DLLS "Install required DLLs when installing executable." ON)
+endif(WIN32)
 
 #------------------------------------------------------------------------------
 
@@ -78,23 +81,23 @@ if(NOT GRAPHICS_LIBRARY)
 endif()
 
 if(GRAPHICS_LIBRARY MATCHES "OpenGL")
-	# To install OpenGL and freeglut:
-	#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
-	#(Windows) https://www.transmissionzero.co.uk/software/freeglut-devel/
 	if(NOT WIN32)
+		# To install OpenGL and freeglut:
+		#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
 		set(GRAPHICS_LIBS -lglut -lGLU -lGL)
 	else()
-		#Find OpenGL install on Windows
-		if(NOT GRAPHICS_LIBRARY)
+		#Find OpenGL install on Windows (eventually make a CMake module for this)
+		#Precompiled freeglut libs from https://www.transmissionzero.co.uk/software/freeglut-devel/
+		if(NOT FREEGLUT_DIRECTORY)
 			set(FREEGLUT_DIRECTORY "" CACHE STRING "Freeglut install directory" FORCE)
-		endif(NOT GRAPHICS_LIBRARY)
+		endif(NOT FREEGLUT_DIRECTORY)
 		set(FREEGLUT_INCLUDE ${FREEGLUT_DIRECTORY}/include)
 		if(CMAKE_CL_64)
 			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/x64/freeglut.lib)
-			set(FREEGLUT_DLL ${FREEGLUT_DIRECTORY}/bin/x64/freeglut.dll)
+			set(FREEGLUT_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/x64/freeglut.dll)
 		else()
 			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/freeglut.lib)
-			set(FREEGLUT_DLL ${FREEGLUT_DIRECTORY}/bin/freeglut.dll)
+			set(FREEGLUT_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/freeglut.dll)
 		endif(CMAKE_CL_64)
 		include_directories(${FREEGLUT_INCLUDE})
 		set(GRAPHICS_LIBS ${FREEGLUT_LIBRARY} opengl32.lib)
@@ -114,9 +117,31 @@ include_directories(include)
 include_directories(graphics/include)
 
 if(BUILD_DEBUG)
-	#Find qt install.
-	#sudo apt-get install libqt4-dev
-	find_package (QT REQUIRED)
+	if(NOT WIN32)
+		#Find qt install.
+		#(Ubuntu) sudo apt-get install libqt4-dev
+		find_package (QT REQUIRED)
+	else()
+		#Find Qt install on Windows (eventually make a CMake module for this)
+		#Precompiled Qt4 libs from https://www.npcglib.org/~stathis/blog/precompiled-qt4-qt5/
+		if(NOT QT_TOP_DIRECTORY)
+			set(QT_TOP_DIRECTORY "" CACHE STRING "Qt4+ install directory" FORCE)
+		endif(NOT QT_TOP_DIRECTORY)
+		#Set paths for Qt headers
+		set(QT_INC_DIR ${QT_TOP_DIRECTORY}/include)
+		set(QT_CORE_INC_DIR ${QT_INC_DIR}/QtCore)
+		set(QT_GUI_INC_DIR ${QT_INC_DIR}/QtGui)
+		#Set paths for Qt libraries
+		set(QT_LIB_DIR ${QT_TOP_DIRECTORY}/lib)
+		set(QT_GUI_LIB ${QT_LIB_DIR}/QtGui4.lib)
+		set(QT_CORE_LIB ${QT_LIB_DIR}/QtCore4.lib)
+		set(QT_OPENGL_LIB ${QT_LIB_DIR}/QtOpenGL4.lib)
+		#Set Qt executable path
+		set(MOC_EXECUTABLE ${QT_TOP_DIRECTORY}/bin/moc)
+		set(UIC_EXECUTABLE ${QT_TOP_DIRECTORY}/bin/uic)
+		#Set a list of Qt dlls
+		set(QT_DLL_LIST ${QT_LIB_DIR}/QtGui4.dll ${QT_LIB_DIR}/QtCore4.dll ${QT_LIB_DIR}/QtOpenGL4.dll)
+	endif()
 	include_directories(qtfiles ${QT_INC_DIR} ${QT_CORE_INC_DIR} ${QT_GUI_INC_DIR})
 	add_subdirectory(qtfiles)
 endif()

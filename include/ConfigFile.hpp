@@ -15,13 +15,15 @@ public:
 
 	bool search(const std::string& name, bool bRequiredArg=false);
 
+	bool searchBoolFlag(const std::string& name);
+
 	std::string getCurrentFilename() const { return filename; }
 
 	std::string getCurrentParameterName() const { return currentName; }
 
 	std::string getCurrentParameterString() const { return currentValue; }
 
-	std::string getFirstValue(const std::string& name) const ;
+	std::string getValue(const std::string& name) const ;
 
 	bool getBoolFlag(const std::string& name) const;
 

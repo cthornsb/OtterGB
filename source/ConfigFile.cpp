@@ -4,6 +4,13 @@
 #include "ConfigFile.hpp"
 #include "Support.hpp"
 
+bool isNumeric(const std::string& str) {
+	for (auto i = 0; i < str.length(); i++)
+		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
+			return false;
+	return true;
+}
+
 bool ConfigFile::read(const std::string& fname){
 	filename = fname;
 	std::ifstream ifile(filename.c_str());
@@ -53,7 +60,13 @@ bool ConfigFile::search(const std::string& name, bool bRequiredArg/*=false*/) {
 	return false;
 }
 
-std::string ConfigFile::getFirstValue(const std::string& name) const {
+bool ConfigFile::searchBoolFlag(const std::string& name) {
+	if (search(name, true))
+		return getBoolFlag();
+	return false;
+}
+
+std::string ConfigFile::getValue(const std::string& name) const {
 	auto element = parameters.find(name);
 	if (element != parameters.end())
 		return element->second;
@@ -61,33 +74,33 @@ std::string ConfigFile::getFirstValue(const std::string& name) const {
 }
 
 bool ConfigFile::getBoolFlag(const std::string& name) const {
-	std::string input = toLowercase(getFirstValue(name));
-	return (input == "true" || std::stoul(input) == 1);
+	std::string lower = toLowercase(getValue(name));
+	return (lower == "true" || (isNumeric(lower) && std::stoul(lower) == 1));
 }
 
 unsigned char ConfigFile::getUChar(const std::string& name) const {
-	return (unsigned char)std::stoul(getFirstValue(name));
+	return (unsigned char)std::stoul(getValue(name));
 }
 
 unsigned short ConfigFile::getUShort(const std::string& name) const {
-	return (unsigned short)std::stoul(getFirstValue(name));
+	return (unsigned short)std::stoul(getValue(name));
 }
 
 unsigned int ConfigFile::getUInt(const std::string& name) const {
-	return std::stoul(getFirstValue(name));
+	return std::stoul(getValue(name));
 }
 
 float ConfigFile::getFloat(const std::string& name) const {
-	return std::stof(getFirstValue(name));
+	return std::stof(getValue(name));
 }
 
 double ConfigFile::getDouble(const std::string& name) const {
-	return std::stod(getFirstValue(name));
+	return std::stod(getValue(name));
 }
 
 bool ConfigFile::getBoolFlag() const {
 	std::string lower = toLowercase(currentValue);
-	return (lower == "true" || std::stoul(lower) == 1);
+	return (lower == "true" || (isNumeric(lower) && std::stoul(lower) == 1));
 }
 
 unsigned char ConfigFile::getUChar() const {
