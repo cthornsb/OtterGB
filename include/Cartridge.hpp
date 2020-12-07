@@ -7,7 +7,9 @@
 
 class Cartridge : public SystemComponent {
 public:
-	Cartridge() : SystemComponent("Cartridge"), ramSelect(false), extRamEnabled(false) { }
+	enum CartMBC {UNKNOWN, ROMONLY, MBC1, MBC2, MMM01, MBC3, MBC4, MBC5};
+
+	Cartridge();
 
 	// ROM is read-only, so return false to prevent writing to it.
 	virtual bool preWriteAction(){ return false; }
@@ -25,12 +27,14 @@ public:
 	std::string getTitleString() const { return std::string(titleString); }
 
 	std::string getLanguage() const { return (language == 0x0 ? "Japanese" : "English"); }
+
+	std::string getCartridgeType() const;
 	
 	unsigned short getRomSize() const { return size/1024; }
 	
 	unsigned short getRamSize() const { return ram.getSize()/1024; }
 	
-	unsigned char getCartridgeType() const { return cartridgeType; }
+	unsigned char getCartridgeTypeID() const { return cartridgeType; }
 
 	unsigned short getProgramEntryPoint() const { return programStart; }	
 	
@@ -62,6 +66,8 @@ private:
 	unsigned short globalChecksum;
 
 	SystemComponent ram;
+	
+	CartMBC mbcType;
 	
 	unsigned int readHeader(std::ifstream &f);
 };

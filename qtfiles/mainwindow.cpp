@@ -283,7 +283,7 @@ void MainWindow::updateCartridgeTab(){
 	setLineEditHex(ui->lineEdit_RomEntryPoint, cart->getProgramEntryPoint());
 	setLineEditText(ui->lineEdit_RomSize, cart->getRomSize());
 	setLineEditText(ui->lineEdit_RomSramSize, cart->getRamSize());
-	setLineEditHex(ui->lineEdit_RomType, cart->getCartridgeType());
+	setLineEditText(ui->lineEdit_RomType, cart->getCartridgeType());
 	setLineEditText(ui->lineEdit_RomLanguage, cart->getLanguage());
 	
 	// Cartridge status

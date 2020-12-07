@@ -291,9 +291,9 @@ void SoundProcessor::triggerSweepTimer(){
 	//x(t) = x(t-1) +/- x(t-1)/2^n
 	if(ch1SweepTime){
 		if(!ch1SweepIncDec) // Increase frequency
-			ch1Frequency = ch1Frequency * (1 + 1/std::powf(2, ch1SweepShift));
+			ch1Frequency = ch1Frequency * (1 + 1/powf(2, ch1SweepShift));
 		else // Decrease frequency
-			ch1Frequency = ch1Frequency * (1 - 1/std::powf(2, ch1SweepShift));
+			ch1Frequency = ch1Frequency * (1 - 1/powf(2, ch1SweepShift));
 		ch1SweepTime--;
 	}
 }

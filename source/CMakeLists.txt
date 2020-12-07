@@ -1,7 +1,21 @@
-set(CORE_SOURCES LR35902.cpp SystemComponent.cpp GPU.cpp Cartridge.cpp Sound.cpp Joystick.cpp WorkRam.cpp DmaController.cpp SerialController.cpp SystemRegisters.cpp SystemTimer.cpp SystemGBC.cpp Support.cpp ConfigFile.cpp Bitmap.cpp)
+set(CORE_SOURCES Bitmap.cpp
+                 Cartridge.cpp 
+                 ConfigFile.cpp
+                 DmaController.cpp 
+                 GPU.cpp 
+                 Joystick.cpp
+                 LR35902.cpp 
+                 SerialController.cpp 
+                 Sound.cpp 
+                 Support.cpp
+                 SystemComponent.cpp
+                 SystemGBC.cpp
+                 SystemRegisters.cpp 
+                 SystemTimer.cpp 
+                 WorkRam.cpp)
 
 if(NOT WIN32)
-	append(CORE_SOURCES optionHandler.cpp)
+	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
 endif(NOT WIN32)
 
 if(NOT ${GB_BOOT_ROM} STREQUAL "")

@@ -4,6 +4,7 @@ project (gbc)
 
 if(NOT WIN32) # Unix systems (Ubuntu)
 	#Compile with c++11 or c++0x depending on the compiler version
+	message(STATUS "Building for Linux")
 	if (CMAKE_COMPILER_IS_GNUCXX)
 		if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "4.3" AND
 				${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.7")
@@ -24,7 +25,7 @@ if(NOT WIN32) # Unix systems (Ubuntu)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 	endif()
 else()
-	message(STATUS "Compiling for Windows")
+	message(STATUS "Building for Windows")
 endif()
 
 #if user does not specify prefix we assign it to the exec directory

@@ -13,6 +13,31 @@ constexpr unsigned short ROM_HIGH     = 0x8000;
 // class Cartridge
 /////////////////////////////////////////////////////////////////////
 
+Cartridge::Cartridge() : 
+	SystemComponent("Cartridge"), 
+	ramSelect(false), 
+	extRamEnabled(false),
+	leader(0),
+	programStart(0),
+	nintendoString(""),
+	titleString(""),
+	manufacturer(""),
+	gbcFlag(0),
+	licensee(""),
+	sgbFlag(0),
+	cartridgeType(0),
+	romSize(0),
+	ramSize(0),
+	language(0),
+	oldLicensee(0),
+	versionNumber(0),
+	headerChecksum(0),
+	globalChecksum(0),
+	ram("SRAM"),
+	mbcType(UNKNOWN)
+{ 
+}
+
 bool Cartridge::preReadAction(){
 	if(readLoc < ROM_SWAP_LOW){ // ROM bank 0
 		readBank = 0;
@@ -28,97 +53,131 @@ bool Cartridge::preReadAction(){
 }
 
 bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &val){
-	if(reg == 0x0){ // ROM only
-	}
-	else if(reg >= 0x1 && reg <= 0x3){ // MBC1
-		if(reg <= 0x2000){ // RAM enable (write only)
-			// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-			// Note: Type 0x01 does not have cartridge RAM
-			extRamEnabled = ((val & 0x0F) == 0x0A);
-		}
-		else if(reg < 0x4000){ // ROM bank number register (write only)
-			// 5-bit register [0x01, 0x1F] (write only)
-			// Specify lower 5 bits of ROM bank number
-			bs &= 0xE0; // Clear bits 0-4
-			bs |= (val & 0x1F); // Set bits 0-4
-			// Note: MBC1 translates a 0x0 here as bank 1
-		}
-		else if(reg < 0x6000){
-			// 2-bit register [0,3] (write only)
-			if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
-				bs &= 0x9F; // Clear bits 5-6
-				bs |= ((val & 0x3) << 5); // Set bits 5-6
+	switch(mbcType){
+		case ROMONLY: // ROM only
+			break;
+		case MBC1: // MBC1 (1-3)
+			if(reg <= 0x2000){ // RAM enable (write only)
+				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+				// Note: Type 0x01 does not have cartridge RAM
+				extRamEnabled = ((val & 0x0F) == 0x0A);
 			}
-			else // Specify RAM bank number (if in RAM select mode).
-				ram.setBank(val & 0x3);
-		}
-		else if(reg < 0x8000){ // ROM/RAM mode select
-			// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
-			// Note: Type 0x01 does not have cartridge RAM
-			ramSelect = (val & 0x1) == 0x1;
-		}
-	}
-	else if(reg >= 0x5 && reg <= 0x6){ // MBC2
-		if(reg < 0x2000){ // RAM enable (write only)
-			if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
-				extRamEnabled = true;
-		}
-		else if(reg < 0x4000){ // ROM bank number (write only)
-			if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
-				bs = (val & 0x0F);
-		}
-	}
-	else if(reg >= 0xB && reg <= 0xD){ // MMM01
-	}
-	else if (reg >= 0xF && reg <= 0x13){ // MBC3
-	}
-	else if(reg >= 0x15 && reg <= 0x17){ // MBC4
-	}
-	else if(reg >= 0x19 && reg <= 0x1E){ // MBC5
-		if(reg < 0x2000){ // RAM enable (write only)
-			// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-			extRamEnabled = ((val & 0x0F) == 0x0A);
-		}
-		else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
-			// 9-bit register [0x01, 0x1FF] (write only)
-			// Specify lower 8 bits of ROM bank number
-			bs &= 0xFF00; // Clear bits 0-7
-			bs |= (val & 0x00FF); // Set bits 0-7
-		}
-		else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
-			// 1-bit register [0,3] (write only)
-			// Specify upper 1 bit of ROM bank number
-			bs &= 0xFEFF; // Clear bit 9;
-			bs |= ((val & 0x0001) << 8); // Set bit 9
-		}
-		else if(reg < 0x6000){ // RAM bank number
-			// Select the RAM bank [0,F]
-			ram.setBank(val & 0x0F);
-		}			
+			else if(reg < 0x4000){ // ROM bank number register (write only)
+				// 5-bit register [0x01, 0x1F] (write only)
+				// Specify lower 5 bits of ROM bank number
+				bs &= 0xE0; // Clear bits 0-4
+				bs |= (val & 0x1F); // Set bits 0-4
+				// Note: MBC1 translates a 0x0 here as bank 1
+			}
+			else if(reg < 0x6000){
+				// 2-bit register [0,3] (write only)
+				if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
+					bs &= 0x9F; // Clear bits 5-6
+					bs |= ((val & 0x3) << 5); // Set bits 5-6
+				}
+				else // Specify RAM bank number (if in RAM select mode).
+					ram.setBank(val & 0x3);
+			}
+			else if(reg < 0x8000){ // ROM/RAM mode select
+				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
+				// Note: Type 0x01 does not have cartridge RAM
+				ramSelect = (val & 0x1) == 0x1;
+			}
+			break;
+		case MBC2: // MBC2 (5-6)
+			if(reg < 0x2000){ // RAM enable (write only)
+				if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
+					extRamEnabled = true;
+			}
+			else if(reg < 0x4000){ // ROM bank number (write only)
+				if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
+					bs = (val & 0x0F);
+			}
+			break;
+		case MMM01: // MMM01
+			break;
+		case MBC3: // MBC3
+			break;
+		case MBC4: // MBC4
+			break;
+		case MBC5: // MBC5
+			if(reg < 0x2000){ // RAM enable (write only)
+				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
+				extRamEnabled = ((val & 0x0F) == 0x0A);
+			}
+			else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
+				// 9-bit register [0x01, 0x1FF] (write only)
+				// Specify lower 8 bits of ROM bank number
+				bs &= 0xFF00; // Clear bits 0-7
+				bs |= (val & 0x00FF); // Set bits 0-7
+			}
+			else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
+				// 1-bit register [0,3] (write only)
+				// Specify upper 1 bit of ROM bank number
+				bs &= 0xFEFF; // Clear bit 9;
+				bs |= ((val & 0x0001) << 8); // Set bit 9
+			}
+			else if(reg < 0x6000){ // RAM bank number
+				// Select the RAM bank [0,F]
+				ram.setBank(val & 0x0F);
+			}
+			break;
+		default:
+			break;	
 	}
 	return false;
 }
 
 bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
-	if(reg == 0x0){ // ROM only
-	}
-	else if(reg <= 0x1 && reg <= 0x3){ // MBC1
-		// MBC1 has no registers which may be read
-		return false;
-	}
-	else if(reg <= 0x5 && reg <= 0x6){ // MBC2
-		// MBC2 has no registers which may be read
-		return false;
-	}
-	else if(reg <= 0xB && reg <= 0xD){ // MMM01
-	}
-	else if(reg <= 0xF && reg <= 0x13){ // MBC3
-	}
-	else if(reg <= 0x15 && reg <= 0x17){ // MBC4
-	}
-	else if(reg <= 0x19 && reg <= 0x1E){ // MBC5
+	switch(mbcType){
+		case ROMONLY: // ROM only
+			break;
+		case MBC1: // MBC1 (1-3)
+			break;
+		case MBC2: // MBC2 (5-6)
+			break;
+		case MMM01: // MMM01
+			break;
+		case MBC3: // MBC3
+			break;
+		case MBC4: // MBC4
+			break;
+		case MBC5: // MBC5
+			break;
+		default:
+			break;	
 	}
 	return false;
+}
+
+std::string Cartridge::getCartridgeType() const {
+	std::string retval = "UNKNOWN";
+	switch(mbcType){
+		case ROMONLY: // ROM only
+			retval = "ROM ONLY";
+			break;
+		case MBC1: // MBC1 (1-3)
+			retval = "MBC1";
+			break;
+		case MBC2: // MBC2 (5-6)
+			retval = "MBC2";
+			break;
+		case MMM01: // MMM01
+			retval = "MMM01";
+			break;
+		case MBC3: // MBC3
+			retval = "MBC3";
+			break;
+		case MBC4: // MBC4
+			retval = "MBC4";
+			break;
+		case MBC5: // MBC5
+			retval = "MBC5";
+			break;
+		default:
+			break;	
+	}
+	return retval;
 }
 
 bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
@@ -171,6 +230,25 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 
 	// Check for Gameboy Color mode flag
 	bGBCMODE = ((gbcFlag & 0x80) != 0);
+	
+	// Set cartridge type
+	mbcType = UNKNOWN;
+	if(cartridgeType == 0x0 || cartridgeType == 0x8 || cartridgeType == 0x9)
+		mbcType = ROMONLY;
+	else if(cartridgeType >= 0x01 && cartridgeType <= 0x03) // MBC1
+		mbcType = MBC1;
+	else if(cartridgeType >= 0x05 && cartridgeType <= 0x06) // MBC2
+		mbcType = MBC2;
+	else if(cartridgeType >= 0x0B && cartridgeType <= 0x0D) // MMM01
+		mbcType = MMM01;
+	else if(cartridgeType >= 0x0F && cartridgeType <= 0x13) // MBC3
+		mbcType = MBC3;
+	else if(cartridgeType >= 0x15 && cartridgeType <= 0x17) // MBC4
+		mbcType = MBC4;
+	else if(cartridgeType >= 0x19 && cartridgeType <= 0x1E) // MBC5
+		mbcType = MBC5;
+	else
+		std::cout << " Warning! Unknown cartridge type (" << getHex(cartridgeType) << ").\n";
 	
 	// Initialize ROM storage
 	mem.clear();
@@ -239,7 +317,7 @@ void Cartridge::print(){
 	std::cout << "Title: " << getTitleString() << std::endl;
 	std::cout << " ROM: " << getRomSize() << " kB\n";
 	std::cout << " RAM: " << getRamSize() << " kB\n";
-	std::cout << " Type: " << getHex(cartridgeType) << std::endl;
+	std::cout << " Type: " << getCartridgeType() << std::endl;
 	std::cout << " Vers: " << getHex(versionNumber) << "\n";
 	std::cout << " Lang: " << getLanguage() << std::endl;
 	std::cout << " Program entry at " << getHex(programStart) << "\n";
