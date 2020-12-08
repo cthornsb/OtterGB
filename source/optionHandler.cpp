@@ -9,7 +9,14 @@
 /////////////////////////////////////////////////////////////////////
 
 optionExt::optionExt(const char *name_, const int &has_arg_, int *flag_, const int &val_, const std::string &argstr_, const std::string &helpstr_) : 
-  name(name_), has_arg(has_arg_), flag(flag_), val(val_), argstr(argstr_), helpstr(helpstr_), active(false) {
+  name(name_), 
+  has_arg(has_arg_), 
+  flag(flag_), 
+  val(val_), 
+  argstr(argstr_), 
+  helpstr(helpstr_), 
+  active(false) 
+{
 }
 
 void optionExt::print(const size_t &len_/*=0*/, const std::string &prefix_/*=""*/){
@@ -38,7 +45,13 @@ option optionExt::getOption(){
 // class optionHandler
 /////////////////////////////////////////////////////////////////////
 
-optionHandler::optionHandler(){
+optionHandler::optionHandler() :
+	bGood(false),
+	longOpts(),
+	baseOpts(),
+	userOpts(),
+	optstr()
+{
 	baseOpts.push_back(optionExt("help", no_argument, NULL, 'h', "", "Display this dialogue"));
 	
 	optstr = "h";
@@ -135,7 +148,7 @@ bool optionHandler::setup(int argc, char *argv[]){
 		}
 	}//while
 	
-	return true;
+	return (bGood = true);
 }
 
 optionExt *optionHandler::getOption(const size_t &index_){

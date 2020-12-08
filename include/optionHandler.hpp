@@ -90,7 +90,13 @@ class optionHandler{
 	  */
 	optionExt *getOption(const size_t &index_);
 
+	/** Return true if user input was read successfully and return false otherwise.
+	  */
+	bool good() const { return bGood; }
+
   private:
+  	bool bGood; ///< Set to true if user input read successfully
+  	
 	std::vector<option> longOpts; ///< Vector of all command line options
 	std::vector<optionExt> baseOpts; ///< Default command line options
 	std::vector<optionExt> userOpts; ///< User defined command line options

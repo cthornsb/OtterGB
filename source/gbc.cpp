@@ -8,8 +8,7 @@ int main(int argc, char *argv[]){
 
 	// Read the ROM into memory
 	if(!gbc->reset()){
-		std::cout << " ERROR! Failed to read input ROM file \"" << gbc->getRomFilename() << "\"!\n";
-		return 3;
+		return 1;
 	}
 
 	// Execute the ROM

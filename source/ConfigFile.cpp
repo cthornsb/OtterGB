@@ -11,6 +11,25 @@ bool isNumeric(const std::string& str) {
 	return true;
 }
 
+ConfigFile::ConfigFile() : 
+	bGood(false),
+	filename(),
+	currentName(),
+	currentValue(),
+	parameters()
+{
+}
+
+ConfigFile::ConfigFile(const std::string& fname) : 
+	bGood(false),
+	filename(),
+	currentName(),
+	currentValue(),
+	parameters()
+{ 
+	read(fname); 
+}
+
 bool ConfigFile::read(const std::string& fname){
 	filename = fname;
 	std::ifstream ifile(filename.c_str());
@@ -43,7 +62,7 @@ bool ConfigFile::read(const std::string& fname){
 		}
 	}
 	ifile.close();
-	return true;
+	return (bGood = true);
 }
 
 bool ConfigFile::search(const std::string& name, bool bRequiredArg/*=false*/) {
@@ -96,6 +115,10 @@ float ConfigFile::getFloat(const std::string& name) const {
 
 double ConfigFile::getDouble(const std::string& name) const {
 	return std::stod(getValue(name));
+}
+
+std::string ConfigFile::getValue() const {
+	return currentValue;
 }
 
 bool ConfigFile::getBoolFlag() const {

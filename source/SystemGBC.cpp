@@ -1,6 +1,3 @@
-#ifndef _WIN32
-#include <unistd.h>
-#endif
 #include <iostream>
 #include <string>
 #include <string.h>
@@ -78,6 +75,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	userQuitting(false),
 	autoLoadExtRam(true),
 	initSuccessful(false),
+	fatalError(false),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -88,42 +86,21 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	pauseAfterNextInstruction(false),
 	pauseAfterNextClock(false),
 	pauseAfterNextHBlank(false),
-	pauseAfterNextVBlank(false),
-	serial(new SerialController()),
-	dma(new DmaController),
-	cart(new Cartridge),
-	gpu(new GPU),
-	sound(new SoundProcessor),
-	oam(new SpriteHandler),
-	joy(new JoystickController),
-	wram(new WorkRam),
-	hram(new SystemComponent),
-	sclk(new SystemClock),
-	timer(new SystemTimer),
-	cpu(new LR35902)
+	pauseAfterNextVBlank(false)
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
 	memoryAccessWrite[1] = 0;
 	memoryAccessRead[0] = 1; 
 	memoryAccessRead[1] = 0;
-
-#ifdef USE_QT_DEBUGGER			
-	app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
-#endif
-
-	// Add all components to the subsystem list
-	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
-
-	// Initialize registers vector
-	registers = std::vector<Register>(REGISTER_HIGH-REGISTER_LOW, Register());
-
-	// Initialize system components
-	this->initialize();
+	
+	// Configuration file handler
+	ConfigFile cfgFile;
 
 #ifndef _WIN32
 	// Handle command line options
 	optionHandler handler;
+	handler.add(optionExt("config", required_argument, NULL, 'c', "<filename>", "Specify an input configuration file."));
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
 	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<multiplier>", "Set target framerate multiplier (default=1)."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
@@ -134,79 +111,46 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
 	handler.add(optionExt("tile-viewer", no_argument, NULL, 'T', "", "Enable VRAM tile viewer (if debug gui enabled)."));
 	handler.add(optionExt("layer-viewer", no_argument, NULL, 'L', "", "Enable BG/WIN layer viewer (if debug gui enabled)."));
-#endif
-
+#endif // ifdef USE_QT_DEBUGGER
 	// Handle user input.
-	if(handler.setup(argc, argv)){
-		if(handler.getOption(0)->active) // Set input filename
-			romPath = handler.getOption(0)->argument;
-
-		if(handler.getOption(1)->active) // Set framerate multiplier
-			sclk->setFramerateMultiplier(strtod(handler.getOption(1)->argument.c_str(), NULL));
-
-		if(handler.getOption(2)->active) // Toggle verbose flag
-			setVerboseMode(true);
-
-		if(handler.getOption(3)->active) // Set pixel scaling factor
-			gpu->setPixelScale(strtoul(handler.getOption(3)->argument.c_str(), NULL, 10));
-
-		if(handler.getOption(4)->active) // Use GBC mode for original GB games
-			setForceColorMode(true);
-
-		if(handler.getOption(5)->active) // Do not automatically save/load external cartridge RAM (SRAM)
-			autoLoadExtRam = false;
-
-#ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(6)->active){ // Toggle debug flag
-			setDebugMode(true);
-			if(handler.getOption(7)->active)
-				gui->openTileViewer();
-			if(handler.getOption(8)->active) // Toggle debug flag
-				gui->openLayerViewer();
+	if(!handler.setup(argc, argv)){
+		fatalError = true;
+		return;
+	}
+	if(handler.getOption(0)->active){ 
+		std::cout << " Reading from configuration file (" << handler.getOption(0)->argument << ")\n";
+		if(!cfgFile.read(handler.getOption(0)->argument)){ // Read configuration file
+			std::cout << " FATAL ERROR! Failed to load input configuration file.\n";
+			fatalError = true;
+			return;
 		}
-#endif
+		// Get the ROM path
+		romPath = cfgFile.getValue("ROM_DIRECTORY") + "/" + cfgFile.getValue("ROM_FILENAME");
 	}
-#else
-	std::cout << " Reading from configuration file\n";
-	ConfigFile cfgFile;
-	if (!cfgFile.read("default.cfg"))
-		std::cout << " Warning! Failed to load configuration file \"default.cfg\". Using default settings.";
-
-	// Get the ROM filename
-	romPath = cfgFile.getValue("ROM_DIRECTORY") + "/" + cfgFile.getValue("ROM_FILENAME");
-
-	// Handle user input.
-	if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
-		sclk->setFramerateMultiplier(cfgFile.getFloat());
-
-	if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
-		setVerboseMode(true);
-
-	if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
-		gpu->setPixelScale(cfgFile.getUInt());
-
-	if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use GBC mode for original GB games
-		setForceColorMode(true);
-
-	if (cfgFile.searchBoolFlag("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
-		autoLoadExtRam = false;
-
-#ifdef USE_QT_DEBUGGER			
-	if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
-		setDebugMode(true);
-		if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
-			gui->openTileViewer();
-		if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
-			gui->openLayerViewer();
+	if(handler.getOption(1)->active) // Set input filename
+		romPath = handler.getOption(1)->argument;
+#else // ifndef _WIN32	
+	std::cout << " Reading from configuration file (default.cfg)\n";
+	if(!cfgFile.read("default.cfg")){ // Read configuration file
+		std::cout << " FATAL ERROR! Failed to load input configuration file.\n";
+		fatalError = true;
+		return;
 	}
-#endif
-	// Setup key mapping
-	joy->setButtonMap(&cfgFile);
-#endif
+#endif // ifndef _WIN32	
+
+	// Get the ROM path from the config file
+	if(romPath.empty() && cfgFile.good()){ 
+		if(cfgFile.search("ROM_DIRECTORY", true))
+			romPath += cfgFile.getValue() + "/";
+		if(cfgFile.search("ROM_FILENAME", true))
+			romPath += cfgFile.getValue();
+	}
+
 	// Check for ROM path
 	if(romPath.empty()){
-		std::cout << " Warning! Input gb/gbc ROM file not specified!\n";
-		// Do something to prevent running with no input file
+		std::cout << " FATAL ERROR! Input gb/gbc ROM file not specified!\n";
+		fatalError = true;
+		return;
 	}
 
 	// Get the ROM filename and file extension
@@ -220,7 +164,82 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		romExtension = romFilename.substr(index+1);
 		romFilename = romFilename.substr(0, index);
 	}
-	
+
+#ifdef USE_QT_DEBUGGER			
+	app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
+#endif // ifdef USE_QT_DEBUGGER
+
+	// Define all system components
+	serial.reset(new SerialController);
+	dma.reset(new DmaController);
+	cart.reset(new Cartridge);
+	gpu.reset(new GPU);
+	sound.reset(new SoundProcessor);
+	oam.reset(new SpriteHandler);
+	joy.reset(new JoystickController);
+	wram.reset(new WorkRam);
+	hram.reset(new SystemComponent);
+	sclk.reset(new SystemClock);
+	timer.reset(new SystemTimer);
+	cpu.reset(new LR35902);
+
+	// Add all components to the subsystem list
+	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
+
+	// Initialize registers vector
+	registers = std::vector<Register>(REGISTER_HIGH-REGISTER_LOW, Register());
+
+	// Initialize system components
+	this->initialize();
+
+	if(cfgFile.good()){ // Handle user input from config file
+		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
+			sclk->setFramerateMultiplier(cfgFile.getFloat());
+		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
+			setVerboseMode(true);
+		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
+			gpu->setPixelScale(cfgFile.getUInt());
+		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use GBC mode for original GB games
+			setForceColorMode(true);
+		if (cfgFile.searchBoolFlag("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
+			autoLoadExtRam = false;
+#ifdef USE_QT_DEBUGGER			
+		if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
+			setDebugMode(true);
+			if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
+				gui->openTileViewer();
+			if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
+				gui->openLayerViewer();
+		}
+#endif // ifdef USE_QT_DEBUGGER
+		// Setup key mapping
+		joy->setButtonMap(&cfgFile);
+	}
+
+#ifndef _WIN32
+	if(handler.good()){ // Handle user command line arguments
+		if(handler.getOption(2)->active) // Set framerate multiplier
+			sclk->setFramerateMultiplier(strtod(handler.getOption(2)->argument.c_str(), NULL));
+		if(handler.getOption(3)->active) // Toggle verbose flag
+			setVerboseMode(true);
+		if(handler.getOption(4)->active) // Set pixel scaling factor
+			gpu->setPixelScale(strtoul(handler.getOption(4)->argument.c_str(), NULL, 10));
+		if(handler.getOption(5)->active) // Use GBC mode for original GB games
+			forceColor = true;
+		if(handler.getOption(6)->active) // Do not automatically save/load external cartridge RAM (SRAM)
+			autoLoadExtRam = false;
+#ifdef USE_QT_DEBUGGER			
+		if(handler.getOption(7)->active){ // Toggle debug flag
+			setDebugMode(true);
+			if(handler.getOption(8)->active)
+				gui->openTileViewer();
+			if(handler.getOption(9)->active) // Toggle debug flag
+				gui->openLayerViewer();
+		}
+#endif // ifdef USE_QT_DEBUGGER
+	}
+#endif // ifndef _WIN32
+
 	pauseAfterNextInstruction = false;
 	pauseAfterNextClock = false;
 	pauseAfterNextHBlank = false;
@@ -231,6 +250,9 @@ SystemGBC::~SystemGBC(){
 }
 
 void SystemGBC::initialize(){ 
+	if(fatalError) // Check for fatal error
+		return;
+
 	hram->initialize(127);
 	hram->setName("HRAM");
 
@@ -280,6 +302,8 @@ void SystemGBC::initialize(){
 }
 
 bool SystemGBC::execute(){
+	if(!initSuccessful)
+		return false;
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
@@ -364,7 +388,7 @@ bool SystemGBC::execute(){
 			gpu->processEvents();
 			checkSystemKeys();
 
-			// Maintain framerate but do not advance the system sclk->
+			// Maintain framerate but do not advance the system clock
 			sclk->wait();
 #ifndef USE_QT_DEBUGGER
 		}
@@ -812,6 +836,9 @@ void SystemGBC::unpause(){
 }
 
 bool SystemGBC::reset() {
+	if(!initSuccessful)
+		return false;
+
 	// Set default register values.
 	cpu->reset();
 
@@ -819,8 +846,10 @@ bool SystemGBC::reset() {
 	bool retval = cart->readRom(romPath, verboseMode);
 
 	// Check that the ROM is loaded and the window is open
-	if (!retval || !gpu->getWindowStatus())
+	if (!retval || !gpu->getWindowStatus()){
+		std::cout << " ERROR! Failed to read input ROM file (" << romPath << ").\n";
 		return false;
+	}
 
 	// Load save data (if available)
 	if(autoLoadExtRam && cart->getRam()->getSize())

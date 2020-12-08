@@ -265,6 +265,7 @@ private:
 	bool userQuitting;
 	bool autoLoadExtRam; ///< If set, external cartridge RAM (SRAM) will not be loaded at boot
 	bool initSuccessful; ///< Set if all components were initialized successfully
+	bool fatalError;
 
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB

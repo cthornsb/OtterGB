@@ -7,9 +7,13 @@
 
 class ConfigFile {
 public:
-	ConfigFile(){}
+	ConfigFile();
 
-	ConfigFile(const std::string& fname){ read(fname); }
+	ConfigFile(const std::string& fname);
+
+	/** Return true if user input was read successfully and return false otherwise.
+	  */
+	bool good() const { return bGood; }
 
 	bool read(const std::string& fname);
 
@@ -37,6 +41,8 @@ public:
 
 	double getDouble(const std::string& name) const;
 
+	std::string getValue() const;
+
 	bool getBoolFlag() const;
 
 	unsigned char getUChar() const;
@@ -56,6 +62,8 @@ public:
 	std::map<std::string, std::string>::iterator end() { return parameters.end(); }
 
 private:
+	bool bGood; ///< Set to true if user input read successfully
+
 	std::string filename;
 	std::string currentName;
 	std::string currentValue;
