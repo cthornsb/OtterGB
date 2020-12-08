@@ -3,10 +3,6 @@
 
 #include <vector>
 
-#ifdef USE_QT_DEBUGGER
-#include <QtOpenGL/QGLWidget>
-#endif
-
 #include "colors.hpp"
 
 class GPU;
@@ -31,18 +27,11 @@ private:
 	bool states[256]; ///< States of keyboard keys (true indicates key is down) 
 };
 
-#ifndef USE_QT_DEBUGGER
 class Window{
-#else
-class Window : public QGLWidget {
-#endif
 public:
 	/** Default constructor
 	  */
 	Window() : 
-#ifdef USE_QT_DEBUGGER
-		QGLWidget(),
-#endif
 		W(0), 
 		H(0), 
 		A(1),
@@ -58,9 +47,6 @@ public:
 	/** Constructor taking the width and height of the window
 	  */
 	Window(const int &w, const int &h) : 
-#ifdef USE_QT_DEBUGGER
-		QGLWidget(),
-#endif
 		W(w), 
 		H(h),
 		A(float(w)/h),
