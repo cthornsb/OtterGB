@@ -673,6 +673,8 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 // Toggle verbose flag
 void SystemGBC::setVerboseMode(bool state/*=true*/){
 	verboseMode = state;
+	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++)
+		comp->second->setVerboseMode(state);
 }
 
 void SystemGBC::setMemoryWriteRegion(const unsigned short &locL, const unsigned short &locH/*=0*/){

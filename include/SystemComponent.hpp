@@ -102,6 +102,8 @@ public:
 	std::string getName() const { return sName; }
 
 	void setDebugMode(bool state=true){ debugMode = state; }
+	
+	void setVerboseMode(bool state=true){ verboseMode = state; }
 
 protected:
 	SystemGBC *sys; ///< Pointer to the system bus
@@ -110,6 +112,7 @@ protected:
 	
 	bool readOnly; ///< Read-only flag
 	bool debugMode; ///< Debug flag
+	bool verboseMode; ///< Verbosity flag
 
 	unsigned short offset; ///< Memory address offset
 	unsigned short nBytes; ///< Number of bytes per bank
