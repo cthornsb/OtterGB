@@ -10,6 +10,8 @@
 #include "LR35902.hpp"
 #include "GPU.hpp"
 #include "DmaController.hpp"
+#include "Cartridge.hpp"
+#include "WorkRam.hpp"
 
 QString getQString(const std::string &str)
 {

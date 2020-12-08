@@ -10,6 +10,7 @@
 #include "Graphics.hpp"
 #include "Bitmap.hpp"
 #include "GPU.hpp"
+#include "SystemTimer.hpp"
 
 constexpr unsigned short VRAM_LOW  = 0x8000;
 constexpr unsigned short VRAM_HIGH = 0xA000;

@@ -11,6 +11,16 @@
 	#include "optionHandler.hpp"
 #endif
 
+#include "Cartridge.hpp"
+#include "GPU.hpp"
+#include "Sound.hpp"
+#include "SystemTimer.hpp"
+#include "Joystick.hpp"
+#include "LR35902.hpp"
+#include "WorkRam.hpp"
+#include "DmaController.hpp"
+#include "SerialController.hpp"
+
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
 	#include "mainwindow.h"
@@ -472,25 +482,32 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 			return false;
 	}
 	else if(loc <= 0x7FFF){ // Cartridge ROM 
-			cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
-		}
+		cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
+	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu->write(loc, src);
+		gpu->writeFast(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
-		cart->getRam()->write(loc, src);
+		if(cart->hasRam())
+			cart->getRam()->writeFast(loc, src);
 	}
-	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
-		wram->write(loc, src);
+	else if(loc <= 0xCFFF){ // Work RAM (WRAM) bank 0
+		wram->writeFastBank0(loc, src);
+	}
+	else if(loc <= 0xDFFF){ // Work RAM (WRAM) swap bank
+		wram->writeFast(loc-0x1000, src);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) echo
+		wram->writeFastBank0(loc-0x2000, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam->write(loc, src);
+		oam->writeFast(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram->write(loc, src);
+		hram->writeFast(loc, src);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		rIE->write(src);
@@ -509,31 +526,41 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		if(!readRegister(loc, dest))
 			return false;
 	}
-	else if(loc <= 0x7FFF){ // Cartridge ROM 
+	else if(loc <= 0x3FFF){ // Cartridge ROM bank 0
 		if(bootSequence && (loc < 0x100 || loc >= 0x200)){ // Startup sequence. 
 			//Ignore bytes between 0x100 and 0x200 where the cartridge header lives.
 			dest = bootROM[loc];
 		}
 		else
-			cart->read(loc, dest);
+			cart->readFastBank0(loc, dest);
+	}
+	else if(loc <= 0x7FFF){ // Cartridge ROM swap bank
+		cart->readFast(loc-0x4000, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu->read(loc, dest);
+		gpu->readFast(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
-		cart->getRam()->read(loc, dest);
+		if(cart->hasRam())
+			cart->getRam()->readFast(loc, dest);
 	}
-	else if(loc <= 0xFDFF){ // Work RAM (WRAM)
-		wram->read(loc, dest);
+	else if(loc <= 0xCFFF){ // Work RAM (WRAM) bank 0
+		wram->readFastBank0(loc, dest);
+	}
+	else if(loc <= 0xDFFF){ // Work RAM (WRAM) swap bank
+		wram->readFast(loc-0x1000, dest);
+	}
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) echo
+		wram->readFastBank0(loc-0x2000, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam->read(loc, dest);
+		oam->readFast(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram->read(loc, dest);
+		hram->readFast(loc, dest);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		dest = rIE->read();

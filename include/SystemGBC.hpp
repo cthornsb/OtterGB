@@ -7,20 +7,23 @@
 
 #include "SystemComponent.hpp"
 #include "SystemRegisters.hpp"
-#include "Cartridge.hpp"
-#include "GPU.hpp"
-#include "Sound.hpp"
-#include "SystemTimer.hpp"
-#include "Joystick.hpp"
-#include "LR35902.hpp"
-#include "WorkRam.hpp"
-#include "DmaController.hpp"
-#include "SerialController.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	class QApplication;
 	class MainWindow;
 #endif
+
+class SerialController;
+class DmaController;
+class Cartridge;
+class GPU;
+class SoundProcessor;
+class SpriteHandler;
+class JoystickController;
+class WorkRam;
+class SystemClock;
+class SystemTimer;
+class LR35902;
 
 class ComponentList{
 public:

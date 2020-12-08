@@ -40,6 +40,18 @@ bool SystemComponent::write(const unsigned short &loc, const unsigned short &ban
 	return true;		
 }	
 
+void SystemComponent::writeFast(const unsigned short &loc, const unsigned char &src){
+	if(readOnly)
+		return;
+	mem[bs][loc-offset] = src;
+}
+
+void SystemComponent::writeFastBank0(const unsigned short &loc, const unsigned char &src){
+	if(readOnly)
+		return;
+	mem[0][loc-offset] = src;
+}
+
 bool SystemComponent::read(const unsigned short &loc, unsigned char *dest){
 	return read(loc, bs, (*dest));
 }
@@ -62,6 +74,14 @@ bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank
 	dest = mem[readBank][readLoc-offset];
 	postReadAction();
 	return true;
+}
+
+void SystemComponent::readFast(const unsigned short &loc, unsigned char &dest){ 
+	dest = mem[bs][loc-offset];
+}
+
+void SystemComponent::readFastBank0(const unsigned short &loc, unsigned char &dest){ 
+	dest = mem[0][loc-offset];
 }
 
 void SystemComponent::print(const unsigned short bytesPerRow/*=10*/){

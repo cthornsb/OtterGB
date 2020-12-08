@@ -1,7 +1,3 @@
-
-#ifndef _WIN32
-#include <unistd.h> // Is this needed on Linux now that usleep is removed? CRT
-#endif
 #include <thread>
 #include <iostream>
 

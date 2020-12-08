@@ -30,6 +30,8 @@ public:
 	
 	void initialize(const unsigned short &nB, const unsigned short &N=1);
 	
+	bool empty() const { return mem.empty(); }
+	
 	bool write(const unsigned short &loc, unsigned char *src);
 	
 	bool write(const unsigned short &loc, const unsigned char &src);
@@ -38,6 +40,10 @@ public:
 
 	bool write(const unsigned short &loc, const unsigned short &bank, const unsigned char &src);
 
+	void writeFast(const unsigned short &loc, const unsigned char &src);
+
+	void writeFastBank0(const unsigned short &loc, const unsigned char &src);
+
 	bool read(const unsigned short &loc, unsigned char *dest);
 
 	bool read(const unsigned short &loc, unsigned char &dest);
@@ -45,6 +51,10 @@ public:
 	bool read(const unsigned short &loc, const unsigned short &bank, unsigned char *dest);
 
 	bool read(const unsigned short &loc, const unsigned short &bank, unsigned char &dest);
+
+	void readFast(const unsigned short &loc, unsigned char &dest);
+
+	void readFastBank0(const unsigned short &loc, unsigned char &dest);
 
 	void setBank(const unsigned short &b){ bs = (b < nBanks ? b : b-1); }
 

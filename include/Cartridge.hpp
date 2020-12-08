@@ -20,6 +20,8 @@ public:
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
 
+	bool hasRam(){ return !ram.empty(); }
+
 	SystemComponent *getRam(){ return &ram; }
 
 	char *getRawTitleString(){ return titleString; }
