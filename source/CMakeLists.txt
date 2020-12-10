@@ -1,6 +1,7 @@
 set(CORE_SOURCES Bitmap.cpp
                  Cartridge.cpp 
                  ConfigFile.cpp
+                 Console.cpp
                  DmaController.cpp 
                  GPU.cpp 
                  Joystick.cpp

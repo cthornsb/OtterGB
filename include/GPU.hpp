@@ -10,7 +10,7 @@
 
 class Register;
 class Window;
-class CharacterMap;
+class ConsoleGBC;
 
 /////////////////////////////////////////////////////////////////////
 // class SpriteHandler
@@ -86,6 +86,8 @@ public:
 	
 	void initialize();
 
+	void drawConsole();
+
 	void drawTileMaps(Window *win);
 
 	void drawLayer(Window *win, bool mapSelect=true);
@@ -151,7 +153,7 @@ private:
 
 	std::unique_ptr<Window> window; ///< Pointer to the main renderer window
 	
-	std::unique_ptr<CharacterMap> cmap; ///< Pointer to the character map used for printing text.
+	std::unique_ptr<ConsoleGBC> console; ///< Pointer to the console object used for printing text.
 	
 	ColorGBC currentLineSprite[256];
 	ColorGBC currentLineWindow[256];

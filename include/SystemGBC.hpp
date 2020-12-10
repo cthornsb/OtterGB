@@ -232,6 +232,10 @@ public:
 	
 	void help();
 	
+	void openDebugConsole();
+	
+	void closeDebugConsole();
+	
 	void quit(){ userQuitting = true; }
 
 	/** Resume emulation until the next instruction is executed.
@@ -269,6 +273,7 @@ private:
 	bool autoLoadExtRam; ///< If set, external cartridge RAM (SRAM) will not be loaded at boot
 	bool initSuccessful; ///< Set if all components were initialized successfully
 	bool fatalError;
+	bool consoleIsOpen;
 
 	unsigned char dmaSourceH; ///< DMA source MSB
 	unsigned char dmaSourceL; ///< DMA source LSB

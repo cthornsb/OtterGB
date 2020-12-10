@@ -8,7 +8,7 @@
 #include "SystemGBC.hpp"
 #include "Support.hpp"
 #include "Graphics.hpp"
-#include "Bitmap.hpp"
+#include "Console.hpp"
 #include "GPU.hpp"
 #include "SystemTimer.hpp"
 
@@ -160,9 +160,10 @@ void GPU::initialize(){
 #endif
 
 	// Setup the ascii character map for text output
-	cmap = std::unique_ptr<CharacterMap>(new CharacterMap());
-	cmap->setWindow(window.get());
-	cmap->setTransparency(false);
+	console = std::unique_ptr<ConsoleGBC>(new ConsoleGBC());
+	console->setWindow(window.get());
+	console->setSystem(sys);
+	console->setTransparency(false);
 
 	// Setup the window
 	window->initialize();
@@ -313,6 +314,12 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	}
 	
 	return true;
+}
+
+void GPU::drawConsole(){
+	console->update();
+	console->draw();
+	render();
 }
 
 void GPU::drawTileMaps(Window *win){
@@ -566,7 +573,7 @@ void GPU::setPixelScale(const unsigned int &n){
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
-	cmap->putString(str, x, y);
+	console->putString(str, x, y);
 }
 
 bool GPU::preWriteAction(){

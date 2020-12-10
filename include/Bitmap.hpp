@@ -39,7 +39,7 @@ public:
 
 	void putString(const std::string &str, const unsigned short &x, const unsigned short &y, bool wrap=true);
 
-private:
+protected:
 	Window *window;
 	
 	bool transparency;
