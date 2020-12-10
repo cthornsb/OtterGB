@@ -17,6 +17,10 @@ Cartridge::Cartridge() :
 	SystemComponent("Cartridge"), 
 	ramSelect(false), 
 	extRamEnabled(false),
+	extRamSupport(false),
+	batterySupport(false),
+	timerSupport(false),
+	rumbleSupport(false),
 	leader(0),
 	programStart(0),
 	nintendoString(""),
@@ -248,7 +252,19 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	else if(cartridgeType >= 0x19 && cartridgeType <= 0x1E) // MBC5
 		mbcType = MBC5;
 	else
-		std::cout << " Warning! Unknown cartridge type (" << getHex(cartridgeType) << ").\n";
+		std::cout << " Warning! Unknown cartridge type (" << getHex(cartridgeType) << ")." << std::endl;
+	
+	// Set cartridge component flags
+	if(cartridgeType <= 30){
+		const unsigned char cartFlags[31] = {0x01, 0x01, 0x03, 0x07, 0x00, 0x01, 0x03, 0x00, 0x03, 0x07, 
+			                                 0x00, 0x01, 0x03, 0x07, 0x00, 0x0D, 0x0F, 0x01, 0x03, 0x07, 
+			                                 0x00, 0x01, 0x03, 0x07, 0x00, 0x01, 0x03, 0x07, 0x11, 0x13, 
+			                                 0x17};
+		extRamSupport = bitTest(cartFlags[cartridgeType], 1);
+		batterySupport = bitTest(cartFlags[cartridgeType], 2);
+		timerSupport = bitTest(cartFlags[cartridgeType], 3);
+		rumbleSupport = bitTest(cartFlags[cartridgeType], 4);
+	}
 	
 	// Initialize ROM storage
 	mem.clear();
@@ -315,10 +331,13 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 
 void Cartridge::print(){
 	std::cout << "Title: " << getTitleString() << std::endl;
-	std::cout << " ROM: " << getRomSize() << " kB\n";
-	std::cout << " RAM: " << getRamSize() << " kB\n";
-	std::cout << " Type: " << getCartridgeType() << std::endl;
-	std::cout << " Vers: " << getHex(versionNumber) << "\n";
+	std::cout << " ROM: " << getRomSize() << " kB" << std::endl;
+	std::cout << " RAM: " << getRamSize() << " kB" << std::endl;
+	std::cout << " Type: " << getHex(cartridgeType) << " (" << getCartridgeType() << ")" << std::endl;
+	std::cout << " Vers: " << getHex(versionNumber) << std::endl;
 	std::cout << " Lang: " << getLanguage() << std::endl;
-	std::cout << " Program entry at " << getHex(programStart) << "\n";
+	std::cout << " Battery? " << (batterySupport ? "Yes" : "No") << std::endl;
+	std::cout << " Rumble?  " << (rumbleSupport ? "Yes" : "No") << std::endl;
+	std::cout << " Timer?   " << (timerSupport ? "Yes" : "No") << std::endl;
+	std::cout << " Program entry at " << getHex(programStart) << std::endl;
 }

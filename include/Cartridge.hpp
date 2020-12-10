@@ -42,6 +42,12 @@ public:
 	
 	bool getExternalRamEnabled() const { return extRamEnabled; }
 	
+	bool getSaveSupport() const { return (!ram.empty() && batterySupport); }
+	
+	bool getTimerSupport() const { return timerSupport; }
+	
+	bool getRumbleSupport() const { return rumbleSupport; }
+	
 	bool readRom(const std::string &fname, bool verbose=false);
 
 	void print();
@@ -49,6 +55,10 @@ public:
 private:
 	bool ramSelect;
 	bool extRamEnabled;
+	bool extRamSupport;
+	bool batterySupport;
+	bool timerSupport;
+	bool rumbleSupport;
 
 	unsigned char leader;
 	unsigned short programStart;
