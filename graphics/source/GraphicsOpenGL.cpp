@@ -140,9 +140,18 @@ void displayFunction() {
 // class KeyStates
 /////////////////////////////////////////////////////////////////////
 
-KeyStates::KeyStates(){
-	for(int i = 0; i < 256; i++)
-		states[i] = false;
+KeyStates::KeyStates() : count(0), streamMode(false) {
+	reset();
+}
+
+void KeyStates::enableStreamMode(){
+	streamMode = true;
+	reset();
+}
+
+void KeyStates::disableStreamMode(){
+	streamMode = false;
+	reset();
 }
 
 bool KeyStates::poll(const unsigned char &key){ 
@@ -154,17 +163,40 @@ bool KeyStates::poll(const unsigned char &key){
 }
 
 void KeyStates::keyDown(const unsigned char &key){
-	if(!states[key]){
-		states[key] = true;
-		count++;
+	if(!streamMode){
+		if(!states[key]){
+			states[key] = true;
+			count++;
+		}
+	}
+	else{
+		buffer.push((char)key);
 	}
 }
 
 void KeyStates::keyUp(const unsigned char &key){
-	if(states[key]){
-		states[key] = false;
-		count--;
+	if(!streamMode){
+		if(states[key]){
+			states[key] = false;
+			count--;
+		}
 	}
+}
+
+bool KeyStates::get(char& key){
+	if(buffer.empty())
+		return false;
+	key = buffer.front();
+	buffer.pop();
+	return true;
+}
+
+void KeyStates::reset(){
+	for(int i = 0; i < 256; i++)
+		states[i] = false;
+	while(!buffer.empty())
+		buffer.pop();
+	count = 0;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -280,6 +312,18 @@ void Window::initialize(){
 	init = true;
 }
 
+void Window::setKeyboardStreamMode(){
+	// Enable keyboard repeat
+	glutIgnoreKeyRepeat(0);
+	keys.enableStreamMode();
+}
+
+void Window::setKeyboardToggleMode(){
+	// Disable keyboard repeat
+	glutIgnoreKeyRepeat(1);
+	keys.disableStreamMode();
+}
+
 void Window::setupKeyboardHandler(){
 	// Set keyboard handler
 	glutKeyboardFunc(handleKeys);
@@ -292,8 +336,8 @@ void Window::setupKeyboardHandler(){
 	// Set window size handler
 	glutReshapeFunc(reshapeScene);
 
-	// Disable keyboard repeat
-	glutIgnoreKeyRepeat(1);
+	// Set keyboard keys to behave as button toggles
+	setKeyboardToggleMode();
 }
 
 void Window::paintGL(){

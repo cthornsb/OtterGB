@@ -2,6 +2,7 @@
 #define GRAPHICS_HPP
 
 #include <vector>
+#include <queue>
 
 #include "colors.hpp"
 
@@ -10,6 +11,10 @@ class GPU;
 class KeyStates{
 public:
 	KeyStates();
+	
+	void enableStreamMode();
+	
+	void disableStreamMode();
 	
 	bool empty() const { return (count == 0); }
 	
@@ -20,9 +25,17 @@ public:
 	void keyDown(const unsigned char &key);
 	
 	void keyUp(const unsigned char &key);
+	
+	bool get(char& key);
+
+	void reset();
 
 private:
 	unsigned short count; ///< Number of standard keyboard keys which are currently pressed
+
+	bool streamMode; ///< Flag to set keyboard to behave as stream buffer
+
+	std::queue<char> buffer;
 
 	bool states[256]; ///< States of keyboard keys (true indicates key is down) 
 };
@@ -178,6 +191,10 @@ public:
 	/** Initialize OpenGL and open the window
 	  */
 	void initialize();
+
+	void setKeyboardStreamMode();
+
+	void setKeyboardToggleMode();
 
 	void setupKeyboardHandler();
 
