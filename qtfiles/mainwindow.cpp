@@ -326,7 +326,7 @@ void MainWindow::updateClockTab()
 {
 	SystemClock *sclk = components->sclk;
 
-	setLineEditText(ui->lineEdit_Clock_Frequency, sclk->getFrequency()/1E6);
+	setLineEditText(ui->lineEdit_Clock_Frequency, sclk->getCyclesPerSecond()/1E6);
 	setLineEditText(ui->lineEdit_Clock_SinceVBlank, sclk->getCyclesSinceVBlank());
 	setLineEditText(ui->lineEdit_Clock_SinceHBlank, sclk->getCyclesSinceHBlank());
 

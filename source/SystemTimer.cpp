@@ -26,10 +26,13 @@ SystemClock::SystemClock() :
 	cyclesPerHSync(0),
 	lcdDriverMode(2), 
 	framerate(0),
-	framePeriod(0)
+	framePeriod(0),
+	timeOfInitialization(sclock::now()),
+	timeOfLastVSync(sclock::now()),
+	cycleTimer(sclock::now()),
+	cycleCounter(0),
+	cyclesPerSecond(0)
 {
-	timeOfInitialization = sclock::now();
-	timeOfLastVSync = sclock::now();
 	setNormalSpeedMode();
 }
 
@@ -63,6 +66,20 @@ void SystemClock::setNormalSpeedMode(){
 
 // Tick the system clock.
 bool SystemClock::onClockUpdate(){
+	if(++cycleCounter % (currentClockSpeed*10) == 0){ // Every 10 seconds
+		std::chrono::duration<double> wallTime = sclock::now() - cycleTimer;
+		cycleTimer = sclock::now();
+		cyclesPerSecond = currentClockSpeed*10/wallTime.count();
+		if(verboseMode){
+			double percentDifference = 100.0*(cyclesPerSecond-currentClockSpeed)/currentClockSpeed;
+			std::cout << " SystemClock: " << wallTime.count() << " seconds (" << cyclesPerSecond << " cycles/s, " << percentDifference;
+			if(percentDifference < 0)
+				std::cout << "% [slow])\n";
+			else
+				std::cout << "% [fast])\n"; 
+		}
+	}
+
 	// Check if the display is enabled. If it's not, set STAT to mode 1
 	if(!rLCDC->getBit(7)){
 		if(lcdDriverMode != 1){
@@ -204,7 +221,14 @@ void SystemClock::mode2Interrupt(){
 // class SystemTimer
 /////////////////////////////////////////////////////////////////////
 
-SystemTimer::SystemTimer() : SystemComponent("Timer"), ComponentTimer(), nDividerCycles(0) {
+SystemTimer::SystemTimer() : 
+	SystemComponent("Timer"), 
+	ComponentTimer(), 
+	nDividerCycles(0),
+	dividerRegister(0),
+	timerModulo(0),
+	clockSelect(0)
+{
 }
 
 bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &val){
@@ -271,7 +295,7 @@ bool SystemTimer::readRegister(const unsigned short &reg, unsigned char &dest){
 bool SystemTimer::onClockUpdate(){
 	if(!timerEnable) return false;
 	if((nDividerCycles++) >= 64){ // DIV (divider register) incremented at a rate of 16384 Hz
-		nDividerCycles = nDividerCycles % 64;
+		nDividerCycles = 0;
 		(*rDIV)++;
 	}
 	nCyclesSinceLastTick++;

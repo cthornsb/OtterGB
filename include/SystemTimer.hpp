@@ -21,6 +21,8 @@ public:
 	void setNormalSpeedMode();
 
 	double getFrequency() const { return currentClockSpeed; }
+
+	double getCyclesPerSecond() const { return cyclesPerSecond; }
 	
 	unsigned int getCyclesSinceVBlank() const { return cyclesSinceLastVSync; }
 	
@@ -65,10 +67,15 @@ private:
 	
 	double framePeriod; ///< Wall clock time between successive frames (microseconds)
 
-	unsigned int modeStart[4];
-
 	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
+	sclock::time_point cycleTimer;
+
+	unsigned int cycleCounter;
+
+	double cyclesPerSecond;
+
+	unsigned int modeStart[4];
 
 	/** Increment the current scanline (register LY).
 	  * @return True if there is coincidence with register LYC, and return false otherwise.
