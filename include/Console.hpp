@@ -10,7 +10,7 @@
 
 class SystemGBC;
 
-enum class cmdType{ NONE, QUIT, HELP, REG8, REG16, INST, READ, WRITE, HEX, BIN, DEC, CLS, RES};
+enum class cmdType{ NONE, QUIT, HELP, REG8, REG16, INST, READ, WRITE, HEX, BIN, DEC, CLS, RES, QSAVE, QLOAD};
 
 class ConsoleCommand{
 public:

@@ -16,33 +16,35 @@ ConsoleGBC::ConsoleGBC() :
 	line(),
 	buffer(nRows, std::string(nCols, ' '))
 { 
-	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit emulator");
-	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit emulator");
-	addConsoleCommand("help", 0, cmdType::HELP, "", "Exit emulator");
-	addConsoleCommand("a",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("b",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("c",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("d",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("e",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("f",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("h",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("l",    0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("d8",   0, cmdType::REG8, "", "Exit emulator");
-	addConsoleCommand("af",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("bc",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("de",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("hl",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("pc",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("sp",   0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("d16",  0, cmdType::REG16, "", "Exit emulator");
-	addConsoleCommand("inst", 0, cmdType::INST, "", "Exit emulator");
-	addConsoleCommand("rd",   1, cmdType::READ, "<reg,val>", "Set reg");
-	addConsoleCommand("wt",   2, cmdType::WRITE, "<reg,val>", "Set reg");
-	addConsoleCommand("hex",  1, cmdType::HEX, "<reg,val>", "Set reg");
-	addConsoleCommand("bin",  1, cmdType::BIN, "<reg,val>", "Set reg");
-	addConsoleCommand("dec",  1, cmdType::DEC, "<reg,val>", "Set reg");
-	addConsoleCommand("cls",  0, cmdType::CLS, "<reg,val>", "Set reg");
-	addConsoleCommand("res",  0, cmdType::RES, "<reg,val>", "Set reg");
+	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit console");
+	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit console");
+	addConsoleCommand("help", 0, cmdType::HELP, "", "Print help");
+	addConsoleCommand("a",    0, cmdType::REG8, "", "Print A register");
+	addConsoleCommand("b",    0, cmdType::REG8, "", "Print B register");
+	addConsoleCommand("c",    0, cmdType::REG8, "", "Print C register");
+	addConsoleCommand("d",    0, cmdType::REG8, "", "Print D register");
+	addConsoleCommand("e",    0, cmdType::REG8, "", "Print E register");
+	addConsoleCommand("f",    0, cmdType::REG8, "", "Print F register");
+	addConsoleCommand("h",    0, cmdType::REG8, "", "Print H register");
+	addConsoleCommand("l",    0, cmdType::REG8, "", "Print L register");
+	addConsoleCommand("d8",   0, cmdType::REG8, "", "Print d8 immediate");
+	addConsoleCommand("af",   0, cmdType::REG16, "", "Print AF register");
+	addConsoleCommand("bc",   0, cmdType::REG16, "", "Print BC register");
+	addConsoleCommand("de",   0, cmdType::REG16, "", "Print DE register");
+	addConsoleCommand("hl",   0, cmdType::REG16, "", "Print HL register");
+	addConsoleCommand("pc",   0, cmdType::REG16, "", "Print program counter");
+	addConsoleCommand("sp",   0, cmdType::REG16, "", "Print stack pointer");
+	addConsoleCommand("d16",  0, cmdType::REG16, "", "Print d16 immediate");
+	addConsoleCommand("inst", 0, cmdType::INST, "", "Print instruction");
+	addConsoleCommand("rd",   1, cmdType::READ, "<reg,val>", "Read byte at addres");
+	addConsoleCommand("wt",   2, cmdType::WRITE, "<reg,val>", "Write byte to address");
+	addConsoleCommand("hex",  1, cmdType::HEX, "<reg,val>", "Convert to hex");
+	addConsoleCommand("bin",  1, cmdType::BIN, "<reg,val>", "Convert to binary");
+	addConsoleCommand("dec",  1, cmdType::DEC, "<reg,val>", "Convert to decimal");
+	addConsoleCommand("cls",  0, cmdType::CLS, "<reg,val>", "Clear screen");
+	addConsoleCommand("res",  0, cmdType::RES, "<reg,val>", "Reset emulator");
+	addConsoleCommand("qsv", 0, cmdType::QSAVE, "<reg,val>", "Quicksave");
+	addConsoleCommand("qld", 0, cmdType::QLOAD, "<reg,val>", "Quickload");
 	put('>');
 }
 
@@ -160,7 +162,7 @@ void ConsoleGBC::handleInput(){
 	unsigned short d16;
 	switch(cmd->getType()){
 		case cmdType::QUIT:
-			sys->quit();
+			sys->closeDebugConsole();
 			break;
 		case cmdType::HELP:
 			d16 = 0;
@@ -231,8 +233,14 @@ void ConsoleGBC::handleInput(){
 		case cmdType::CLS: // clear screen
 			clear();
 			break;
-		case cmdType::RES: // Resume
-			sys->closeDebugConsole();
+		case cmdType::RES: // Reset
+			sys->reset();
+			break;
+		case cmdType::QSAVE: // Quicksave
+			sys->quicksave();
+			break;
+		case cmdType::QLOAD: // Quickload
+			sys->quickload();
 			break;
 	}
 }
