@@ -171,12 +171,12 @@ private:
 	/** Draw a background tile.
 	  * @param x The current LCD screen horizontal pixel [0,160).
 	  * @param y The vertical pixel row of the tile to draw.
+	  * @param x0 Horizontal pixel offset in the layer.
 	  * @param offset The memory offset of the selected tilemap in VRAM.
 	  * @param line Array of all pixels for the currnt scanline.
 	  * @return The number of pixels drawn.
 	  */
-	unsigned char drawTile(const unsigned char &x, const unsigned char &y, 
-	                       const unsigned short &offset, ColorGBC *line);
+	unsigned char drawTile(const unsigned char &x, const unsigned char &y, const unsigned char &x0, const unsigned short &offset, ColorGBC *line);
 
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).

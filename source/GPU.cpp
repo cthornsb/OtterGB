@@ -201,11 +201,12 @@ unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned ch
 /** Draw a background tile.
   * @param x The current horizontal pixel [0,256).
   * @param y The vertical pixel row of the tile to draw.
+  * @param x0 Horizontal pixel offset in the layer.
   * @param offset The memory offset of the selected tilemap in VRAM.
   * @param line Array of all pixels for the current scanline.
   * @return The number of pixels drawn.
   */
-unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, 
+unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigned char &x0,
                             const unsigned short &offset, ColorGBC *line){
 	unsigned char tileY, tileX;
 	unsigned char pixelY, pixelX;
@@ -217,8 +218,8 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y,
 	tileY = y / 8; // Current vertical BG tile [0,32)
 	pixelY = y % 8; // Vertical pixel in the tile [0,8)
 
-	tileX = x / 8; // Current horizontal BG tile [0,32)
-	pixelX = x % 8; // Horizontal pixel in the tile [0,8)
+	tileX = (x-x0) / 8; // Current horizontal BG tile [0,32)
+	pixelX = (x-x0) % 8; // Horizontal pixel in the tile [0,8)
 	
 	// Draw the background tile
 	// Background tile map selection (tile IDs) [0: 9800-9BFF, 1: 9C00-9FFF]
@@ -365,7 +366,7 @@ void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 	for(unsigned short y = 0; y < 256; y++){
 		pixelX = 0;
 		for(unsigned short tx = 0; tx <= 32; tx++) // Draw the layer
-			pixelX += drawTile(pixelX, (unsigned char)y, (mapSelect ? 0x1C00 : 0x1800), line);
+			pixelX += drawTile(pixelX, (unsigned char)y, 0, (mapSelect ? 0x1C00 : 0x1800), line);
 		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
 			switch(line[px].getColor()){
 				case 0:
@@ -412,7 +413,7 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 	rx = rSCX->getValue();
 	if((bGBCMODE || bgDisplayEnable) && userLayerEnable[0]){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
-			rx += drawTile(rx, ry, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+			rx += drawTile(rx, ry, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
 	}
 	else{ // Background disabled (white)
 		for(unsigned short x = 0; x < 160; x++) // Draw a "white" line
@@ -423,10 +424,10 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 	bool windowVisible = false; // Is the window visible on this line?
 	if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
 		if(userLayerEnable[1]){
-			rx = 0;
+			rx = rWX->getValue()-7;
 			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
 			for(unsigned short x = 0; x <= nTiles; x++){
-				rx += drawTile(rx, rWLY->getValue(), (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+				rx += drawTile(rx, rWLY->getValue(), rWX->getValue() - 7, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
 			}
 			windowVisible = true;
 		}
