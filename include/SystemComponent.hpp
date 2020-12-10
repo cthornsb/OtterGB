@@ -138,10 +138,6 @@ protected:
 	
 	virtual bool preReadAction(){ return true; }
 
-	virtual void postWriteAction(){ }
-
-	virtual void postReadAction(){ }
-	
 	void writeSavestateHeader(std::ofstream &f);
 
 	void readSavestateHeader(std::ifstream &f);

@@ -31,12 +31,17 @@ bool SystemComponent::write(const unsigned short &loc, const unsigned short &ban
 	writeLoc = loc; 
 	writeBank = bank;
 	writeVal = src;
-	if(!preWriteAction())
+	if(readOnly || !preWriteAction())
 		return false;
-	if(readOnly || nBytes == 0 || (writeLoc-offset) >= nBytes || writeBank >= nBanks)
+#ifdef USE_QT_DEBUGGER
+	if (nBytes == 0 || (writeLoc - offset) >= nBytes || writeBank >= nBanks) {
+		if (verboseMode) {
+			std::cerr << " Warning! Failed to write to memory address " << getHex(writeLoc) << std::endl;
+		}
 		return false;
+	}
+#endif // ifdef USE_QT_DEBUGGER
 	mem[writeBank][writeLoc-offset] = writeVal;
-	postWriteAction();
 	return true;		
 }	
 
@@ -69,10 +74,15 @@ bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank
 	readBank = bank;
 	if(!preReadAction())
 		return false;
-	if(nBytes == 0 || (readLoc-offset) >= nBytes || readBank >= nBanks) 
+#ifdef USE_QT_DEBUGGER
+	if (nBytes == 0 || (readLoc - offset) >= nBytes || readBank >= nBanks) {
+		if (verboseMode) {
+			std::cerr << " Warning! Failed to read from memory address " << getHex(readLoc) << std::endl;
+		}
 		return false;
+	}
+#endif // ifdef USE_QT_DEBUGGER
 	dest = mem[readBank][readLoc-offset];
-	postReadAction();
 	return true;
 }
 

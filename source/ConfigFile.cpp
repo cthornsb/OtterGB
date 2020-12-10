@@ -4,13 +4,6 @@
 #include "ConfigFile.hpp"
 #include "Support.hpp"
 
-bool isNumeric(const std::string& str) {
-	for (auto i = 0; i < str.length(); i++)
-		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
-			return false;
-	return true;
-}
-
 ConfigFile::ConfigFile() : 
 	bGood(false),
 	filename(),

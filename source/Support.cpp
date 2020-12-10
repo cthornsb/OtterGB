@@ -9,6 +9,14 @@ const unsigned char LOWERCASE_HIGH = 122;
 const unsigned char UPPERCASE_LOW  = 65;
 const unsigned char UPPERCASE_HIGH = 90;
 
+// Return true if an input string is numerical
+bool isNumeric(const std::string& str) {
+	for (auto i = 0; i < str.length(); i++)
+		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
+			return false;
+	return true;
+}
+
 // Compute the two's compliment of an unsigned byte
 short twosComp(const unsigned char &n){
 	if((n & 0x80) == 0) // Positive value
@@ -149,8 +157,10 @@ unsigned short getUserInputUShort(const std::string& str){
 		removeCharacter(input, 'b');
 		return (unsigned short)stoul(input, 0, 2);
 	}
-	// Decimal
-	return (unsigned short)stoul(input, 0, 10);
+	else if (isNumeric(str)) { // Decimal
+		return (unsigned short)stoul(input, 0, 10);
+	}
+	return 0;
 }
 
 unsigned short getUShort(const unsigned char &h, const unsigned char &l){ 

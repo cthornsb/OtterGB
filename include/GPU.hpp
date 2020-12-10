@@ -116,10 +116,6 @@ public:
 
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
 
-	virtual bool preWriteAction();
-	
-	virtual bool preReadAction();
-
 	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	
 	virtual bool readRegister(const unsigned short &reg, unsigned char &val);

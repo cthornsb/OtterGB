@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+// Return true if an input string is numerical
+bool isNumeric(const std::string& str);
+
 // Compute the two's compliment of an unsigned byte
 short twosComp(const unsigned char &n);
 

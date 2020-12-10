@@ -576,27 +576,6 @@ void GPU::print(const std::string &str, const unsigned char &x, const unsigned c
 	console->putString(str, x, y);
 }
 
-bool GPU::preWriteAction(){
-	if(writeLoc >= VRAM_LOW && writeLoc < VRAM_HIGH)
-		return true;
-
-	// Tile Data	
-	// Tiles are 8x8
-	// Tiles occupy 16 bytes, 2 bytes per line
-	// VRAM contains two sets of 192 tiles at 8000:8FFF and 8800:97FF
-	// The first tile set can be used for BG and Sprites and the 2nd for BG and Window
-	// For each line, the first byte defines the LSB of the color number and the second byte the MSB
-
-	return false;
-} 
-
-bool GPU::preReadAction(){
-	if(readLoc >= VRAM_LOW && readLoc < VRAM_HIGH)
-		return true;
-
-	return false;
-} 
-
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(reg){
 		case 0xFF40: // LCDC (LCD Control Register)

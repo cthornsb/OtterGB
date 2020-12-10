@@ -33,18 +33,17 @@ bool WorkRam::preWriteAction(){
 	if(writeLoc < WRAM_ZERO_LOW || writeLoc >= WRAM_ECHO_HIGH)
 		return false;
 
+	if (writeLoc >= WRAM_ECHO_LOW) { // Echo of bank 0 and 1
+		writeLoc = writeLoc - 0x2000;
+	}
+
 	if(writeLoc < WRAM_SWAP_LOW){ // Bank 0
 		writeBank = 0;
 		return true;
 	}
 	else if(writeLoc < WRAM_ECHO_LOW){ // Bank 1-7
-		writeLoc = writeLoc - 4096;
+		writeLoc = writeLoc - 0x1000;
 		writeBank = bs;
-		return true;
-	}
-	else if(writeLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
-		writeLoc = writeLoc - 8192;
-		writeBank = 0;
 		return true;
 	}
 
@@ -55,18 +54,17 @@ bool WorkRam::preReadAction(){
 	if(readLoc < WRAM_ZERO_LOW || readLoc >= WRAM_ECHO_HIGH)
 		return false;
 
+	if (readLoc >= WRAM_ECHO_LOW) { // Echo of bank 0 and 1
+		readLoc = readLoc - 0x2000;
+	}
+
 	if(readLoc < WRAM_SWAP_LOW){ // Bank 0
 		readBank = 0;
 		return true;
 	}
 	else if(readLoc < WRAM_ECHO_LOW){ // Bank 1-7
-		readLoc = readLoc - 4096;
+		readLoc = readLoc - 0x1000;
 		readBank = bs;
-		return true;
-	}
-	else if(readLoc < WRAM_ECHO_HIGH){ // Echo of bank 0
-		readLoc = readLoc - 8192;
-		readBank = 0;
 		return true;
 	}
 	

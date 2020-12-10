@@ -466,21 +466,6 @@ void SystemGBC::disableInterrupts(){
 }
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
-	// Check for memory access watch
-	if(loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]){
-		OpcodeData *op = cpu->getLastOpcode();
-		std::cout << " (W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
-		if(op->op->nBytes == 2)
-			std::cout << "d8=" << getHex(op->getd8());
-		else if(op->op->nBytes == 3)
-			std::cout << "d16=" << getHex(op->getd16());
-		std::cout << std::endl;
-	}
-	
-	// Check for memory write breakpoint
-	if(breakpointMemoryWrite.check(loc))
-		pause();
-
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Write the register
@@ -491,41 +476,46 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu->writeFast(loc, src);
+		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
 		if(cart->hasRam())
-			cart->getRam()->writeFast(loc, src);
+			cart->getRam()->write(loc, src);
 	}
-	else if(loc <= 0xCFFF){ // Work RAM (WRAM) bank 0
-		wram->writeFastBank0(loc, src);
-	}
-	else if(loc <= 0xDFFF){ // Work RAM (WRAM) swap bank
-		wram->writeFast(loc-0x1000, src);
-	}
-	else if(loc <= 0xFDFF){ // Work RAM (WRAM) echo
-		wram->writeFastBank0(loc-0x2000, src);
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) bank 0, swap, and echo
+		wram->write(loc, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam->writeFast(loc, src);
+		oam->write(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram->writeFast(loc, src);
+		hram->write(loc, src);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		rIE->write(src);
 	}
+#ifdef USE_QT_DEBUGGER
+	// Check for memory access watch
+	if (loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]) {
+		OpcodeData* op = cpu->getLastOpcode();
+		std::cout << " (W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		if (op->op->nBytes == 2)
+			std::cout << "d8=" << getHex(op->getd8());
+		else if (op->op->nBytes == 3)
+			std::cout << "d16=" << getHex(op->getd16());
+		std::cout << std::endl;
+	}
+	// Check for memory write breakpoint
+	if (breakpointMemoryWrite.check(loc))
+		pause();
+#endif // ifdef USE_QT_DEBUGGER
 	return true; // Successfully wrote to memory location (loc)
 }
 
 bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
-	// Check for memory read breakpoint
-	if(breakpointMemoryRead.check(loc))
-		pause();
-
 	// Check for system registers
 	if(loc >= REGISTER_LOW && loc < REGISTER_HIGH){
 		// Read the register
@@ -544,40 +534,37 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		cart->readFast(loc-0x4000, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		gpu->readFast(loc, dest);
+		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
 		if(cart->hasRam())
-			cart->getRam()->readFast(loc, dest);
+			cart->getRam()->read(loc, dest);
 	}
-	else if(loc <= 0xCFFF){ // Work RAM (WRAM) bank 0
-		wram->readFastBank0(loc, dest);
-	}
-	else if(loc <= 0xDFFF){ // Work RAM (WRAM) swap bank
-		wram->readFast(loc-0x1000, dest);
-	}
-	else if(loc <= 0xFDFF){ // Work RAM (WRAM) echo
-		wram->readFastBank0(loc-0x2000, dest);
+	else if(loc <= 0xFDFF){ // Work RAM (WRAM) bank 0, swap, and echo
+		wram->read(loc, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		oam->readFast(loc, dest);
+		oam->read(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
 		return false;
 	}
 	else if(loc <= 0xFFFE){ // High RAM (HRAM)
-		hram->readFast(loc, dest);
+		hram->read(loc, dest);
 	}
 	else if(loc == 0xFFFF){ // Interrupt enable (IE)
 		dest = rIE->read();
 	}
-
+#ifdef USE_QT_DEBUGGER
+	// Check for memory read breakpoint
+	if (breakpointMemoryRead.check(loc))
+		pause();
 	// Check for memory access watch
 	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
 		OpcodeData *op = cpu->getLastOpcode();
 		std::cout << " (R) PC=" << getHex(op->nPC) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
 	}
-
+#endif // ifdef USE_QT_DEBUGGER
 	return true; // Successfully read from memory location (loc)
 }
 
