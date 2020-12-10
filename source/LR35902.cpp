@@ -187,11 +187,11 @@ void OpcodeData::setCB(Opcode *op_){
 
 void OpcodeData::setImmediateData(const std::string &str){
 	if(op->nBytes == 2){ // d8
-		unsigned char d8 = stoul(str, 0, 16);
+		unsigned char d8 = (unsigned char)stoul(str, 0, 16);
 		setImmediateData(d8);
 	}
 	else if(op->nBytes == 3){ // d16
-		unsigned short d16 = stoul(str, 0, 16);
+		unsigned short d16 = (unsigned short)stoul(str, 0, 16);
 		setImmediateData(d16);
 	}
 }

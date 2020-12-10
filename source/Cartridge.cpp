@@ -38,7 +38,7 @@ Cartridge::Cartridge() :
 	headerChecksum(0),
 	globalChecksum(0),
 	ram("SRAM"),
-	mbcType(UNKNOWN)
+	mbcType(CartMBC::UNKNOWN)
 { 
 }
 
@@ -58,9 +58,9 @@ bool Cartridge::preReadAction(){
 
 bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(mbcType){
-		case ROMONLY: // ROM only
+		case CartMBC::ROMONLY: // ROM only
 			break;
-		case MBC1: // MBC1 (1-3)
+		case CartMBC::MBC1: // MBC1 (1-3)
 			if(reg <= 0x2000){ // RAM enable (write only)
 				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
 				// Note: Type 0x01 does not have cartridge RAM
@@ -88,7 +88,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 				ramSelect = (val & 0x1) == 0x1;
 			}
 			break;
-		case MBC2: // MBC2 (5-6)
+		case CartMBC::MBC2: // MBC2 (5-6)
 			if(reg < 0x2000){ // RAM enable (write only)
 				if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
 					extRamEnabled = true;
@@ -98,13 +98,13 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 					bs = (val & 0x0F);
 			}
 			break;
-		case MMM01: // MMM01
+		case CartMBC::MMM01: // MMM01
 			break;
-		case MBC3: // MBC3
+		case CartMBC::MBC3: // MBC3
 			break;
-		case MBC4: // MBC4
+		case CartMBC::MBC4: // MBC4
 			break;
-		case MBC5: // MBC5
+		case CartMBC::MBC5: // MBC5
 			if(reg < 0x2000){ // RAM enable (write only)
 				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
 				extRamEnabled = ((val & 0x0F) == 0x0A);
@@ -134,19 +134,19 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 
 bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
 	switch(mbcType){
-		case ROMONLY: // ROM only
+		case CartMBC::ROMONLY: // ROM only
 			break;
-		case MBC1: // MBC1 (1-3)
+		case CartMBC::MBC1: // MBC1 (1-3)
 			break;
-		case MBC2: // MBC2 (5-6)
+		case CartMBC::MBC2: // MBC2 (5-6)
 			break;
-		case MMM01: // MMM01
+		case CartMBC::MMM01: // MMM01
 			break;
-		case MBC3: // MBC3
+		case CartMBC::MBC3: // MBC3
 			break;
-		case MBC4: // MBC4
+		case CartMBC::MBC4: // MBC4
 			break;
-		case MBC5: // MBC5
+		case CartMBC::MBC5: // MBC5
 			break;
 		default:
 			break;	
@@ -157,25 +157,25 @@ bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
 std::string Cartridge::getCartridgeType() const {
 	std::string retval = "UNKNOWN";
 	switch(mbcType){
-		case ROMONLY: // ROM only
+		case CartMBC::ROMONLY: // ROM only
 			retval = "ROM ONLY";
 			break;
-		case MBC1: // MBC1 (1-3)
+		case CartMBC::MBC1: // MBC1 (1-3)
 			retval = "MBC1";
 			break;
-		case MBC2: // MBC2 (5-6)
+		case CartMBC::MBC2: // MBC2 (5-6)
 			retval = "MBC2";
 			break;
-		case MMM01: // MMM01
+		case CartMBC::MMM01: // MMM01
 			retval = "MMM01";
 			break;
-		case MBC3: // MBC3
+		case CartMBC::MBC3: // MBC3
 			retval = "MBC3";
 			break;
-		case MBC4: // MBC4
+		case CartMBC::MBC4: // MBC4
 			retval = "MBC4";
 			break;
-		case MBC5: // MBC5
+		case CartMBC::MBC5: // MBC5
 			retval = "MBC5";
 			break;
 		default:
@@ -236,21 +236,21 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	bGBCMODE = ((gbcFlag & 0x80) != 0);
 	
 	// Set cartridge type
-	mbcType = UNKNOWN;
+	mbcType = CartMBC::UNKNOWN;
 	if(cartridgeType == 0x0 || cartridgeType == 0x8 || cartridgeType == 0x9)
-		mbcType = ROMONLY;
+		mbcType = CartMBC::ROMONLY;
 	else if(cartridgeType >= 0x01 && cartridgeType <= 0x03) // MBC1
-		mbcType = MBC1;
+		mbcType = CartMBC::MBC1;
 	else if(cartridgeType >= 0x05 && cartridgeType <= 0x06) // MBC2
-		mbcType = MBC2;
+		mbcType = CartMBC::MBC2;
 	else if(cartridgeType >= 0x0B && cartridgeType <= 0x0D) // MMM01
-		mbcType = MMM01;
+		mbcType = CartMBC::MMM01;
 	else if(cartridgeType >= 0x0F && cartridgeType <= 0x13) // MBC3
-		mbcType = MBC3;
+		mbcType = CartMBC::MBC3;
 	else if(cartridgeType >= 0x15 && cartridgeType <= 0x17) // MBC4
-		mbcType = MBC4;
+		mbcType = CartMBC::MBC4;
 	else if(cartridgeType >= 0x19 && cartridgeType <= 0x1E) // MBC5
-		mbcType = MBC5;
+		mbcType = CartMBC::MBC5;
 	else
 		std::cout << " Warning! Unknown cartridge type (" << getHex(cartridgeType) << ")." << std::endl;
 	

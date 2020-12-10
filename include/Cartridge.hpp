@@ -7,7 +7,7 @@
 
 class Cartridge : public SystemComponent {
 public:
-	enum CartMBC {UNKNOWN, ROMONLY, MBC1, MBC2, MMM01, MBC3, MBC4, MBC5};
+	enum class CartMBC {UNKNOWN, ROMONLY, MBC1, MBC2, MMM01, MBC3, MBC4, MBC5};
 
 	Cartridge();
 
