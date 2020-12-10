@@ -212,7 +212,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			gpu->setPixelScale(cfgFile.getUInt());
 		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use GBC mode for original GB games
 			setForceColorMode(true);
-		if (cfgFile.searchBoolFlag("AUTO_SAVE_SRAM")) // Do not automatically save/load external cartridge RAM (SRAM)
+		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
 #ifdef USE_QT_DEBUGGER			
 		if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
