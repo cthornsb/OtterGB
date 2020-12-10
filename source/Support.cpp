@@ -124,6 +124,35 @@ std::string toLowercase(const std::string &str){
 	return retval;
 }
 
+std::string stripWhitespace(const std::string &str){
+	return str.substr(0, str.find_last_not_of(' ')+1);
+}
+
+void removeCharacter(std::string& str, const char& c){
+	size_t index = str.find(c);
+	if(index != std::string::npos){
+		str.replace(index, 1, "");
+	}
+}
+
+unsigned char getUserInputUChar(const std::string& str){
+	return (unsigned char)getUserInputUShort(str);
+}
+
+unsigned short getUserInputUShort(const std::string& str){
+	std::string input = str;
+	if(str.find('$') != std::string::npos){ // Hex
+		removeCharacter(input, '$');
+		return (unsigned short)stoul(input, 0, 16);
+	}
+	else if(str.find('b') != std::string::npos){ // Binary
+		removeCharacter(input, 'b');
+		return (unsigned short)stoul(input, 0, 2);
+	}
+	// Decimal
+	return (unsigned short)stoul(input, 0, 10);
+}
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l){ 
 	return (((0xFFFF & h) << 8) + l); 
 }

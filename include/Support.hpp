@@ -31,6 +31,14 @@ std::string toUppercase(const std::string &str);
 
 std::string toLowercase(const std::string &str);
 
+std::string stripWhitespace(const std::string &str);
+
+void removeCharacter(std::string& str, const char& c);
+
+unsigned char getUserInputUChar(const std::string& str);
+
+unsigned short getUserInputUShort(const std::string& str);
+
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 
 bool bitTest(const unsigned char &input, const unsigned char &bit);
