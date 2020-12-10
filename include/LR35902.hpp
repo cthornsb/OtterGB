@@ -2,6 +2,7 @@
 #define LR35902_HPP
 
 #include <string>
+#include <map>
 
 #include "SystemComponent.hpp"
 
@@ -18,12 +19,18 @@ extern const unsigned char FLAG_C_MASK;
 class LR35902;
 
 typedef unsigned short (LR35902::*addrGetFunc)() const;
+typedef unsigned char (LR35902::*regGet8bit)() const;
+typedef unsigned short (LR35902::*regGet16bit)() const;
+typedef void (LR35902::*regSet8bit)(const unsigned char&);
+typedef void (LR35902::*regSet16bit)(const unsigned short&);
 
 class Opcode{
 public:
 	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
 
 	addrGetFunc addrptr; ///< Pointer to the function which returns the memory address.
+
+	unsigned char nType;
 
 	unsigned short nCycles; ///< Length of clock cycles required.
 	unsigned short nBytes; ///< Length of instruction in bytes.
@@ -38,10 +45,12 @@ public:
 
 	std::string sOpname; ///< Opcode name.
 	std::string sOperands[2]; ///< Operand names.
-
+	
 	Opcode() : ptr(0x0), addrptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
 	
 	Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
+	
+	bool check(const std::string& op, const unsigned char& type, const std::string& arg1="", const std::string& arg2="") const ;
 };
 
 class OpcodeData{
@@ -81,6 +90,8 @@ public:
 
 	std::string getInstruction() const ;
 	
+	std::string getShortInstruction() const ; 
+	
 	void addCycles(const unsigned short &extra){ nExtraCycles = extra; }
 	
 	unsigned char getd8() const { return (unsigned char)nData; }
@@ -89,15 +100,23 @@ public:
 	
 	void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
 	
+	void set(Opcode *op_);
+	
 	void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
+
+	void setCB(Opcode *op_);
 
 	void setImmediateData(const unsigned char &d8){ nData = (d8 & 0x00FF); }
 	
 	void setImmediateData(const unsigned short &d16){ nData = d16; }
+
+	void setImmediateData(const std::string &str);
 };
 
 class LR35902 : public SystemComponent {
 public:
+	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
+
 	LR35902() : SystemComponent("CPU"), halfCarry(false), fullCarry(false), 
 	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
 	            d8(0), d16h(0), d16l(0), SP(0), PC(0) { }
@@ -123,67 +142,69 @@ public:
 
 	std::string getInstruction() const { return lastOpcode.getInstruction(); }
 
-	unsigned short getProgramCounter() const { return PC; }
-
-	unsigned short getStackPointer() const { return SP; }
-
-	unsigned char getd8() const { return d8; }
-	
-	unsigned short getd16() const ;
-	
-	unsigned short getAF() const ;
-
-	unsigned short getBC() const ;
-
-	unsigned short getDE() const ;
-
-	unsigned short getHL() const ;
-
 	unsigned short getAddress_C() const { return (0xFF00 + C); }
 
 	unsigned short getAddress_d8() const { return (0xFF00 + d8); }
-
-	unsigned char getA() const { return A; }
-
-	unsigned char getB() const { return B; }
-
-	unsigned char getC() const { return C; }
-
-	unsigned char getD() const { return D; }
-
-	unsigned char getE() const { return E; }
-
-	unsigned char getF() const { return F; }
-
-	unsigned char getH() const { return H; }
-
-	unsigned char getL() const { return L; }
 
 	unsigned short getCyclesRemaining() const { return lastOpcode.nCycles; }
 	
 	unsigned short getMemoryAddress() const { return memoryAddress; }
 	
 	unsigned char getMemoryValue() const { return memoryValue; }
-	
+
+	unsigned short getd16() const ;
+	unsigned short getAF() const ;
+	unsigned short getBC() const ;
+	unsigned short getDE() const ;
+	unsigned short getHL() const ;
+	unsigned short getProgramCounter() const { return PC; }
+	unsigned short getStackPointer() const { return SP; }
+
+	unsigned char getd8() const { return d8; }
+	unsigned char getA() const { return A; }
+	unsigned char getB() const { return B; }
+	unsigned char getC() const { return C; }
+	unsigned char getD() const { return D; }
+	unsigned char getE() const { return E; }
+	unsigned char getF() const { return F; }
+	unsigned char getH() const { return H; }
+	unsigned char getL() const { return L; }
+
+	void setMemoryAddress(const unsigned short &addr){ memoryAddress = addr; }
+
+	void setd16(const unsigned short &val);
+	void setAF(const unsigned short &val);
+	void setBC(const unsigned short &val);
+	void setDE(const unsigned short &val);
+	void setHL(const unsigned short &val);
 	void setProgramCounter(const unsigned short &pc){ PC = pc; }
+	void setStackPointer(const unsigned short &sp){ SP = sp; }
 
 	void setd8(const unsigned char &d){ d8 = d; }
-	
-	void setd16(const unsigned short &dd);
+	void setA(const unsigned char &val){ A = val; }
+	void setB(const unsigned char &val){ B = val; }
+	void setC(const unsigned char &val){ C = val; }
+	void setD(const unsigned char &val){ D = val; }
+	void setE(const unsigned char &val){ E = val; }
+	void setF(const unsigned char &val){ F = val; }
+	void setH(const unsigned char &val){ H = val; }
+	void setL(const unsigned char &val){ L = val; }
 
-	void setAF(const unsigned short &val);
+	bool getRegister8bit(const std::string& name, unsigned char& val);
 
-	void setBC(const unsigned short &val);
+	bool getRegister16bit(const std::string& name, unsigned short& val);
 
-	void setDE(const unsigned short &val);
+	bool setRegister8bit(const std::string& name, const unsigned char& val);
 
-	void setHL(const unsigned short &val);
+	bool setRegister16bit(const std::string& name, const unsigned short& val);
 
 	void readMemory();
 	
 	void writeMemory();
 
 	addrGetFunc getMemoryAddressFunction(const std::string &target);
+
+	bool findOpcode(const std::string& mnemonic, OpcodeData& data);
 
 	virtual unsigned int writeSavestate(std::ofstream &f);
 
@@ -219,6 +240,12 @@ protected:
 
 	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
 	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
+
+	std::map<std::string, regGet8bit> rget8; ///< Map of 8-bit register getters
+	std::map<std::string, regSet8bit> rset8; ///< Map of 8-bit register setters
+	
+	std::map<std::string, regGet16bit> rget16; ///< Map of 16-bit register getters
+	std::map<std::string, regSet16bit> rset16; ///< Map of 16-bit register setters
 
 	void acknowledgeVBlankInterrupt();
 

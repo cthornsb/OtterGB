@@ -16,17 +16,30 @@ const unsigned char FLAG_S_MASK = 0x40;
 const unsigned char FLAG_H_MASK = 0x20;
 const unsigned char FLAG_C_MASK = 0x10;
 
+const unsigned char IMMEDIATE_LEFT_BIT  = 0;
+const unsigned char IMMEDIATE_RIGHT_BIT = 1;
+const unsigned char ADDRESS_LEFT_BIT    = 2;
+const unsigned char ADDRESS_RIGHT_BIT   = 3;
+
 const unsigned char ZERO = 0x0;
 
 Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
 	ptr(p),
 	addrptr(0x0),
+	nType(0x0),
 	nCycles(cycles), 
 	nBytes(bytes), 
 	nReadCycles(read), 
 	nWriteCycles(write), 
-	sName(mnemonic) 
+	sName(toLowercase(mnemonic)),
+	sPrefix(),
+	sSuffix(),
+	sOpname()
 {
+	if(nWriteCycles)
+		bitSet(nType, ADDRESS_LEFT_BIT);
+	if(nReadCycles)
+		bitSet(nType, ADDRESS_RIGHT_BIT);
 	const std::string targets[5] = {"d8", "r8", "a8", "d16", "a16"};
 	if(nBytes > 1){
 		for(int i = 0; i < 5; i++){
@@ -55,6 +68,14 @@ Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &
 		else{
 			sOperands[0] = temp;
 		}
+		sOperands[0] = stripWhitespace(sOperands[0]);
+		sOperands[1] = stripWhitespace(sOperands[1]);
+		for(int i = 0; i < 5; i++){
+			if(sOperands[0].find(targets[i]) != std::string::npos)
+				bitSet(nType, IMMEDIATE_LEFT_BIT);
+			if(sOperands[1].find(targets[i]) != std::string::npos)
+				bitSet(nType, IMMEDIATE_RIGHT_BIT);
+		}
 		index = sOperands[0].find('(');
 		std::string memRead, memWrite;
 		if(index != std::string::npos){
@@ -74,6 +95,21 @@ Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &
 		else if(!memWrite.empty())
 			addrptr = cpu->getMemoryAddressFunction(memWrite);
 	}
+}
+
+bool Opcode::check(const std::string& op, const unsigned char& type, const std::string& arg1/*=""*/, const std::string& arg2/*=""*/) const {
+	if(op == sOpname && type == nType){
+		if(bitTest(nType, IMMEDIATE_LEFT_BIT)){
+			return (sOperands[1].empty() || sOperands[1] == arg2);
+		}
+		else if(bitTest(nType, IMMEDIATE_RIGHT_BIT)){
+			return (sOperands[0].empty() || sOperands[0] == arg1);
+		}
+		else{
+			return ((sOperands[0].empty() || sOperands[0] == arg1) && (sOperands[1].empty() || sOperands[1] == arg2));
+		}
+	}
+	return false;
 }
 
 OpcodeData::OpcodeData() : 
@@ -105,7 +141,11 @@ bool OpcodeData::clock(LR35902 *cpu){
 }
 
 std::string OpcodeData::getInstruction() const {
-	std::string retval = getHex(nPC) + " " + op->sPrefix;
+	return (getHex(nPC) + " " + getShortInstruction());
+}
+
+std::string OpcodeData::getShortInstruction() const {
+	std::string retval = op->sPrefix;
 	if(op->nBytes == 2)
 		retval += getHex(getd8());
 	else if(op->nBytes == 3)
@@ -123,13 +163,37 @@ void OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsign
 	nReadCycle    = op->nReadCycles;
 	nWriteCycle   = op->nWriteCycles;
 	nExecuteCycle = op->nCycles;
-	nData         = 0;
+	cbPrefix = false;
+}
+
+void OpcodeData::set(Opcode *op_){
+	op            = op_;
+	nCycles       = 0;
+	nReadCycle    = op->nReadCycles;
+	nWriteCycle   = op->nWriteCycles;
+	nExecuteCycle = op->nCycles;
 	cbPrefix = false;
 }
 
 void OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
 	set(opcodes_, index_, pc_);
 	cbPrefix = true;
+}
+
+void OpcodeData::setCB(Opcode *op_){
+	set(op_);
+	cbPrefix = true;
+}
+
+void OpcodeData::setImmediateData(const std::string &str){
+	if(op->nBytes == 2){ // d8
+		unsigned char d8 = stoul(str, 0, 16);
+		setImmediateData(d8);
+	}
+	else if(op->nBytes == 3){ // d16
+		unsigned short d16 = stoul(str, 0, 16);
+		setImmediateData(d16);
+	}
 }
 
 /** Read the next instruction from memory and return the number of clock cycles. 
@@ -255,6 +319,11 @@ unsigned short LR35902::getDE() const { return getUShort(D, E); }
 
 unsigned short LR35902::getHL() const { return getUShort(H, L); }
 
+void LR35902::setd16(const unsigned short &val){
+	d16h = (0xFF00 & val) >> 8;
+	d16l = 0x00FF & val;
+}
+
 void LR35902::setAF(const unsigned short &val){
 	A = (0xFF00 & val) >> 8;
 	F = 0x00FF & val;
@@ -276,6 +345,38 @@ void LR35902::setHL(const unsigned short &val){
 	L = 0x00FF & val;
 }
 
+bool LR35902::getRegister8bit(const std::string& name, unsigned char& val){
+	auto reg = rget8.find(name);
+	if(reg == rget8.end())
+		return false;
+	val = (this->*reg->second)();
+	return true;
+}
+
+bool LR35902::getRegister16bit(const std::string& name, unsigned short& val){
+	auto reg = rget16.find(name);
+	if(reg == rget16.end())
+		return false;
+	val = (this->*reg->second)();
+	return true;
+}
+
+bool LR35902::setRegister8bit(const std::string& name, const unsigned char& val){
+	auto reg = rset8.find(name);
+	if(reg == rset8.end())
+		return false;
+	(this->*reg->second)(val);
+	return true;
+}
+
+bool LR35902::setRegister16bit(const std::string& name, const unsigned short& val){
+	auto reg = rset16.find(name);
+	if(reg == rset16.end())
+		return false;
+	(this->*reg->second)(val);
+	return true;
+}
+
 void LR35902::readMemory(){
 	sys->read(memoryAddress, memoryValue);
 }
@@ -285,21 +386,80 @@ void LR35902::writeMemory(){
 }
 
 addrGetFunc LR35902::getMemoryAddressFunction(const std::string &target){
-	if(target == "BC")
+	if(target.find("bc") != std::string::npos)
 		return &LR35902::getBC;
-	else if(target == "DE")
+	else if(target.find("de") != std::string::npos)
 		return &LR35902::getDE;
-	else if(target == "HL")
+	else if(target.find("hl") != std::string::npos)
 		return &LR35902::getHL;
-	else if(target == "C")
+	else if(target.find("c") != std::string::npos)
 		return &LR35902::getAddress_C;
-	else if(target == "a8")
+	else if(target.find("a8") != std::string::npos)
 		return &LR35902::getAddress_d8;
-	else if(target == "a16")
+	else if(target.find("a16") != std::string::npos)
 		return &LR35902::getd16;
 	else
 		std::cout << " Warning! Unrecognized memory target (" << target << ")\n";
 	return 0x0;
+}
+
+bool LR35902::findOpcode(const std::string& mnemonic, OpcodeData& data){		
+	std::vector<std::string> args;
+	unsigned int nArgs = splitString(mnemonic, args, ' ');
+	if(!nArgs)
+		return 0x0;
+	std::string operand1, operand2;
+	unsigned char type = 0x0;
+	size_t index;
+	if(nArgs >= 2){
+		operand1 = args.at(1);
+		index = operand1.find(',');
+		if(index != std::string::npos){ // Operands seperated by a comma
+			operand2 = operand1.substr(index+1);
+			operand1 = operand1.substr(0, index);
+		}
+		else if(nArgs >= 3) // Operands seperated by a space
+			operand2 = args.at(2);
+	}
+	index = operand1.find('$');
+	if(index != std::string::npos){ // Immediate data
+		removeCharacter(operand1, '$');
+		bitSet(type, IMMEDIATE_LEFT_BIT);
+	}
+	index = operand1.find('(');
+	if(index != std::string::npos){ // Memory address
+		bitSet(type, ADDRESS_LEFT_BIT);
+	}
+	index = operand2.find('$');
+	if(index != std::string::npos){ // Immediate data
+		removeCharacter(operand2, '$');
+		bitSet(type, IMMEDIATE_RIGHT_BIT);
+	}
+	index = operand2.find('(');
+	if(index != std::string::npos){ // Memory address
+		bitSet(type, ADDRESS_RIGHT_BIT);
+	}
+	for(unsigned short i = 0; i < 256; i++){
+		if(opcodes[i].check(args.front(), type, operand1, operand2)){
+			data.set(&opcodes[i]);
+		}
+		else if(opcodesCB[i].check(args.front(), type, operand1, operand2)){
+			data.set(&opcodesCB[i]);
+		}
+		else{
+			continue;
+		}
+		// Set immediate data (if present)
+		if(bitTest(type, IMMEDIATE_LEFT_BIT))	
+			data.setImmediateData(operand1);
+		else if(bitTest(type, IMMEDIATE_RIGHT_BIT))
+			data.setImmediateData(operand2);
+		// Set data access memory address (if present)
+		if(data.memoryAccess())
+			setMemoryAddress((this->*data()->addrptr)());
+		return true;
+	}
+	return false;
 }
 
 void LR35902::rlc_d8(unsigned char *arg){
@@ -846,6 +1006,46 @@ void LR35902::HALT(){
 }
 
 void LR35902::initialize(){
+	// 8 bit register getters
+	rget8["a"] = &LR35902::getA;
+	rget8["b"] = &LR35902::getB;
+	rget8["c"] = &LR35902::getC;
+	rget8["d"] = &LR35902::getD;
+	rget8["e"] = &LR35902::getE;
+	rget8["f"] = &LR35902::getF;
+	rget8["h"] = &LR35902::getH;
+	rget8["l"] = &LR35902::getL;
+	rget8["d8"] = &LR35902::getd8;
+	
+	// 16 bit register getters
+	rget16["af"] = &LR35902::getAF;
+	rget16["bc"] = &LR35902::getBC;
+	rget16["de"] = &LR35902::getDE;
+	rget16["hl"] = &LR35902::getHL;
+	rget16["pc"] = &LR35902::getProgramCounter;
+	rget16["sp"] = &LR35902::getStackPointer;
+	rget16["d16"] = &LR35902::getd16;
+	
+	// 8 bit register setters
+	rset8["a"] = &LR35902::setA;
+	rset8["b"] = &LR35902::setB;
+	rset8["c"] = &LR35902::setC;
+	rset8["d"] = &LR35902::setD;
+	rset8["e"] = &LR35902::setE;
+	rset8["f"] = &LR35902::setF;
+	rset8["h"] = &LR35902::setH;
+	rset8["l"] = &LR35902::setL;
+	rset8["d8"] = &LR35902::setd8;
+	
+	// 16 bit register setters
+	rset16["af"] = &LR35902::setAF;
+	rset16["bc"] = &LR35902::setBC;
+	rset16["de"] = &LR35902::setDE;
+	rset16["hl"] = &LR35902::setHL;
+	rset16["pc"] = &LR35902::setProgramCounter;
+	rset16["sp"] = &LR35902::setStackPointer;
+	rset16["d16"] = &LR35902::setd16;
+
 	// Standard opcodes
 	//                          Mnemonic        C  L  R  W  Pointer
 	opcodes[0]   = Opcode(this, "NOP         ", 1, 1, 0, 0, &LR35902::NOP);
