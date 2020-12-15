@@ -11,6 +11,7 @@ add_definitions(-DPROJECT_GBC)
 
 set(SYSTEM_SOURCES Bitmap.cpp
                    Cartridge.cpp
+                   ColorGBC.cpp
                    Console.cpp
                    DmaController.cpp
                    GPU.cpp

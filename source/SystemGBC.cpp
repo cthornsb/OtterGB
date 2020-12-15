@@ -6,6 +6,7 @@
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
 #include "Graphics.hpp"
+#include "ColorGBC.hpp"
 #include "ConfigFile.hpp"
 #ifndef _WIN32
 	#include "optionHandler.hpp"

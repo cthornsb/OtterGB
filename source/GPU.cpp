@@ -8,6 +8,7 @@
 #include "SystemGBC.hpp"
 #include "Support.hpp"
 #include "Graphics.hpp"
+#include "ColorGBC.hpp"
 #include "Console.hpp"
 #include "GPU.hpp"
 #include "SystemTimer.hpp"
