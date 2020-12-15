@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 #include "TextParser.hpp"
 #include "Support.hpp"

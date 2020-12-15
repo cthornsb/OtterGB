@@ -3,9 +3,9 @@ set(CORE_SOURCES ConfigFile.cpp
                  Opcode.cpp
                  Support.cpp)
 
-# Generate the core library
-add_library(BLAH_OBJECTS OBJECT ${CORE_SOURCES})
-add_library(BLAH_LIB STATIC $<TARGET_OBJECTS:BLAH_OBJECTS>)
+if(NOT WIN32)
+	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
+endif(NOT WIN32)
 
 add_definitions(-DPROJECT_GBC)
 
@@ -24,10 +24,6 @@ set(SYSTEM_SOURCES Bitmap.cpp
                    SystemTimer.cpp
                    TextParser.cpp
                    WorkRam.cpp)
-
-if(NOT WIN32)
-	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
-endif(NOT WIN32)
 
 if(NOT ${GB_BOOT_ROM} STREQUAL "")
 	add_definitions(-DGB_BOOT_ROM="${GB_BOOT_ROM}")
@@ -48,9 +44,9 @@ add_library(SYSTEM_LIB STATIC $<TARGET_OBJECTS:SYSTEM_OBJECTS>)
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
 if(NOT BUILD_DEBUG)
-	target_link_libraries(gbc CORE_LIB SYSTEM_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
+	target_link_libraries(gbc SYSTEM_LIB CORE_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
 else()
-	target_link_libraries(gbc CORE_LIB SYSTEM_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${GRAPHICS_LIBS})
+	target_link_libraries(gbc SYSTEM_LIB CORE_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${GRAPHICS_LIBS})
 endif()
 install(TARGETS gbc DESTINATION bin)
 #Copy default configuration file (if it doesn't already exist)
