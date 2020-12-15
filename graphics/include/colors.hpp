@@ -1,7 +1,7 @@
 #ifndef COLORS_HPP
 #define COLORS_HPP
 
-#ifdef USE_OPENGL
+#ifndef USE_SDL_RENDERER
 
 	class ColorRGB{
 	public:

@@ -4,6 +4,7 @@
 #include "ui_mainwindow.h"
 
 #include "GraphicsOpenGL.hpp"
+#include "ColorGBC.hpp"
 #include "Support.hpp"
 #include "colors.hpp"
 #include "SystemTimer.hpp"

@@ -12,21 +12,16 @@ extern const unsigned char FLAG_Z_MASK;
 extern const unsigned char FLAG_S_MASK;
 extern const unsigned char FLAG_H_MASK;
 extern const unsigned char FLAG_C_MASK;
+
 #ifdef PROJECT_GBC
 class LR35902;
 
 typedef unsigned short (LR35902::*addrGetFunc)() const;
+#endif // ifdef PROJECT_GBC	
 
-class Opcode{
-public:
-	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
-
-	addrGetFunc addrptr; ///< Pointer to the function which returns the memory address.
-#else
 class Opcode {
 public:
-#endif // ifdef PROJECT_GBC	
-	unsigned char nType;
+	unsigned char nType; ///< Opcode type
 
 	unsigned short nCycles; ///< Length of clock cycles required.
 	unsigned short nBytes; ///< Length of instruction in bytes.
@@ -36,30 +31,59 @@ public:
 
 	std::string sName; ///< The full instruction mnemonic.
 
-	std::string sPrefix; ///< 
-	std::string sSuffix; ///< 
+	std::string sPrefix; ///< Sub-string of mnemonic before immediate data target
+	std::string sSuffix; ///< Sub-string of mnemonic after immediate data target
 
 	std::string sOpname; ///< Opcode name.
-	std::string sOperands[2]; ///< Operand names.
-	
+	std::string sOperandsLeft; ///< Left hand operand name
+	std::string sOperandsRight; ///< Right hand operand name
+
+#ifdef PROJECT_GBC
+	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
+
+	addrGetFunc addrptr; ///< Pointer to the function which returns the memory address.
+
 	Opcode() : 
-#ifdef PROJECT_GBC	
-		ptr(0x0), 
-		addrptr(0x0), 
-#endif // ifdef PROJECT_GBC	
 		nType(0),
 		nCycles(0), 
 		nBytes(0), 
 		nReadCycles(0), 
 		nWriteCycles(0), 
-		sName() 
+		sName(),
+		sPrefix(),
+		sSuffix(),
+		sOpname(),
+		sOperandsLeft(),
+		sOperandsRight(),
+		ptr(0x0),
+		addrptr(0x0)
 	{ 
 	}
+#else
+	Opcode() : 
+		nType(0),
+		nCycles(0), 
+		nBytes(0), 
+		nReadCycles(0), 
+		nWriteCycles(0), 
+		sName(),
+		sPrefix(),
+		sSuffix(),
+		sOpname(),
+		sOperandsLeft(),
+		sOperandsRight()
+	{ 
+	}
+#endif // ifdef PROJECT_GBC	
+	
+	Opcode(const std::string& mnemonic, const unsigned short& cycles, const unsigned short& bytes, const unsigned short& read, const unsigned short& write);
+	
 #ifdef PROJECT_GBC
 	Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
-#else
-	Opcode(const std::string& mnemonic, const unsigned short& cycles, const unsigned short& bytes, const unsigned short& read, const unsigned short& write);
-#endif // ifdef PROJECT_GBC	
+
+	void setMemoryPointer(LR35902* cpu);
+#endif // ifdef PROJECT_GBC
+
 	bool check(const std::string& op, const unsigned char& type, const std::string& arg1="", const std::string& arg2="") const ;
 };
 
@@ -134,6 +158,14 @@ public:
 	Opcode* getOpcodes() { return opcodes; }
 
 	Opcode* getOpcodesCB() { return opcodesCB; }
+
+#ifdef PROJECT_GBC
+	void setMemoryAccess(LR35902* cpu);
+
+	void setOpcodePointer(const unsigned char& index, void (LR35902::*p)());
+
+	void setOpcodePointerCB(const unsigned char& index, void (LR35902::*p)());
+#endif // ifdef PROJECT_GBC	
 
 	bool findOpcode(const std::string& mnemonic, OpcodeData& data);
 

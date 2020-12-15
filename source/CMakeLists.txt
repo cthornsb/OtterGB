@@ -7,8 +7,6 @@ if(NOT WIN32)
 	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
 endif(NOT WIN32)
 
-add_definitions(-DPROJECT_GBC)
-
 set(SYSTEM_SOURCES Bitmap.cpp
                    Cartridge.cpp
                    ColorGBC.cpp

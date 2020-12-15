@@ -2,7 +2,7 @@
 
 #include "colors.hpp"
 
-#ifndef USE_OPENGL
+#ifdef USE_SDL_RENDERER
 
 	ColorRGB::ColorRGB(const float &value){
 		r = toUChar(value);
@@ -68,7 +68,7 @@ ColorRGB ColorRGB::operator - (const ColorRGB &rhs) const {
 	return ColorRGB((rprime > 0 ? rprime : 0), (gprime > 1 ? gprime : 0), (bprime > 1 ? bprime : 0));
 }
 
-#ifdef USE_OPENGL
+#ifndef USE_SDL_RENDERER
 ColorRGB ColorRGB::operator * (const float &rhs) const {
 	return ColorRGB(r*rhs, g*rhs, b*rhs);
 }

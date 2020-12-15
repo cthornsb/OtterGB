@@ -18,13 +18,7 @@ const unsigned char REGISTER_RIGHT_BIT  = 5;
 
 const std::vector<std::string> cpuRegisters = { "a", "b", "c", "d", "e", "f", "h", "l", "af", "bc", "de", "hl", "hl-", "hl+", "pc", "sp", "nz", "z", "nc", "c" };
 
-#ifdef PROJECT_GBC
-Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
-	ptr(p),
-	addrptr(0x0),
-#else // ifdef PROJECT_GBC
 Opcode::Opcode(const std::string& mnemonic, const unsigned short& cycles, const unsigned short& bytes, const unsigned short& read, const unsigned short& write) :
-#endif // ifdef PROJECT_GBC
 	nType(0x0),
 	nCycles(cycles), 
 	nBytes(bytes), 
@@ -33,12 +27,16 @@ Opcode::Opcode(const std::string& mnemonic, const unsigned short& cycles, const 
 	sName(toLowercase(mnemonic)),
 	sPrefix(),
 	sSuffix(),
-	sOpname()
+	sOpname(),
+	sOperandsLeft(),
+#ifdef PROJECT_GBC
+	sOperandsRight(),
+	ptr(0x0),
+	addrptr(0x0)
+#else
+	sOperandsRight()
+#endif // ifdef PROJECT_GBC
 {
-	/*if(nWriteCycles)
-		bitSet(nType, ADDRESS_LEFT_BIT);
-	if(nReadCycles)
-		bitSet(nType, ADDRESS_RIGHT_BIT);*/
 	const std::vector<std::string> dataTargets = { "d8", "r8", "a8", "d16", "a16" };
 	if(nBytes > 1){
 		for (auto target = dataTargets.begin(); target != dataTargets.end(); target++) {
@@ -61,63 +59,74 @@ Opcode::Opcode(const std::string& mnemonic, const unsigned short& cycles, const 
 		std::string temp = sName.substr(index+1);
 		index = temp.find(',');
 		if(index != std::string::npos){
-			sOperands[0] = temp.substr(0, index);
-			sOperands[1] = temp.substr(index+1);
+			sOperandsLeft = temp.substr(0, index);
+			sOperandsRight = temp.substr(index+1);
 		}
 		else{
-			sOperands[0] = temp;
+			sOperandsLeft = temp;
 		}
-		sOperands[0] = stripWhitespace(sOperands[0]);
-		sOperands[1] = stripWhitespace(sOperands[1]);
+		sOperandsLeft = stripWhitespace(sOperandsLeft);
+		sOperandsRight = stripWhitespace(sOperandsRight);
 		// Search operands for memory addresses
-		if (sOperands[0].find('(') != std::string::npos) {
-			removeCharacter(sOperands[0], '(');
-			removeCharacter(sOperands[0], ')');
-#ifdef PROJECT_GBC
-			addrptr = cpu->getMemoryAddressFunction(sOperands[0]);
-#endif // ifdef PROJECT_GBC
+		if (sOperandsLeft.find('(') != std::string::npos) {
+			removeCharacter(sOperandsLeft, '(');
+			removeCharacter(sOperandsLeft, ')');
 			bitSet(nType, ADDRESS_LEFT_BIT);
 
 		}
-		else if (sOperands[1].find('(') != std::string::npos) {
-			removeCharacter(sOperands[1], '(');
-			removeCharacter(sOperands[1], ')');
-#ifdef PROJECT_GBC
-			addrptr = cpu->getMemoryAddressFunction(sOperands[1]);
-#endif // ifdef PROJECT_GBC
+		else if (sOperandsRight.find('(') != std::string::npos) {
+			removeCharacter(sOperandsRight, '(');
+			removeCharacter(sOperandsRight, ')');
 			bitSet(nType, ADDRESS_RIGHT_BIT);
 		}
 		// Search operands for immediate data targets
-		if (std::find(dataTargets.begin(), dataTargets.end(), sOperands[0]) != dataTargets.end()) {
+		if (std::find(dataTargets.begin(), dataTargets.end(), sOperandsLeft) != dataTargets.end()) {
 			bitSet(nType, IMMEDIATE_LEFT_BIT);
 		}
-		if (std::find(dataTargets.begin(), dataTargets.end(), sOperands[1]) != dataTargets.end()) {
+		if (std::find(dataTargets.begin(), dataTargets.end(), sOperandsRight) != dataTargets.end()) {
 			bitSet(nType, IMMEDIATE_RIGHT_BIT);
 		}
 		// Search operands for cpu registers
-		if (std::find(cpuRegisters.begin(), cpuRegisters.end(), sOperands[0]) != cpuRegisters.end()) {
+		if (std::find(cpuRegisters.begin(), cpuRegisters.end(), sOperandsLeft) != cpuRegisters.end()) {
 			bitSet(nType, REGISTER_LEFT_BIT);
 		}
-		if (std::find(cpuRegisters.begin(), cpuRegisters.end(), sOperands[1]) != cpuRegisters.end()) {
+		if (std::find(cpuRegisters.begin(), cpuRegisters.end(), sOperandsRight) != cpuRegisters.end()) {
 			bitSet(nType, REGISTER_RIGHT_BIT);
 		}
-		//std::cout << sName << "\ttype=" << getBinary(nType) << std::endl;
 	}
 }
+
+#ifdef PROJECT_GBC
+Opcode::Opcode(LR35902* cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
+	Opcode(mnemonic, cycles, bytes, read, write)
+{
+	ptr = p;
+	setMemoryPointer(cpu);
+}
+
+void Opcode::setMemoryPointer(LR35902* cpu){
+	if(bitTest(nType, ADDRESS_LEFT_BIT)) // mem-write
+		addrptr = cpu->getMemoryAddressFunction(sOperandsLeft);
+	else if(bitTest(nType, ADDRESS_RIGHT_BIT)) // mem-read
+		addrptr = cpu->getMemoryAddressFunction(sOperandsRight);
+	else
+		addrptr = 0x0;
+}
+#endif // ifdef PROJECT_GBC
 
 bool Opcode::check(const std::string& op, const unsigned char& type, const std::string& arg1/*=""*/, const std::string& arg2/*=""*/) const {
 	if(op == sOpname && type == nType){
 		if (bitTest(nType, REGISTER_LEFT_BIT) && bitTest(nType, REGISTER_RIGHT_BIT)) {
-			/*if (sOperands[0] == arg1 && sOperands[1] == arg2) {
-				std::cout << "           \"" << arg1 << "\"=\"" << sOperands[0] << "\", \"" << arg2 << "\"=\"" << sOperands[1] << "\"\n";
+			/*if (sOperandsLeft == arg1 && sOperandsRight == arg2) {
+				std::cout << "           \"" << arg1 << "\"=\"" << sOperandsLeft << "\", \"" << arg2 << "\"=\"" << sOperandsRight << "\"\n";
 			}*/
-			return (sOperands[0] == arg1 && sOperands[1] == arg2);
+			return (sOperandsLeft == arg1 && sOperandsRight == arg2);
 		}
 		else if (bitTest(nType, REGISTER_LEFT_BIT)) {
-			return (sOperands[0] == arg1);
+			return (sOperandsLeft == arg1);
 		}
 		else if (bitTest(nType, REGISTER_RIGHT_BIT)) {
-			return (sOperands[1] == arg2);
+			return (sOperandsRight == arg2);
 		}
 		return true;
 	}
@@ -138,6 +147,7 @@ OpcodeData::OpcodeData() :
 	cbPrefix(false) 
 { 
 }
+
 #ifdef PROJECT_GBC
 bool OpcodeData::clock(LR35902 *cpu){ 
 	nCycles++;
@@ -153,6 +163,7 @@ bool OpcodeData::clock(LR35902 *cpu){
 	return retval;
 }
 #endif // ifdef PROJECT_GBC
+
 std::string OpcodeData::getInstruction() const {
 	return (getHex(nPC) + " " + getShortInstruction());
 }
@@ -222,6 +233,23 @@ void OpcodeData::setImmediateData(const std::string &str){
 OpcodeHandler::OpcodeHandler() {
 	initialize();
 }
+
+#ifdef PROJECT_GBC
+void OpcodeHandler::setMemoryAccess(LR35902* cpu){
+	for (unsigned short i = 0; i < 256; i++) {
+		opcodes[i].setMemoryPointer(cpu);
+		opcodesCB[i].setMemoryPointer(cpu);
+	}
+}
+
+void OpcodeHandler::setOpcodePointer(const unsigned char& index, void (LR35902::*p)()){
+	opcodes[index].ptr = p;
+}
+
+void OpcodeHandler::setOpcodePointerCB(const unsigned char& index, void (LR35902::*p)()){
+	opcodesCB[index].ptr = p;
+}
+#endif // ifdef PROJECT_GBC	
 
 bool OpcodeHandler::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 	std::vector<std::string> args;
@@ -318,7 +346,6 @@ bool OpcodeHandler::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 }
 
 void OpcodeHandler::initialize() {
-#ifndef PROJECT_GBC
 	// Standard opcodes
 	//                  Mnemonic        C  L  R  W 
 	opcodes[0] = Opcode("NOP         ", 1, 1, 0, 0);
@@ -844,5 +871,4 @@ void OpcodeHandler::initialize() {
 	opcodesCB[253] = Opcode("SET 7,L     ", 2, 1, 0, 0);
 	opcodesCB[254] = Opcode("SET 7,(HL)  ", 4, 1, 3, 4);
 	opcodesCB[255] = Opcode("SET 7,A     ", 2, 1, 0, 0);
-#endif // ifndef PROJECT_GBC
 }
