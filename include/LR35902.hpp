@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 
+#include "Opcode.hpp"
 #include "SystemComponent.hpp"
 
 extern const unsigned char FLAG_Z_BIT;
@@ -24,102 +25,29 @@ typedef unsigned short (LR35902::*regGet16bit)() const;
 typedef void (LR35902::*regSet8bit)(const unsigned char&);
 typedef void (LR35902::*regSet16bit)(const unsigned short&);
 
-class Opcode{
-public:
-	void (LR35902::*ptr)(); ///< Pointer to the instruction code.
-
-	addrGetFunc addrptr; ///< Pointer to the function which returns the memory address.
-
-	unsigned char nType;
-
-	unsigned short nCycles; ///< Length of clock cycles required.
-	unsigned short nBytes; ///< Length of instruction in bytes.
-
-	unsigned short nReadCycles; ///< Flag indicating this instruction reads from memory.
-	unsigned short nWriteCycles; ///< Flag indicating this instruction writes to memory.
-
-	std::string sName; ///< The full instruction mnemonic.
-
-	std::string sPrefix; ///< 
-	std::string sSuffix; ///< 
-
-	std::string sOpname; ///< Opcode name.
-	std::string sOperands[2]; ///< Operand names.
-	
-	Opcode() : ptr(0x0), addrptr(0x0), nCycles(0), nBytes(0), nReadCycles(0), nWriteCycles(0), sName() { }
-	
-	Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)());
-	
-	bool check(const std::string& op, const unsigned char& type, const std::string& arg1="", const std::string& arg2="") const ;
-};
-
-class OpcodeData{
-public:
-	Opcode *op; ///< Pointer to the opcode instruction.
-	
-	unsigned char nIndex; ///< Opcode index.
-	unsigned short nData; ///< Immediate data.
-	unsigned short nPC; ///< Program counter.
-	unsigned short nCycles; ///< Clock cycles since start of instruction
-	unsigned short nExtraCycles; ///< 
-	unsigned short nReadCycle;
-	unsigned short nWriteCycle;
-	unsigned short nExecuteCycle; ///< Clock cycle on which to execute instruction
-	
-	bool cbPrefix; ///< CB Prefix opcodes.
-	
-	OpcodeData();
-	
-	Opcode * operator () () { return op; }
-	
-	bool executing() const { return (nCycles < (nExecuteCycle + nExtraCycles)); }
-	
-	bool clock(LR35902 *cpu);
-
-	bool onRead() const { return (nCycles == nReadCycle); }
-	
-	bool onWrite() const { return (nCycles == nWriteCycle); }
-
-	bool onExecute() const { return (nCycles == nExecuteCycle); }
-
-	bool onOvertime() const { return (nCycles > nExecuteCycle); }
-
-	bool memoryAccess() const { return (nReadCycle || nWriteCycle); }
-
-	unsigned short cyclesRemaining() const { return (nExecuteCycle + nExtraCycles - nCycles); }
-
-	std::string getInstruction() const ;
-	
-	std::string getShortInstruction() const ; 
-	
-	void addCycles(const unsigned short &extra){ nExtraCycles = extra; }
-	
-	unsigned char getd8() const { return (unsigned char)nData; }
-	
-	unsigned short getd16() const { return nData; }
-	
-	void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-	
-	void set(Opcode *op_);
-	
-	void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-
-	void setCB(Opcode *op_);
-
-	void setImmediateData(const unsigned char &d8){ nData = (d8 & 0x00FF); }
-	
-	void setImmediateData(const unsigned short &d16){ nData = d16; }
-
-	void setImmediateData(const std::string &str);
-};
-
 class LR35902 : public SystemComponent {
 public:
 	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
 
-	LR35902() : SystemComponent("CPU"), halfCarry(false), fullCarry(false), 
-	            A(0), B(0), C(0), D(0), E(0), H(0), L(0), F(0), 
-	            d8(0), d16h(0), d16l(0), SP(0), PC(0) { }
+	LR35902() : 
+		SystemComponent("CPU"), 
+		halfCarry(false), 
+		fullCarry(false), 
+	    A(0), 
+		B(0),
+		C(0),
+		D(0),
+		E(0), 
+		H(0),
+		L(0), 
+		F(0), 
+	    d8(0),
+		d16h(0),
+		d16l(0), 
+		memoryAddress(0),
+		memoryValue(0),
+		SP(0), 
+		PC(0) { }
 
 	void initialize();
 
@@ -134,9 +62,9 @@ public:
 	  */
 	virtual bool onClockUpdate();
 
-	Opcode *getOpcodes(){ return opcodes; }
+	Opcode *getOpcodes(){ return opcodes.getOpcodes(); }
 	
-	Opcode *getOpcodesCB(){ return opcodesCB; }
+	Opcode *getOpcodesCB(){ return opcodes.getOpcodesCB(); }
 
 	OpcodeData *getLastOpcode(){ return &lastOpcode; }
 
@@ -238,8 +166,7 @@ protected:
 	
 	OpcodeData lastOpcode; ///< Pointer to the last read opcode.
 
-	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
-	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
+	OpcodeHandler opcodes;
 
 	std::map<std::string, regGet8bit> rget8; ///< Map of 8-bit register getters
 	std::map<std::string, regSet8bit> rset8; ///< Map of 8-bit register setters

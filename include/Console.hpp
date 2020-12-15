@@ -7,6 +7,7 @@
 #include <map>
 
 #include "Bitmap.hpp"
+#include "TextParser.hpp"
 
 class SystemGBC;
 
@@ -87,6 +88,8 @@ private:
 	std::deque<std::string> buffer;
 
 	std::map<std::string, ConsoleCommand> commands;
+
+	TextParser parser;
 
 	void put(const char &c);
 	

@@ -120,6 +120,20 @@ void ConsoleGBC::handleInput(){
 	LR35902 *cpu = sys->getCPU();
 	std::vector<std::string> args;
 	std::string userinput = toLowercase(line);
+	if (parser.isExpression(userinput)) {
+		NumericalString value;
+		if (parser.parse(userinput, value)) {
+			if(value.type == NUMTYPE::INTEGER)
+				(*this) << value.getUInt() << "\n";
+			else if(value.type == NUMTYPE::BOOLEAN)
+				(*this) << (value.getBool() ? "true" : "false") << "\n";
+		}
+		else {
+			(*this) << "invalid syntax\n";
+		}
+		line = "";
+		return;
+	}
 	unsigned int nArgs = splitString(userinput, args, ' ');
 	line = "";
 	if(!nArgs)

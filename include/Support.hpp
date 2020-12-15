@@ -7,10 +7,24 @@
 // Return true if an input string is numerical
 bool isNumeric(const std::string& str);
 
+bool isInteger(const std::string& str);
+
+bool isDecimal(const std::string& str);
+
+bool isHexadecimal(const std::string& str);
+
+bool isBinary(const std::string& str);
+
+bool isNotNumeric(const std::string& str);
+
 // Compute the two's compliment of an unsigned byte
 short twosComp(const unsigned char &n);
 
 unsigned int splitString(const std::string &input, std::vector<std::string> &output, const unsigned char &delim='\t');
+
+std::string extractString(std::string& str, const char& c1, const char& c2, const std::string& repstr = "");
+
+unsigned int countOccurances(const std::string& str, const char& c);
 
 std::string getHex(const unsigned char &input);
 
@@ -36,11 +50,15 @@ std::string toLowercase(const std::string &str);
 
 std::string stripWhitespace(const std::string &str);
 
-void removeCharacter(std::string& str, const char& c);
+std::string stripAllWhitespace(const std::string& str);
+
+bool removeCharacter(std::string& str, const char& c);
 
 unsigned char getUserInputUChar(const std::string& str);
 
 unsigned short getUserInputUShort(const std::string& str);
+
+unsigned int getUserInputUInt(const std::string& str);
 
 unsigned short getUShort(const unsigned char &h, const unsigned char &l);
 

@@ -21,181 +21,6 @@ const unsigned char IMMEDIATE_RIGHT_BIT = 1;
 const unsigned char ADDRESS_LEFT_BIT    = 2;
 const unsigned char ADDRESS_RIGHT_BIT   = 3;
 
-const unsigned char ZERO = 0x0;
-
-Opcode::Opcode(LR35902 *cpu, const std::string &mnemonic, const unsigned short &cycles, const unsigned short &bytes, const unsigned short &read, const unsigned short &write, void (LR35902::*p)()) :
-	ptr(p),
-	addrptr(0x0),
-	nType(0x0),
-	nCycles(cycles), 
-	nBytes(bytes), 
-	nReadCycles(read), 
-	nWriteCycles(write), 
-	sName(toLowercase(mnemonic)),
-	sPrefix(),
-	sSuffix(),
-	sOpname()
-{
-	if(nWriteCycles)
-		bitSet(nType, ADDRESS_LEFT_BIT);
-	if(nReadCycles)
-		bitSet(nType, ADDRESS_RIGHT_BIT);
-	const std::string targets[5] = {"d8", "r8", "a8", "d16", "a16"};
-	if(nBytes > 1){
-		for(int i = 0; i < 5; i++){
-			size_t index = sName.find(targets[i]);
-			if(index != std::string::npos){
-				sPrefix = sName.substr(0, index);
-				sSuffix = sName.substr(index+targets[i].length());
-				if(nBytes == 2)
-					sSuffix += " ";
-				break;
-			}
-		}
-	}
-	else{
-		sPrefix = sName + "  ";
-	}
-	size_t index = sName.find(' ');
-	if(index != std::string::npos){
-		sOpname = sName.substr(0, index);
-		std::string temp = sName.substr(index+1);
-		index = temp.find(',');
-		if(index != std::string::npos){
-			sOperands[0] = temp.substr(0, index);
-			sOperands[1] = temp.substr(index+1);
-		}
-		else{
-			sOperands[0] = temp;
-		}
-		sOperands[0] = stripWhitespace(sOperands[0]);
-		sOperands[1] = stripWhitespace(sOperands[1]);
-		for(int i = 0; i < 5; i++){
-			if(sOperands[0].find(targets[i]) != std::string::npos)
-				bitSet(nType, IMMEDIATE_LEFT_BIT);
-			if(sOperands[1].find(targets[i]) != std::string::npos)
-				bitSet(nType, IMMEDIATE_RIGHT_BIT);
-		}
-		index = sOperands[0].find('(');
-		std::string memRead, memWrite;
-		if(index != std::string::npos){
-			memWrite = sOperands[0].substr(index+1, sOperands[0].find(')')-index-1);
-			if(sOperands[1].empty()){
-				memRead = memWrite;
-			}
-		}
-		else{
-			index = sOperands[1].find('(');
-			if(index != std::string::npos){
-				memRead = sOperands[1].substr(index+1, sOperands[1].find(')')-index-1);
-			}
-		}
-		if(!memRead.empty())
-			addrptr = cpu->getMemoryAddressFunction(memRead);
-		else if(!memWrite.empty())
-			addrptr = cpu->getMemoryAddressFunction(memWrite);
-	}
-}
-
-bool Opcode::check(const std::string& op, const unsigned char& type, const std::string& arg1/*=""*/, const std::string& arg2/*=""*/) const {
-	if(op == sOpname && type == nType){
-		if(bitTest(nType, IMMEDIATE_LEFT_BIT)){
-			return (sOperands[1].empty() || sOperands[1] == arg2);
-		}
-		else if(bitTest(nType, IMMEDIATE_RIGHT_BIT)){
-			return (sOperands[0].empty() || sOperands[0] == arg1);
-		}
-		else{
-			return ((sOperands[0].empty() || sOperands[0] == arg1) && (sOperands[1].empty() || sOperands[1] == arg2));
-		}
-	}
-	return false;
-}
-
-OpcodeData::OpcodeData() : 
-	op(0x0), 
-	nIndex(0), 
-	nData(0), 
-	nPC(0), 
-	nCycles(0), 
-	nExtraCycles(0), 
-	nReadCycle(0),
-	nWriteCycle(0),
-	nExecuteCycle(0), 
-	cbPrefix(false) 
-{ 
-}
-
-bool OpcodeData::clock(LR35902 *cpu){ 
-	nCycles++;
-	bool retval = false;
-	if(nCycles == nReadCycle)
-		cpu->readMemory();
-	if(nCycles == nExecuteCycle){
-		(cpu->*op->ptr)();
-		retval = true;
-	}
-	if(nCycles == nWriteCycle)
-		cpu->writeMemory();
-	return retval;
-}
-
-std::string OpcodeData::getInstruction() const {
-	return (getHex(nPC) + " " + getShortInstruction());
-}
-
-std::string OpcodeData::getShortInstruction() const {
-	std::string retval = op->sPrefix;
-	if(op->nBytes == 2)
-		retval += getHex(getd8());
-	else if(op->nBytes == 3)
-		retval += getHex(getd16());
-	retval += op->sSuffix;
-	return retval;
-}
-
-void OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
-	op            = &opcodes_[index_];
-	nIndex        = index_;
-	nPC           = pc_;
-	nCycles       = 0;
-	nExtraCycles  = 0;
-	nReadCycle    = op->nReadCycles;
-	nWriteCycle   = op->nWriteCycles;
-	nExecuteCycle = op->nCycles;
-	cbPrefix = false;
-}
-
-void OpcodeData::set(Opcode *op_){
-	op            = op_;
-	nCycles       = 0;
-	nReadCycle    = op->nReadCycles;
-	nWriteCycle   = op->nWriteCycles;
-	nExecuteCycle = op->nCycles;
-	cbPrefix = false;
-}
-
-void OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
-	set(opcodes_, index_, pc_);
-	cbPrefix = true;
-}
-
-void OpcodeData::setCB(Opcode *op_){
-	set(op_);
-	cbPrefix = true;
-}
-
-void OpcodeData::setImmediateData(const std::string &str){
-	if(op->nBytes == 2){ // d8
-		unsigned char d8 = (unsigned char)stoul(str, 0, 16);
-		setImmediateData(d8);
-	}
-	else if(op->nBytes == 3){ // d16
-		unsigned short d16 = (unsigned short)stoul(str, 0, 16);
-		setImmediateData(d16);
-	}
-}
-
 /** Read the next instruction from memory and return the number of clock cycles. 
   */
 unsigned short LR35902::evaluate(){
@@ -205,10 +30,10 @@ unsigned short LR35902::evaluate(){
 		std::cout << " Opcode read failed! PC=" << getHex((unsigned short)(PC-1)) << std::endl;
 	
 	if(op != 0xCB) // Normal opcodes
-		lastOpcode.set(opcodes, op, PC-1);
+		lastOpcode.set(opcodes.getOpcodes(), op, PC-1);
 	else{ // CB prefix opcodes
 		sys->read(PC++, &op);
-		lastOpcode.set(opcodesCB, op, PC-2);
+		lastOpcode.set(opcodes.getOpcodesCB(), op, PC-2);
 	}
 
 	d8 = 0x0;
@@ -403,59 +228,10 @@ addrGetFunc LR35902::getMemoryAddressFunction(const std::string &target){
 	return 0x0;
 }
 
-bool LR35902::findOpcode(const std::string& mnemonic, OpcodeData& data){		
-	std::vector<std::string> args;
-	unsigned int nArgs = splitString(mnemonic, args, ' ');
-	if(!nArgs)
-		return 0x0;
-	std::string operand1, operand2;
-	unsigned char type = 0x0;
-	size_t index;
-	if(nArgs >= 2){
-		operand1 = args.at(1);
-		index = operand1.find(',');
-		if(index != std::string::npos){ // Operands seperated by a comma
-			operand2 = operand1.substr(index+1);
-			operand1 = operand1.substr(0, index);
-		}
-		else if(nArgs >= 3) // Operands seperated by a space
-			operand2 = args.at(2);
-	}
-	index = operand1.find('$');
-	if(index != std::string::npos){ // Immediate data
-		removeCharacter(operand1, '$');
-		bitSet(type, IMMEDIATE_LEFT_BIT);
-	}
-	index = operand1.find('(');
-	if(index != std::string::npos){ // Memory address
-		bitSet(type, ADDRESS_LEFT_BIT);
-	}
-	index = operand2.find('$');
-	if(index != std::string::npos){ // Immediate data
-		removeCharacter(operand2, '$');
-		bitSet(type, IMMEDIATE_RIGHT_BIT);
-	}
-	index = operand2.find('(');
-	if(index != std::string::npos){ // Memory address
-		bitSet(type, ADDRESS_RIGHT_BIT);
-	}
-	for(unsigned short i = 0; i < 256; i++){
-		if(opcodes[i].check(args.front(), type, operand1, operand2)){
-			data.set(&opcodes[i]);
-		}
-		else if(opcodesCB[i].check(args.front(), type, operand1, operand2)){
-			data.set(&opcodesCB[i]);
-		}
-		else{
-			continue;
-		}
-		// Set immediate data (if present)
-		if(bitTest(type, IMMEDIATE_LEFT_BIT))	
-			data.setImmediateData(operand1);
-		else if(bitTest(type, IMMEDIATE_RIGHT_BIT))
-			data.setImmediateData(operand2);
+bool LR35902::findOpcode(const std::string& mnemonic, OpcodeData& data) {
+	if (opcodes.findOpcode(mnemonic, data)) {
 		// Set data access memory address (if present)
-		if(data.memoryAccess())
+		if (data.memoryAccess())
 			setMemoryAddress((this->*data()->addrptr)());
 		return true;
 	}
@@ -1046,523 +822,527 @@ void LR35902::initialize(){
 	rset16["sp"] = &LR35902::setStackPointer;
 	rset16["d16"] = &LR35902::setd16;
 
+	Opcode* ops = opcodes.getOpcodes();
+
 	// Standard opcodes
 	//                          Mnemonic        C  L  R  W  Pointer
-	opcodes[0]   = Opcode(this, "NOP         ", 1, 1, 0, 0, &LR35902::NOP);
-	opcodes[1]   = Opcode(this, "LD BC,d16   ", 3, 3, 0, 0, &LR35902::LD_BC_d16);
-	opcodes[2]   = Opcode(this, "LD (BC),A   ", 2, 1, 0, 2, &LR35902::LD_aBC_A);
-	opcodes[3]   = Opcode(this, "INC BC      ", 2, 1, 0, 0, &LR35902::INC_BC);
-	opcodes[4]   = Opcode(this, "INC B       ", 1, 1, 0, 0, &LR35902::INC_B);
-	opcodes[5]   = Opcode(this, "DEC B       ", 1, 1, 0, 0, &LR35902::DEC_B);
-	opcodes[6]   = Opcode(this, "LD B,d8     ", 2, 2, 0, 0, &LR35902::LD_B_d8);
-	opcodes[7]   = Opcode(this, "RLCA        ", 1, 1, 0, 0, &LR35902::RLCA);
-	opcodes[8]   = Opcode(this, "LD (a16),SP ", 5, 3, 0, 0, &LR35902::LD_a16_SP);
-	opcodes[9]   = Opcode(this, "ADD HL,BC   ", 2, 1, 0, 0, &LR35902::ADD_HL_BC);
-	opcodes[10]  = Opcode(this, "LD A,(BC)   ", 2, 1, 2, 0, &LR35902::LD_A_aBC);
-	opcodes[11]  = Opcode(this, "DEC BC      ", 2, 1, 0, 0, &LR35902::DEC_BC);
-	opcodes[12]  = Opcode(this, "INC C       ", 1, 1, 0, 0, &LR35902::INC_C);
-	opcodes[13]  = Opcode(this, "DEC C       ", 1, 1, 0, 0, &LR35902::DEC_C);
-	opcodes[14]  = Opcode(this, "LD C,d8     ", 2, 2, 0, 0, &LR35902::LD_C_d8);
-	opcodes[15]  = Opcode(this, "RRCA        ", 1, 1, 0, 0, &LR35902::RRCA);
-	opcodes[16]  = Opcode(this, "STOP 0      ", 1, 2, 0, 0, &LR35902::STOP_0);
-	opcodes[17]  = Opcode(this, "LD DE,d16   ", 3, 3, 0, 0, &LR35902::LD_DE_d16);
-	opcodes[18]  = Opcode(this, "LD (DE),A   ", 2, 1, 0, 2, &LR35902::LD_aDE_A);
-	opcodes[19]  = Opcode(this, "INC DE      ", 2, 1, 0, 0, &LR35902::INC_DE);
-	opcodes[20]  = Opcode(this, "INC D       ", 1, 1, 0, 0, &LR35902::INC_D);
-	opcodes[21]  = Opcode(this, "DEC D       ", 1, 1, 0, 0, &LR35902::DEC_D);
-	opcodes[22]  = Opcode(this, "LD D,d8     ", 2, 2, 0, 0, &LR35902::LD_D_d8);
-	opcodes[23]  = Opcode(this, "RLA         ", 1, 1, 0, 0, &LR35902::RLA);
-	opcodes[24]  = Opcode(this, "JR r8       ", 3, 2, 0, 0, &LR35902::JR_r8);
-	opcodes[25]  = Opcode(this, "ADD HL,DE   ", 2, 1, 0, 0, &LR35902::ADD_HL_DE);
-	opcodes[26]  = Opcode(this, "LD A,(DE)   ", 2, 1, 2, 0, &LR35902::LD_A_aDE);
-	opcodes[27]  = Opcode(this, "DEC DE      ", 2, 1, 0, 0, &LR35902::DEC_DE);
-	opcodes[28]  = Opcode(this, "INC E       ", 1, 1, 0, 0, &LR35902::INC_E);
-	opcodes[29]  = Opcode(this, "DEC E       ", 1, 1, 0, 0, &LR35902::DEC_E);
-	opcodes[30]  = Opcode(this, "LD E,d8     ", 2, 2, 0, 0, &LR35902::LD_E_d8);
-	opcodes[31]  = Opcode(this, "RRA         ", 1, 1, 0, 0, &LR35902::RRA);
-	opcodes[32]  = Opcode(this, "JR NZ,r8    ", 2, 2, 0, 0, &LR35902::JR_NZ_r8);
-	opcodes[33]  = Opcode(this, "LD HL,d16   ", 3, 3, 0, 0, &LR35902::LD_HL_d16);
-	opcodes[34]  = Opcode(this, "LDI (HL),A  ", 2, 1, 0, 2, &LR35902::LDI_aHL_A);
-	opcodes[35]  = Opcode(this, "INC HL      ", 2, 1, 0, 0, &LR35902::INC_HL);
-	opcodes[36]  = Opcode(this, "INC H       ", 1, 1, 0, 0, &LR35902::INC_H);
-	opcodes[37]  = Opcode(this, "DEC H       ", 1, 1, 0, 0, &LR35902::DEC_H);
-	opcodes[38]  = Opcode(this, "LD H,d8     ", 2, 2, 0, 0, &LR35902::LD_H_d8);
-	opcodes[39]  = Opcode(this, "DAA         ", 1, 1, 0, 0, &LR35902::DAA);
-	opcodes[40]  = Opcode(this, "JR Z,r8     ", 2, 2, 0, 0, &LR35902::JR_Z_r8);
-	opcodes[41]  = Opcode(this, "ADD HL,HL   ", 2, 1, 0, 0, &LR35902::ADD_HL_HL);
-	opcodes[42]  = Opcode(this, "LDI A,(HL)  ", 2, 1, 2, 0, &LR35902::LDI_A_aHL);
-	opcodes[43]  = Opcode(this, "DEC HL      ", 2, 1, 0, 0, &LR35902::DEC_HL);
-	opcodes[44]  = Opcode(this, "INC L       ", 1, 1, 0, 0, &LR35902::INC_L);
-	opcodes[45]  = Opcode(this, "DEC L       ", 1, 1, 0, 0, &LR35902::DEC_L);
-	opcodes[46]  = Opcode(this, "LD L,d8     ", 2, 2, 0, 0, &LR35902::LD_L_d8);
-	opcodes[47]  = Opcode(this, "CPL         ", 1, 1, 0, 0, &LR35902::CPL);
-	opcodes[48]  = Opcode(this, "JR NC,r8    ", 2, 2, 0, 0, &LR35902::JR_NC_r8);
-	opcodes[49]  = Opcode(this, "LD SP,d16   ", 3, 3, 0, 0, &LR35902::LD_SP_d16);
-	opcodes[50]  = Opcode(this, "LDD (HL),A  ", 2, 1, 0, 2, &LR35902::LDD_aHL_A);
-	opcodes[51]  = Opcode(this, "INC SP      ", 2, 1, 0, 0, &LR35902::INC_SP);
-	opcodes[52]  = Opcode(this, "INC (HL)    ", 3, 1, 2, 3, &LR35902::INC_aHL);
-	opcodes[53]  = Opcode(this, "DEC (HL)    ", 3, 1, 2, 3, &LR35902::DEC_aHL);
-	opcodes[54]  = Opcode(this, "LD (HL),d8  ", 3, 2, 0, 3, &LR35902::LD_aHL_d8);
-	opcodes[55]  = Opcode(this, "SCF         ", 1, 1, 0, 0, &LR35902::SCF);
-	opcodes[56]  = Opcode(this, "JR C,r8     ", 2, 2, 0, 0, &LR35902::JR_C_r8);
-	opcodes[57]  = Opcode(this, "ADD HL,SP   ", 2, 1, 0, 0, &LR35902::ADD_HL_SP);
-	opcodes[58]  = Opcode(this, "LDD A,(HL)  ", 2, 1, 2, 0, &LR35902::LDD_A_aHL);
-	opcodes[59]  = Opcode(this, "DEC SP      ", 2, 1, 0, 0, &LR35902::DEC_SP);
-	opcodes[60]  = Opcode(this, "INC A       ", 1, 1, 0, 0, &LR35902::INC_A);
-	opcodes[61]  = Opcode(this, "DEC A       ", 1, 1, 0, 0, &LR35902::DEC_A);
-	opcodes[62]  = Opcode(this, "LD A,d8     ", 2, 2, 0, 0, &LR35902::LD_A_d8);
-	opcodes[63]  = Opcode(this, "CCF         ", 1, 1, 0, 0, &LR35902::CCF);
-	opcodes[64]  = Opcode(this, "LD B,B      ", 1, 1, 0, 0, &LR35902::LD_B_B);
-	opcodes[65]  = Opcode(this, "LD B,C      ", 1, 1, 0, 0, &LR35902::LD_B_C);
-	opcodes[66]  = Opcode(this, "LD B,D      ", 1, 1, 0, 0, &LR35902::LD_B_D);
-	opcodes[67]  = Opcode(this, "LD B,E      ", 1, 1, 0, 0, &LR35902::LD_B_E);
-	opcodes[68]  = Opcode(this, "LD B,H      ", 1, 1, 0, 0, &LR35902::LD_B_H);
-	opcodes[69]  = Opcode(this, "LD B,L      ", 1, 1, 0, 0, &LR35902::LD_B_L);
-	opcodes[70]  = Opcode(this, "LD B,(HL)   ", 2, 1, 2, 0, &LR35902::LD_B_aHL);
-	opcodes[71]  = Opcode(this, "LD B,A      ", 1, 1, 0, 0, &LR35902::LD_B_A);
-	opcodes[72]  = Opcode(this, "LD C,B      ", 1, 1, 0, 0, &LR35902::LD_C_B);
-	opcodes[73]  = Opcode(this, "LD C,C      ", 1, 1, 0, 0, &LR35902::LD_C_C);
-	opcodes[74]  = Opcode(this, "LD C,D      ", 1, 1, 0, 0, &LR35902::LD_C_D);
-	opcodes[75]  = Opcode(this, "LD C,E      ", 1, 1, 0, 0, &LR35902::LD_C_E);
-	opcodes[76]  = Opcode(this, "LD C,H      ", 1, 1, 0, 0, &LR35902::LD_C_H);
-	opcodes[77]  = Opcode(this, "LD C,L      ", 1, 1, 0, 0, &LR35902::LD_C_L);
-	opcodes[78]  = Opcode(this, "LD C,(HL)   ", 2, 1, 2, 0, &LR35902::LD_C_aHL);
-	opcodes[79]  = Opcode(this, "LD C,A      ", 1, 1, 0, 0, &LR35902::LD_C_A);
-	opcodes[80]  = Opcode(this, "LD D,B      ", 1, 1, 0, 0, &LR35902::LD_D_B);
-	opcodes[81]  = Opcode(this, "LD D,C      ", 1, 1, 0, 0, &LR35902::LD_D_C);
-	opcodes[82]  = Opcode(this, "LD D,D      ", 1, 1, 0, 0, &LR35902::LD_D_D);
-	opcodes[83]  = Opcode(this, "LD D,E      ", 1, 1, 0, 0, &LR35902::LD_D_E);
-	opcodes[84]  = Opcode(this, "LD D,H      ", 1, 1, 0, 0, &LR35902::LD_D_H);
-	opcodes[85]  = Opcode(this, "LD D,L      ", 1, 1, 0, 0, &LR35902::LD_D_L);
-	opcodes[86]  = Opcode(this, "LD D,(HL)   ", 2, 1, 2, 0, &LR35902::LD_D_aHL);
-	opcodes[87]  = Opcode(this, "LD D,A      ", 1, 1, 0, 0, &LR35902::LD_D_A);
-	opcodes[88]  = Opcode(this, "LD E,B      ", 1, 1, 0, 0, &LR35902::LD_E_B);
-	opcodes[89]  = Opcode(this, "LD E,C      ", 1, 1, 0, 0, &LR35902::LD_E_C);
-	opcodes[90]  = Opcode(this, "LD E,D      ", 1, 1, 0, 0, &LR35902::LD_E_D);
-	opcodes[91]  = Opcode(this, "LD E,E      ", 1, 1, 0, 0, &LR35902::LD_E_E);
-	opcodes[92]  = Opcode(this, "LD E,H      ", 1, 1, 0, 0, &LR35902::LD_E_H);
-	opcodes[93]  = Opcode(this, "LD E,L      ", 1, 1, 0, 0, &LR35902::LD_E_L);
-	opcodes[94]  = Opcode(this, "LD E,(HL)   ", 2, 1, 2, 0, &LR35902::LD_E_aHL);
-	opcodes[95]  = Opcode(this, "LD E,A      ", 1, 1, 0, 0, &LR35902::LD_E_A);
-	opcodes[96]  = Opcode(this, "LD H,B      ", 1, 1, 0, 0, &LR35902::LD_H_B);
-	opcodes[97]  = Opcode(this, "LD H,C      ", 1, 1, 0, 0, &LR35902::LD_H_C);
-	opcodes[98]  = Opcode(this, "LD H,D      ", 1, 1, 0, 0, &LR35902::LD_H_D);
-	opcodes[99]  = Opcode(this, "LD H,E      ", 1, 1, 0, 0, &LR35902::LD_H_E);
-	opcodes[100] = Opcode(this, "LD H,H      ", 1, 1, 0, 0, &LR35902::LD_H_H);
-	opcodes[101] = Opcode(this, "LD H,L      ", 1, 1, 0, 0, &LR35902::LD_H_L);
-	opcodes[102] = Opcode(this, "LD H,(HL)   ", 2, 1, 2, 0, &LR35902::LD_H_aHL);
-	opcodes[103] = Opcode(this, "LD H,A      ", 1, 1, 0, 0, &LR35902::LD_H_A);
-	opcodes[104] = Opcode(this, "LD L,B      ", 1, 1, 0, 0, &LR35902::LD_L_B);
-	opcodes[105] = Opcode(this, "LD L,C      ", 1, 1, 0, 0, &LR35902::LD_L_C);
-	opcodes[106] = Opcode(this, "LD L,D      ", 1, 1, 0, 0, &LR35902::LD_L_D);
-	opcodes[107] = Opcode(this, "LD L,E      ", 1, 1, 0, 0, &LR35902::LD_L_E);
-	opcodes[108] = Opcode(this, "LD L,H      ", 1, 1, 0, 0, &LR35902::LD_L_H);
-	opcodes[109] = Opcode(this, "LD L,L      ", 1, 1, 0, 0, &LR35902::LD_L_L);
-	opcodes[110] = Opcode(this, "LD L,(HL)   ", 2, 1, 2, 0, &LR35902::LD_L_aHL);
-	opcodes[111] = Opcode(this, "LD L,A      ", 1, 1, 0, 0, &LR35902::LD_L_A);
-	opcodes[112] = Opcode(this, "LD (HL),B   ", 2, 1, 0, 2, &LR35902::LD_aHL_B);
-	opcodes[113] = Opcode(this, "LD (HL),C   ", 2, 1, 0, 2, &LR35902::LD_aHL_C);
-	opcodes[114] = Opcode(this, "LD (HL),D   ", 2, 1, 0, 2, &LR35902::LD_aHL_D);
-	opcodes[115] = Opcode(this, "LD (HL),E   ", 2, 1, 0, 2, &LR35902::LD_aHL_E);
-	opcodes[116] = Opcode(this, "LD (HL),H   ", 2, 1, 0, 2, &LR35902::LD_aHL_H);
-	opcodes[117] = Opcode(this, "LD (HL),L   ", 2, 1, 0, 2, &LR35902::LD_aHL_L);
-	opcodes[118] = Opcode(this, "HALT        ", 1, 1, 0, 0, &LR35902::HALT);
-	opcodes[119] = Opcode(this, "LD (HL),A   ", 2, 1, 0, 2, &LR35902::LD_aHL_A);
-	opcodes[120] = Opcode(this, "LD A,B      ", 1, 1, 0, 0, &LR35902::LD_A_B);
-	opcodes[121] = Opcode(this, "LD A,C      ", 1, 1, 0, 0, &LR35902::LD_A_C);
-	opcodes[122] = Opcode(this, "LD A,D      ", 1, 1, 0, 0, &LR35902::LD_A_D);
-	opcodes[123] = Opcode(this, "LD A,E      ", 1, 1, 0, 0, &LR35902::LD_A_E);
-	opcodes[124] = Opcode(this, "LD A,H      ", 1, 1, 0, 0, &LR35902::LD_A_H);
-	opcodes[125] = Opcode(this, "LD A,L      ", 1, 1, 0, 0, &LR35902::LD_A_L);
-	opcodes[126] = Opcode(this, "LD A,(HL)   ", 2, 1, 2, 0, &LR35902::LD_A_aHL);
-	opcodes[127] = Opcode(this, "LD A,A      ", 1, 1, 0, 0, &LR35902::LD_A_A);
-	opcodes[128] = Opcode(this, "ADD A,B     ", 1, 1, 0, 0, &LR35902::ADD_A_B);
-	opcodes[129] = Opcode(this, "ADD A,C     ", 1, 1, 0, 0, &LR35902::ADD_A_C);
-	opcodes[130] = Opcode(this, "ADD A,D     ", 1, 1, 0, 0, &LR35902::ADD_A_D);
-	opcodes[131] = Opcode(this, "ADD A,E     ", 1, 1, 0, 0, &LR35902::ADD_A_E);
-	opcodes[132] = Opcode(this, "ADD A,H     ", 1, 1, 0, 0, &LR35902::ADD_A_H);
-	opcodes[133] = Opcode(this, "ADD A,L     ", 1, 1, 0, 0, &LR35902::ADD_A_L);
-	opcodes[134] = Opcode(this, "ADD A,(HL)  ", 2, 1, 2, 0, &LR35902::ADD_A_aHL);
-	opcodes[135] = Opcode(this, "ADD A,A     ", 1, 1, 0, 0, &LR35902::ADD_A_A);
-	opcodes[136] = Opcode(this, "ADC A,B     ", 1, 1, 0, 0, &LR35902::ADC_A_B);
-	opcodes[137] = Opcode(this, "ADC A,C     ", 1, 1, 0, 0, &LR35902::ADC_A_C);
-	opcodes[138] = Opcode(this, "ADC A,D     ", 1, 1, 0, 0, &LR35902::ADC_A_D);
-	opcodes[139] = Opcode(this, "ADC A,E     ", 1, 1, 0, 0, &LR35902::ADC_A_E);
-	opcodes[140] = Opcode(this, "ADC A,H     ", 1, 1, 0, 0, &LR35902::ADC_A_H);
-	opcodes[141] = Opcode(this, "ADC A,L     ", 1, 1, 0, 0, &LR35902::ADC_A_L);
-	opcodes[142] = Opcode(this, "ADC A,(HL)  ", 2, 1, 2, 0, &LR35902::ADC_A_aHL);
-	opcodes[143] = Opcode(this, "ADC A,A     ", 1, 1, 0, 0, &LR35902::ADC_A_A);
-	opcodes[144] = Opcode(this, "SUB B       ", 1, 1, 0, 0, &LR35902::SUB_B);
-	opcodes[145] = Opcode(this, "SUB C       ", 1, 1, 0, 0, &LR35902::SUB_C);
-	opcodes[146] = Opcode(this, "SUB D       ", 1, 1, 0, 0, &LR35902::SUB_D);
-	opcodes[147] = Opcode(this, "SUB E       ", 1, 1, 0, 0, &LR35902::SUB_E);
-	opcodes[148] = Opcode(this, "SUB H       ", 1, 1, 0, 0, &LR35902::SUB_H);
-	opcodes[149] = Opcode(this, "SUB L       ", 1, 1, 0, 0, &LR35902::SUB_L);
-	opcodes[150] = Opcode(this, "SUB (HL)    ", 2, 1, 2, 0, &LR35902::SUB_aHL);
-	opcodes[151] = Opcode(this, "SUB A       ", 1, 1, 0, 0, &LR35902::SUB_A);
-	opcodes[152] = Opcode(this, "SBC A,B     ", 1, 1, 0, 0, &LR35902::SBC_A_B);
-	opcodes[153] = Opcode(this, "SBC A,C     ", 1, 1, 0, 0, &LR35902::SBC_A_C);
-	opcodes[154] = Opcode(this, "SBC A,D     ", 1, 1, 0, 0, &LR35902::SBC_A_D);
-	opcodes[155] = Opcode(this, "SBC A,E     ", 1, 1, 0, 0, &LR35902::SBC_A_E);
-	opcodes[156] = Opcode(this, "SBC A,H     ", 1, 1, 0, 0, &LR35902::SBC_A_H);
-	opcodes[157] = Opcode(this, "SBC A,L     ", 1, 1, 0, 0, &LR35902::SBC_A_L);
-	opcodes[158] = Opcode(this, "SBC A,(HL)  ", 2, 1, 2, 0, &LR35902::SBC_A_aHL);
-	opcodes[159] = Opcode(this, "SBC A,A     ", 1, 1, 0, 0, &LR35902::SBC_A_A);
-	opcodes[160] = Opcode(this, "AND B       ", 1, 1, 0, 0, &LR35902::AND_B);
-	opcodes[161] = Opcode(this, "AND C       ", 1, 1, 0, 0, &LR35902::AND_C);
-	opcodes[162] = Opcode(this, "AND D       ", 1, 1, 0, 0, &LR35902::AND_D);
-	opcodes[163] = Opcode(this, "AND E       ", 1, 1, 0, 0, &LR35902::AND_E);
-	opcodes[164] = Opcode(this, "AND H       ", 1, 1, 0, 0, &LR35902::AND_H);
-	opcodes[165] = Opcode(this, "AND L       ", 1, 1, 0, 0, &LR35902::AND_L);
-	opcodes[166] = Opcode(this, "AND (HL)    ", 2, 1, 2, 0, &LR35902::AND_aHL);
-	opcodes[167] = Opcode(this, "AND A       ", 1, 1, 0, 0, &LR35902::AND_A);
-	opcodes[168] = Opcode(this, "XOR B       ", 1, 1, 0, 0, &LR35902::XOR_B);
-	opcodes[169] = Opcode(this, "XOR C       ", 1, 1, 0, 0, &LR35902::XOR_C);
-	opcodes[170] = Opcode(this, "XOR D       ", 1, 1, 0, 0, &LR35902::XOR_D);
-	opcodes[171] = Opcode(this, "XOR E       ", 1, 1, 0, 0, &LR35902::XOR_E);
-	opcodes[172] = Opcode(this, "XOR H       ", 1, 1, 0, 0, &LR35902::XOR_H);
-	opcodes[173] = Opcode(this, "XOR L       ", 1, 1, 0, 0, &LR35902::XOR_L);
-	opcodes[174] = Opcode(this, "XOR (HL)    ", 2, 1, 2, 0, &LR35902::XOR_aHL);
-	opcodes[175] = Opcode(this, "XOR A       ", 1, 1, 0, 0, &LR35902::XOR_A);
-	opcodes[176] = Opcode(this, "OR B        ", 1, 1, 0, 0, &LR35902::OR_B);
-	opcodes[177] = Opcode(this, "OR C        ", 1, 1, 0, 0, &LR35902::OR_C);
-	opcodes[178] = Opcode(this, "OR D        ", 1, 1, 0, 0, &LR35902::OR_D);
-	opcodes[179] = Opcode(this, "OR E        ", 1, 1, 0, 0, &LR35902::OR_E);
-	opcodes[180] = Opcode(this, "OR H        ", 1, 1, 0, 0, &LR35902::OR_H);
-	opcodes[181] = Opcode(this, "OR L        ", 1, 1, 0, 0, &LR35902::OR_L);
-	opcodes[182] = Opcode(this, "OR (HL)     ", 2, 1, 2, 0, &LR35902::OR_aHL);
-	opcodes[183] = Opcode(this, "OR A        ", 1, 1, 0, 0, &LR35902::OR_A);
-	opcodes[184] = Opcode(this, "CP B        ", 1, 1, 0, 0, &LR35902::CP_B);
-	opcodes[185] = Opcode(this, "CP C        ", 1, 1, 0, 0, &LR35902::CP_C);
-	opcodes[186] = Opcode(this, "CP D        ", 1, 1, 0, 0, &LR35902::CP_D);
-	opcodes[187] = Opcode(this, "CP E        ", 1, 1, 0, 0, &LR35902::CP_E);
-	opcodes[188] = Opcode(this, "CP H        ", 1, 1, 0, 0, &LR35902::CP_H);
-	opcodes[189] = Opcode(this, "CP L        ", 1, 1, 0, 0, &LR35902::CP_L);
-	opcodes[190] = Opcode(this, "CP (HL)     ", 2, 1, 2, 0, &LR35902::CP_aHL);
-	opcodes[191] = Opcode(this, "CP A        ", 1, 1, 0, 0, &LR35902::CP_A);
-	opcodes[192] = Opcode(this, "RET NZ      ", 2, 1, 0, 0, &LR35902::RET_NZ);
-	opcodes[193] = Opcode(this, "POP BC      ", 3, 1, 0, 0, &LR35902::POP_BC);
-	opcodes[194] = Opcode(this, "JP NZ,a16   ", 3, 3, 0, 0, &LR35902::JP_NZ_d16);
-	opcodes[195] = Opcode(this, "JP a16      ", 4, 3, 0, 0, &LR35902::JP_d16);
-	opcodes[196] = Opcode(this, "CALL NZ,a16 ", 3, 3, 0, 0, &LR35902::CALL_NZ_a16);
-	opcodes[197] = Opcode(this, "PUSH BC     ", 4, 1, 0, 0, &LR35902::PUSH_BC);
-	opcodes[198] = Opcode(this, "ADD A,d8    ", 2, 2, 0, 0, &LR35902::ADD_A_d8);
-	opcodes[199] = Opcode(this, "RST 00H     ", 4, 1, 0, 0, &LR35902::RST_00H);
-	opcodes[200] = Opcode(this, "RET Z       ", 2, 1, 0, 0, &LR35902::RET_Z);
-	opcodes[201] = Opcode(this, "RET         ", 4, 1, 0, 0, &LR35902::RET);
-	opcodes[202] = Opcode(this, "JP Z,a16    ", 3, 3, 0, 0, &LR35902::JP_Z_d16);
-	opcodes[203] = Opcode(this, "PREFIX CB   ", 0, 1, 0, 0, 0x0);
-	opcodes[204] = Opcode(this, "CALL Z,a16  ", 3, 3, 0, 0, &LR35902::CALL_Z_a16);
-	opcodes[205] = Opcode(this, "CALL a16    ", 6, 3, 0, 0, &LR35902::CALL_a16);
-	opcodes[206] = Opcode(this, "ADC A,d8    ", 2, 2, 0, 0, &LR35902::ADC_A_d8);
-	opcodes[207] = Opcode(this, "RST 08H     ", 4, 1, 0, 0, &LR35902::RST_08H);
-	opcodes[208] = Opcode(this, "RET NC      ", 2, 1, 0, 0, &LR35902::RET_NC);
-	opcodes[209] = Opcode(this, "POP DE      ", 3, 1, 0, 0, &LR35902::POP_DE);
-	opcodes[210] = Opcode(this, "JP NC,a16   ", 3, 3, 0, 0, &LR35902::JP_NC_d16);
-	opcodes[211] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[212] = Opcode(this, "CALL NC,a16 ", 3, 3, 0, 0, &LR35902::CALL_NC_a16);
-	opcodes[213] = Opcode(this, "PUSH DE     ", 4, 1, 0, 0, &LR35902::PUSH_DE);
-	opcodes[214] = Opcode(this, "SUB d8      ", 2, 2, 0, 0, &LR35902::SUB_d8);
-	opcodes[215] = Opcode(this, "RST 10H     ", 4, 1, 0, 0, &LR35902::RST_10H);
-	opcodes[216] = Opcode(this, "RET C       ", 2, 1, 0, 0, &LR35902::RET_C);
-	opcodes[217] = Opcode(this, "RETI        ", 4, 1, 0, 0, &LR35902::RETI);
-	opcodes[218] = Opcode(this, "JP C,a16    ", 3, 3, 0, 0, &LR35902::JP_C_d16);
-	opcodes[219] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[220] = Opcode(this, "CALL C,a16  ", 3, 3, 0, 0, &LR35902::CALL_C_a16);
-	opcodes[221] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[222] = Opcode(this, "SBC A,d8    ", 2, 2, 0, 0, &LR35902::SBC_A_d8);
-	opcodes[223] = Opcode(this, "RST 18H     ", 4, 1, 0, 0, &LR35902::RST_18H);
-	opcodes[224] = Opcode(this, "LDH (a8),A  ", 3, 2, 0, 3, &LR35902::LDH_a8_A);
-	opcodes[225] = Opcode(this, "POP HL      ", 3, 1, 0, 0, &LR35902::POP_HL);
-	opcodes[226] = Opcode(this, "LD (C),A    ", 2, 1, 0, 2, &LR35902::LD_aC_A);
-	opcodes[227] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[228] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[229] = Opcode(this, "PUSH HL     ", 4, 1, 0, 0, &LR35902::PUSH_HL);
-	opcodes[230] = Opcode(this, "AND d8      ", 2, 2, 0, 0, &LR35902::AND_d8);
-	opcodes[231] = Opcode(this, "RST 20H     ", 4, 1, 0, 0, &LR35902::RST_20H);
-	opcodes[232] = Opcode(this, "ADD SP,r8   ", 4, 2, 0, 0, &LR35902::ADD_SP_r8);
-	opcodes[233] = Opcode(this, "JP (HL)     ", 1, 1, 0, 0, &LR35902::JP_aHL);
-	opcodes[234] = Opcode(this, "LD (a16),A  ", 4, 3, 0, 4, &LR35902::LD_a16_A);
-	opcodes[235] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[236] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[237] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[238] = Opcode(this, "XOR d8      ", 2, 2, 0, 0, &LR35902::XOR_d8);
-	opcodes[239] = Opcode(this, "RST 28H     ", 4, 1, 0, 0, &LR35902::RST_28H);
-	opcodes[240] = Opcode(this, "LDH A,(a8)  ", 3, 2, 3, 0, &LR35902::LDH_A_a8);
-	opcodes[241] = Opcode(this, "POP AF      ", 3, 1, 0, 0, &LR35902::POP_AF);
-	opcodes[242] = Opcode(this, "LD A,(C)    ", 2, 1, 2, 0, &LR35902::LD_A_aC);
-	opcodes[243] = Opcode(this, "DI          ", 1, 1, 0, 0, &LR35902::DI);
-	opcodes[244] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[245] = Opcode(this, "PUSH AF     ", 4, 1, 0, 0, &LR35902::PUSH_AF);
-	opcodes[246] = Opcode(this, "OR d8       ", 2, 2, 0, 0, &LR35902::OR_d8);
-	opcodes[247] = Opcode(this, "RST 30H     ", 4, 1, 0, 0, &LR35902::RST_30H);
-	opcodes[248] = Opcode(this, "LD HL,SP+r8 ", 3, 2, 0, 0, &LR35902::LD_HL_SP_r8);
-	opcodes[249] = Opcode(this, "LD SP,HL    ", 2, 1, 0, 0, &LR35902::LD_SP_HL);
-	opcodes[250] = Opcode(this, "LD A,(a16)  ", 4, 3, 4, 0, &LR35902::LD_A_a16);
-	opcodes[251] = Opcode(this, "EI          ", 1, 1, 0, 0, &LR35902::EI);
-	opcodes[252] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[253] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
-	opcodes[254] = Opcode(this, "CP d8       ", 2, 2, 0, 0, &LR35902::CP_d8);
-	opcodes[255] = Opcode(this, "RST 38H     ", 4, 1, 0, 0, &LR35902::RST_38H);
+	ops[0]   = Opcode(this, "NOP         ", 1, 1, 0, 0, &LR35902::NOP);
+	ops[1]   = Opcode(this, "LD BC,d16   ", 3, 3, 0, 0, &LR35902::LD_BC_d16);
+	ops[2]   = Opcode(this, "LD (BC),A   ", 2, 1, 0, 2, &LR35902::LD_aBC_A);
+	ops[3]   = Opcode(this, "INC BC      ", 2, 1, 0, 0, &LR35902::INC_BC);
+	ops[4]   = Opcode(this, "INC B       ", 1, 1, 0, 0, &LR35902::INC_B);
+	ops[5]   = Opcode(this, "DEC B       ", 1, 1, 0, 0, &LR35902::DEC_B);
+	ops[6]   = Opcode(this, "LD B,d8     ", 2, 2, 0, 0, &LR35902::LD_B_d8);
+	ops[7]   = Opcode(this, "RLCA        ", 1, 1, 0, 0, &LR35902::RLCA);
+	ops[8]   = Opcode(this, "LD (a16),SP ", 5, 3, 0, 0, &LR35902::LD_a16_SP);
+	ops[9]   = Opcode(this, "ADD HL,BC   ", 2, 1, 0, 0, &LR35902::ADD_HL_BC);
+	ops[10]  = Opcode(this, "LD A,(BC)   ", 2, 1, 2, 0, &LR35902::LD_A_aBC);
+	ops[11]  = Opcode(this, "DEC BC      ", 2, 1, 0, 0, &LR35902::DEC_BC);
+	ops[12]  = Opcode(this, "INC C       ", 1, 1, 0, 0, &LR35902::INC_C);
+	ops[13]  = Opcode(this, "DEC C       ", 1, 1, 0, 0, &LR35902::DEC_C);
+	ops[14]  = Opcode(this, "LD C,d8     ", 2, 2, 0, 0, &LR35902::LD_C_d8);
+	ops[15]  = Opcode(this, "RRCA        ", 1, 1, 0, 0, &LR35902::RRCA);
+	ops[16]  = Opcode(this, "STOP 0      ", 1, 2, 0, 0, &LR35902::STOP_0);
+	ops[17]  = Opcode(this, "LD DE,d16   ", 3, 3, 0, 0, &LR35902::LD_DE_d16);
+	ops[18]  = Opcode(this, "LD (DE),A   ", 2, 1, 0, 2, &LR35902::LD_aDE_A);
+	ops[19]  = Opcode(this, "INC DE      ", 2, 1, 0, 0, &LR35902::INC_DE);
+	ops[20]  = Opcode(this, "INC D       ", 1, 1, 0, 0, &LR35902::INC_D);
+	ops[21]  = Opcode(this, "DEC D       ", 1, 1, 0, 0, &LR35902::DEC_D);
+	ops[22]  = Opcode(this, "LD D,d8     ", 2, 2, 0, 0, &LR35902::LD_D_d8);
+	ops[23]  = Opcode(this, "RLA         ", 1, 1, 0, 0, &LR35902::RLA);
+	ops[24]  = Opcode(this, "JR r8       ", 3, 2, 0, 0, &LR35902::JR_r8);
+	ops[25]  = Opcode(this, "ADD HL,DE   ", 2, 1, 0, 0, &LR35902::ADD_HL_DE);
+	ops[26]  = Opcode(this, "LD A,(DE)   ", 2, 1, 2, 0, &LR35902::LD_A_aDE);
+	ops[27]  = Opcode(this, "DEC DE      ", 2, 1, 0, 0, &LR35902::DEC_DE);
+	ops[28]  = Opcode(this, "INC E       ", 1, 1, 0, 0, &LR35902::INC_E);
+	ops[29]  = Opcode(this, "DEC E       ", 1, 1, 0, 0, &LR35902::DEC_E);
+	ops[30]  = Opcode(this, "LD E,d8     ", 2, 2, 0, 0, &LR35902::LD_E_d8);
+	ops[31]  = Opcode(this, "RRA         ", 1, 1, 0, 0, &LR35902::RRA);
+	ops[32]  = Opcode(this, "JR NZ,r8    ", 2, 2, 0, 0, &LR35902::JR_NZ_r8);
+	ops[33]  = Opcode(this, "LD HL,d16   ", 3, 3, 0, 0, &LR35902::LD_HL_d16);
+	ops[34]  = Opcode(this, "LDI (HL),A  ", 2, 1, 0, 2, &LR35902::LDI_aHL_A);
+	ops[35]  = Opcode(this, "INC HL      ", 2, 1, 0, 0, &LR35902::INC_HL);
+	ops[36]  = Opcode(this, "INC H       ", 1, 1, 0, 0, &LR35902::INC_H);
+	ops[37]  = Opcode(this, "DEC H       ", 1, 1, 0, 0, &LR35902::DEC_H);
+	ops[38]  = Opcode(this, "LD H,d8     ", 2, 2, 0, 0, &LR35902::LD_H_d8);
+	ops[39]  = Opcode(this, "DAA         ", 1, 1, 0, 0, &LR35902::DAA);
+	ops[40]  = Opcode(this, "JR Z,r8     ", 2, 2, 0, 0, &LR35902::JR_Z_r8);
+	ops[41]  = Opcode(this, "ADD HL,HL   ", 2, 1, 0, 0, &LR35902::ADD_HL_HL);
+	ops[42]  = Opcode(this, "LDI A,(HL)  ", 2, 1, 2, 0, &LR35902::LDI_A_aHL);
+	ops[43]  = Opcode(this, "DEC HL      ", 2, 1, 0, 0, &LR35902::DEC_HL);
+	ops[44]  = Opcode(this, "INC L       ", 1, 1, 0, 0, &LR35902::INC_L);
+	ops[45]  = Opcode(this, "DEC L       ", 1, 1, 0, 0, &LR35902::DEC_L);
+	ops[46]  = Opcode(this, "LD L,d8     ", 2, 2, 0, 0, &LR35902::LD_L_d8);
+	ops[47]  = Opcode(this, "CPL         ", 1, 1, 0, 0, &LR35902::CPL);
+	ops[48]  = Opcode(this, "JR NC,r8    ", 2, 2, 0, 0, &LR35902::JR_NC_r8);
+	ops[49]  = Opcode(this, "LD SP,d16   ", 3, 3, 0, 0, &LR35902::LD_SP_d16);
+	ops[50]  = Opcode(this, "LDD (HL),A  ", 2, 1, 0, 2, &LR35902::LDD_aHL_A);
+	ops[51]  = Opcode(this, "INC SP      ", 2, 1, 0, 0, &LR35902::INC_SP);
+	ops[52]  = Opcode(this, "INC (HL)    ", 3, 1, 2, 3, &LR35902::INC_aHL);
+	ops[53]  = Opcode(this, "DEC (HL)    ", 3, 1, 2, 3, &LR35902::DEC_aHL);
+	ops[54]  = Opcode(this, "LD (HL),d8  ", 3, 2, 0, 3, &LR35902::LD_aHL_d8);
+	ops[55]  = Opcode(this, "SCF         ", 1, 1, 0, 0, &LR35902::SCF);
+	ops[56]  = Opcode(this, "JR C,r8     ", 2, 2, 0, 0, &LR35902::JR_C_r8);
+	ops[57]  = Opcode(this, "ADD HL,SP   ", 2, 1, 0, 0, &LR35902::ADD_HL_SP);
+	ops[58]  = Opcode(this, "LDD A,(HL)  ", 2, 1, 2, 0, &LR35902::LDD_A_aHL);
+	ops[59]  = Opcode(this, "DEC SP      ", 2, 1, 0, 0, &LR35902::DEC_SP);
+	ops[60]  = Opcode(this, "INC A       ", 1, 1, 0, 0, &LR35902::INC_A);
+	ops[61]  = Opcode(this, "DEC A       ", 1, 1, 0, 0, &LR35902::DEC_A);
+	ops[62]  = Opcode(this, "LD A,d8     ", 2, 2, 0, 0, &LR35902::LD_A_d8);
+	ops[63]  = Opcode(this, "CCF         ", 1, 1, 0, 0, &LR35902::CCF);
+	ops[64]  = Opcode(this, "LD B,B      ", 1, 1, 0, 0, &LR35902::LD_B_B);
+	ops[65]  = Opcode(this, "LD B,C      ", 1, 1, 0, 0, &LR35902::LD_B_C);
+	ops[66]  = Opcode(this, "LD B,D      ", 1, 1, 0, 0, &LR35902::LD_B_D);
+	ops[67]  = Opcode(this, "LD B,E      ", 1, 1, 0, 0, &LR35902::LD_B_E);
+	ops[68]  = Opcode(this, "LD B,H      ", 1, 1, 0, 0, &LR35902::LD_B_H);
+	ops[69]  = Opcode(this, "LD B,L      ", 1, 1, 0, 0, &LR35902::LD_B_L);
+	ops[70]  = Opcode(this, "LD B,(HL)   ", 2, 1, 2, 0, &LR35902::LD_B_aHL);
+	ops[71]  = Opcode(this, "LD B,A      ", 1, 1, 0, 0, &LR35902::LD_B_A);
+	ops[72]  = Opcode(this, "LD C,B      ", 1, 1, 0, 0, &LR35902::LD_C_B);
+	ops[73]  = Opcode(this, "LD C,C      ", 1, 1, 0, 0, &LR35902::LD_C_C);
+	ops[74]  = Opcode(this, "LD C,D      ", 1, 1, 0, 0, &LR35902::LD_C_D);
+	ops[75]  = Opcode(this, "LD C,E      ", 1, 1, 0, 0, &LR35902::LD_C_E);
+	ops[76]  = Opcode(this, "LD C,H      ", 1, 1, 0, 0, &LR35902::LD_C_H);
+	ops[77]  = Opcode(this, "LD C,L      ", 1, 1, 0, 0, &LR35902::LD_C_L);
+	ops[78]  = Opcode(this, "LD C,(HL)   ", 2, 1, 2, 0, &LR35902::LD_C_aHL);
+	ops[79]  = Opcode(this, "LD C,A      ", 1, 1, 0, 0, &LR35902::LD_C_A);
+	ops[80]  = Opcode(this, "LD D,B      ", 1, 1, 0, 0, &LR35902::LD_D_B);
+	ops[81]  = Opcode(this, "LD D,C      ", 1, 1, 0, 0, &LR35902::LD_D_C);
+	ops[82]  = Opcode(this, "LD D,D      ", 1, 1, 0, 0, &LR35902::LD_D_D);
+	ops[83]  = Opcode(this, "LD D,E      ", 1, 1, 0, 0, &LR35902::LD_D_E);
+	ops[84]  = Opcode(this, "LD D,H      ", 1, 1, 0, 0, &LR35902::LD_D_H);
+	ops[85]  = Opcode(this, "LD D,L      ", 1, 1, 0, 0, &LR35902::LD_D_L);
+	ops[86]  = Opcode(this, "LD D,(HL)   ", 2, 1, 2, 0, &LR35902::LD_D_aHL);
+	ops[87]  = Opcode(this, "LD D,A      ", 1, 1, 0, 0, &LR35902::LD_D_A);
+	ops[88]  = Opcode(this, "LD E,B      ", 1, 1, 0, 0, &LR35902::LD_E_B);
+	ops[89]  = Opcode(this, "LD E,C      ", 1, 1, 0, 0, &LR35902::LD_E_C);
+	ops[90]  = Opcode(this, "LD E,D      ", 1, 1, 0, 0, &LR35902::LD_E_D);
+	ops[91]  = Opcode(this, "LD E,E      ", 1, 1, 0, 0, &LR35902::LD_E_E);
+	ops[92]  = Opcode(this, "LD E,H      ", 1, 1, 0, 0, &LR35902::LD_E_H);
+	ops[93]  = Opcode(this, "LD E,L      ", 1, 1, 0, 0, &LR35902::LD_E_L);
+	ops[94]  = Opcode(this, "LD E,(HL)   ", 2, 1, 2, 0, &LR35902::LD_E_aHL);
+	ops[95]  = Opcode(this, "LD E,A      ", 1, 1, 0, 0, &LR35902::LD_E_A);
+	ops[96]  = Opcode(this, "LD H,B      ", 1, 1, 0, 0, &LR35902::LD_H_B);
+	ops[97]  = Opcode(this, "LD H,C      ", 1, 1, 0, 0, &LR35902::LD_H_C);
+	ops[98]  = Opcode(this, "LD H,D      ", 1, 1, 0, 0, &LR35902::LD_H_D);
+	ops[99]  = Opcode(this, "LD H,E      ", 1, 1, 0, 0, &LR35902::LD_H_E);
+	ops[100] = Opcode(this, "LD H,H      ", 1, 1, 0, 0, &LR35902::LD_H_H);
+	ops[101] = Opcode(this, "LD H,L      ", 1, 1, 0, 0, &LR35902::LD_H_L);
+	ops[102] = Opcode(this, "LD H,(HL)   ", 2, 1, 2, 0, &LR35902::LD_H_aHL);
+	ops[103] = Opcode(this, "LD H,A      ", 1, 1, 0, 0, &LR35902::LD_H_A);
+	ops[104] = Opcode(this, "LD L,B      ", 1, 1, 0, 0, &LR35902::LD_L_B);
+	ops[105] = Opcode(this, "LD L,C      ", 1, 1, 0, 0, &LR35902::LD_L_C);
+	ops[106] = Opcode(this, "LD L,D      ", 1, 1, 0, 0, &LR35902::LD_L_D);
+	ops[107] = Opcode(this, "LD L,E      ", 1, 1, 0, 0, &LR35902::LD_L_E);
+	ops[108] = Opcode(this, "LD L,H      ", 1, 1, 0, 0, &LR35902::LD_L_H);
+	ops[109] = Opcode(this, "LD L,L      ", 1, 1, 0, 0, &LR35902::LD_L_L);
+	ops[110] = Opcode(this, "LD L,(HL)   ", 2, 1, 2, 0, &LR35902::LD_L_aHL);
+	ops[111] = Opcode(this, "LD L,A      ", 1, 1, 0, 0, &LR35902::LD_L_A);
+	ops[112] = Opcode(this, "LD (HL),B   ", 2, 1, 0, 2, &LR35902::LD_aHL_B);
+	ops[113] = Opcode(this, "LD (HL),C   ", 2, 1, 0, 2, &LR35902::LD_aHL_C);
+	ops[114] = Opcode(this, "LD (HL),D   ", 2, 1, 0, 2, &LR35902::LD_aHL_D);
+	ops[115] = Opcode(this, "LD (HL),E   ", 2, 1, 0, 2, &LR35902::LD_aHL_E);
+	ops[116] = Opcode(this, "LD (HL),H   ", 2, 1, 0, 2, &LR35902::LD_aHL_H);
+	ops[117] = Opcode(this, "LD (HL),L   ", 2, 1, 0, 2, &LR35902::LD_aHL_L);
+	ops[118] = Opcode(this, "HALT        ", 1, 1, 0, 0, &LR35902::HALT);
+	ops[119] = Opcode(this, "LD (HL),A   ", 2, 1, 0, 2, &LR35902::LD_aHL_A);
+	ops[120] = Opcode(this, "LD A,B      ", 1, 1, 0, 0, &LR35902::LD_A_B);
+	ops[121] = Opcode(this, "LD A,C      ", 1, 1, 0, 0, &LR35902::LD_A_C);
+	ops[122] = Opcode(this, "LD A,D      ", 1, 1, 0, 0, &LR35902::LD_A_D);
+	ops[123] = Opcode(this, "LD A,E      ", 1, 1, 0, 0, &LR35902::LD_A_E);
+	ops[124] = Opcode(this, "LD A,H      ", 1, 1, 0, 0, &LR35902::LD_A_H);
+	ops[125] = Opcode(this, "LD A,L      ", 1, 1, 0, 0, &LR35902::LD_A_L);
+	ops[126] = Opcode(this, "LD A,(HL)   ", 2, 1, 2, 0, &LR35902::LD_A_aHL);
+	ops[127] = Opcode(this, "LD A,A      ", 1, 1, 0, 0, &LR35902::LD_A_A);
+	ops[128] = Opcode(this, "ADD A,B     ", 1, 1, 0, 0, &LR35902::ADD_A_B);
+	ops[129] = Opcode(this, "ADD A,C     ", 1, 1, 0, 0, &LR35902::ADD_A_C);
+	ops[130] = Opcode(this, "ADD A,D     ", 1, 1, 0, 0, &LR35902::ADD_A_D);
+	ops[131] = Opcode(this, "ADD A,E     ", 1, 1, 0, 0, &LR35902::ADD_A_E);
+	ops[132] = Opcode(this, "ADD A,H     ", 1, 1, 0, 0, &LR35902::ADD_A_H);
+	ops[133] = Opcode(this, "ADD A,L     ", 1, 1, 0, 0, &LR35902::ADD_A_L);
+	ops[134] = Opcode(this, "ADD A,(HL)  ", 2, 1, 2, 0, &LR35902::ADD_A_aHL);
+	ops[135] = Opcode(this, "ADD A,A     ", 1, 1, 0, 0, &LR35902::ADD_A_A);
+	ops[136] = Opcode(this, "ADC A,B     ", 1, 1, 0, 0, &LR35902::ADC_A_B);
+	ops[137] = Opcode(this, "ADC A,C     ", 1, 1, 0, 0, &LR35902::ADC_A_C);
+	ops[138] = Opcode(this, "ADC A,D     ", 1, 1, 0, 0, &LR35902::ADC_A_D);
+	ops[139] = Opcode(this, "ADC A,E     ", 1, 1, 0, 0, &LR35902::ADC_A_E);
+	ops[140] = Opcode(this, "ADC A,H     ", 1, 1, 0, 0, &LR35902::ADC_A_H);
+	ops[141] = Opcode(this, "ADC A,L     ", 1, 1, 0, 0, &LR35902::ADC_A_L);
+	ops[142] = Opcode(this, "ADC A,(HL)  ", 2, 1, 2, 0, &LR35902::ADC_A_aHL);
+	ops[143] = Opcode(this, "ADC A,A     ", 1, 1, 0, 0, &LR35902::ADC_A_A);
+	ops[144] = Opcode(this, "SUB B       ", 1, 1, 0, 0, &LR35902::SUB_B);
+	ops[145] = Opcode(this, "SUB C       ", 1, 1, 0, 0, &LR35902::SUB_C);
+	ops[146] = Opcode(this, "SUB D       ", 1, 1, 0, 0, &LR35902::SUB_D);
+	ops[147] = Opcode(this, "SUB E       ", 1, 1, 0, 0, &LR35902::SUB_E);
+	ops[148] = Opcode(this, "SUB H       ", 1, 1, 0, 0, &LR35902::SUB_H);
+	ops[149] = Opcode(this, "SUB L       ", 1, 1, 0, 0, &LR35902::SUB_L);
+	ops[150] = Opcode(this, "SUB (HL)    ", 2, 1, 2, 0, &LR35902::SUB_aHL);
+	ops[151] = Opcode(this, "SUB A       ", 1, 1, 0, 0, &LR35902::SUB_A);
+	ops[152] = Opcode(this, "SBC A,B     ", 1, 1, 0, 0, &LR35902::SBC_A_B);
+	ops[153] = Opcode(this, "SBC A,C     ", 1, 1, 0, 0, &LR35902::SBC_A_C);
+	ops[154] = Opcode(this, "SBC A,D     ", 1, 1, 0, 0, &LR35902::SBC_A_D);
+	ops[155] = Opcode(this, "SBC A,E     ", 1, 1, 0, 0, &LR35902::SBC_A_E);
+	ops[156] = Opcode(this, "SBC A,H     ", 1, 1, 0, 0, &LR35902::SBC_A_H);
+	ops[157] = Opcode(this, "SBC A,L     ", 1, 1, 0, 0, &LR35902::SBC_A_L);
+	ops[158] = Opcode(this, "SBC A,(HL)  ", 2, 1, 2, 0, &LR35902::SBC_A_aHL);
+	ops[159] = Opcode(this, "SBC A,A     ", 1, 1, 0, 0, &LR35902::SBC_A_A);
+	ops[160] = Opcode(this, "AND B       ", 1, 1, 0, 0, &LR35902::AND_B);
+	ops[161] = Opcode(this, "AND C       ", 1, 1, 0, 0, &LR35902::AND_C);
+	ops[162] = Opcode(this, "AND D       ", 1, 1, 0, 0, &LR35902::AND_D);
+	ops[163] = Opcode(this, "AND E       ", 1, 1, 0, 0, &LR35902::AND_E);
+	ops[164] = Opcode(this, "AND H       ", 1, 1, 0, 0, &LR35902::AND_H);
+	ops[165] = Opcode(this, "AND L       ", 1, 1, 0, 0, &LR35902::AND_L);
+	ops[166] = Opcode(this, "AND (HL)    ", 2, 1, 2, 0, &LR35902::AND_aHL);
+	ops[167] = Opcode(this, "AND A       ", 1, 1, 0, 0, &LR35902::AND_A);
+	ops[168] = Opcode(this, "XOR B       ", 1, 1, 0, 0, &LR35902::XOR_B);
+	ops[169] = Opcode(this, "XOR C       ", 1, 1, 0, 0, &LR35902::XOR_C);
+	ops[170] = Opcode(this, "XOR D       ", 1, 1, 0, 0, &LR35902::XOR_D);
+	ops[171] = Opcode(this, "XOR E       ", 1, 1, 0, 0, &LR35902::XOR_E);
+	ops[172] = Opcode(this, "XOR H       ", 1, 1, 0, 0, &LR35902::XOR_H);
+	ops[173] = Opcode(this, "XOR L       ", 1, 1, 0, 0, &LR35902::XOR_L);
+	ops[174] = Opcode(this, "XOR (HL)    ", 2, 1, 2, 0, &LR35902::XOR_aHL);
+	ops[175] = Opcode(this, "XOR A       ", 1, 1, 0, 0, &LR35902::XOR_A);
+	ops[176] = Opcode(this, "OR B        ", 1, 1, 0, 0, &LR35902::OR_B);
+	ops[177] = Opcode(this, "OR C        ", 1, 1, 0, 0, &LR35902::OR_C);
+	ops[178] = Opcode(this, "OR D        ", 1, 1, 0, 0, &LR35902::OR_D);
+	ops[179] = Opcode(this, "OR E        ", 1, 1, 0, 0, &LR35902::OR_E);
+	ops[180] = Opcode(this, "OR H        ", 1, 1, 0, 0, &LR35902::OR_H);
+	ops[181] = Opcode(this, "OR L        ", 1, 1, 0, 0, &LR35902::OR_L);
+	ops[182] = Opcode(this, "OR (HL)     ", 2, 1, 2, 0, &LR35902::OR_aHL);
+	ops[183] = Opcode(this, "OR A        ", 1, 1, 0, 0, &LR35902::OR_A);
+	ops[184] = Opcode(this, "CP B        ", 1, 1, 0, 0, &LR35902::CP_B);
+	ops[185] = Opcode(this, "CP C        ", 1, 1, 0, 0, &LR35902::CP_C);
+	ops[186] = Opcode(this, "CP D        ", 1, 1, 0, 0, &LR35902::CP_D);
+	ops[187] = Opcode(this, "CP E        ", 1, 1, 0, 0, &LR35902::CP_E);
+	ops[188] = Opcode(this, "CP H        ", 1, 1, 0, 0, &LR35902::CP_H);
+	ops[189] = Opcode(this, "CP L        ", 1, 1, 0, 0, &LR35902::CP_L);
+	ops[190] = Opcode(this, "CP (HL)     ", 2, 1, 2, 0, &LR35902::CP_aHL);
+	ops[191] = Opcode(this, "CP A        ", 1, 1, 0, 0, &LR35902::CP_A);
+	ops[192] = Opcode(this, "RET NZ      ", 2, 1, 0, 0, &LR35902::RET_NZ);
+	ops[193] = Opcode(this, "POP BC      ", 3, 1, 0, 0, &LR35902::POP_BC);
+	ops[194] = Opcode(this, "JP NZ,a16   ", 3, 3, 0, 0, &LR35902::JP_NZ_d16);
+	ops[195] = Opcode(this, "JP a16      ", 4, 3, 0, 0, &LR35902::JP_d16);
+	ops[196] = Opcode(this, "CALL NZ,a16 ", 3, 3, 0, 0, &LR35902::CALL_NZ_a16);
+	ops[197] = Opcode(this, "PUSH BC     ", 4, 1, 0, 0, &LR35902::PUSH_BC);
+	ops[198] = Opcode(this, "ADD A,d8    ", 2, 2, 0, 0, &LR35902::ADD_A_d8);
+	ops[199] = Opcode(this, "RST 00H     ", 4, 1, 0, 0, &LR35902::RST_00H);
+	ops[200] = Opcode(this, "RET Z       ", 2, 1, 0, 0, &LR35902::RET_Z);
+	ops[201] = Opcode(this, "RET         ", 4, 1, 0, 0, &LR35902::RET);
+	ops[202] = Opcode(this, "JP Z,a16    ", 3, 3, 0, 0, &LR35902::JP_Z_d16);
+	ops[203] = Opcode(this, "PREFIX CB   ", 0, 1, 0, 0, 0x0);
+	ops[204] = Opcode(this, "CALL Z,a16  ", 3, 3, 0, 0, &LR35902::CALL_Z_a16);
+	ops[205] = Opcode(this, "CALL a16    ", 6, 3, 0, 0, &LR35902::CALL_a16);
+	ops[206] = Opcode(this, "ADC A,d8    ", 2, 2, 0, 0, &LR35902::ADC_A_d8);
+	ops[207] = Opcode(this, "RST 08H     ", 4, 1, 0, 0, &LR35902::RST_08H);
+	ops[208] = Opcode(this, "RET NC      ", 2, 1, 0, 0, &LR35902::RET_NC);
+	ops[209] = Opcode(this, "POP DE      ", 3, 1, 0, 0, &LR35902::POP_DE);
+	ops[210] = Opcode(this, "JP NC,a16   ", 3, 3, 0, 0, &LR35902::JP_NC_d16);
+	ops[211] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[212] = Opcode(this, "CALL NC,a16 ", 3, 3, 0, 0, &LR35902::CALL_NC_a16);
+	ops[213] = Opcode(this, "PUSH DE     ", 4, 1, 0, 0, &LR35902::PUSH_DE);
+	ops[214] = Opcode(this, "SUB d8      ", 2, 2, 0, 0, &LR35902::SUB_d8);
+	ops[215] = Opcode(this, "RST 10H     ", 4, 1, 0, 0, &LR35902::RST_10H);
+	ops[216] = Opcode(this, "RET C       ", 2, 1, 0, 0, &LR35902::RET_C);
+	ops[217] = Opcode(this, "RETI        ", 4, 1, 0, 0, &LR35902::RETI);
+	ops[218] = Opcode(this, "JP C,a16    ", 3, 3, 0, 0, &LR35902::JP_C_d16);
+	ops[219] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[220] = Opcode(this, "CALL C,a16  ", 3, 3, 0, 0, &LR35902::CALL_C_a16);
+	ops[221] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[222] = Opcode(this, "SBC A,d8    ", 2, 2, 0, 0, &LR35902::SBC_A_d8);
+	ops[223] = Opcode(this, "RST 18H     ", 4, 1, 0, 0, &LR35902::RST_18H);
+	ops[224] = Opcode(this, "LDH (a8),A  ", 3, 2, 0, 3, &LR35902::LDH_a8_A);
+	ops[225] = Opcode(this, "POP HL      ", 3, 1, 0, 0, &LR35902::POP_HL);
+	ops[226] = Opcode(this, "LD (C),A    ", 2, 1, 0, 2, &LR35902::LD_aC_A);
+	ops[227] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[228] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[229] = Opcode(this, "PUSH HL     ", 4, 1, 0, 0, &LR35902::PUSH_HL);
+	ops[230] = Opcode(this, "AND d8      ", 2, 2, 0, 0, &LR35902::AND_d8);
+	ops[231] = Opcode(this, "RST 20H     ", 4, 1, 0, 0, &LR35902::RST_20H);
+	ops[232] = Opcode(this, "ADD SP,r8   ", 4, 2, 0, 0, &LR35902::ADD_SP_r8);
+	ops[233] = Opcode(this, "JP (HL)     ", 1, 1, 0, 0, &LR35902::JP_aHL);
+	ops[234] = Opcode(this, "LD (a16),A  ", 4, 3, 0, 4, &LR35902::LD_a16_A);
+	ops[235] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[236] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[237] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[238] = Opcode(this, "XOR d8      ", 2, 2, 0, 0, &LR35902::XOR_d8);
+	ops[239] = Opcode(this, "RST 28H     ", 4, 1, 0, 0, &LR35902::RST_28H);
+	ops[240] = Opcode(this, "LDH A,(a8)  ", 3, 2, 3, 0, &LR35902::LDH_A_a8);
+	ops[241] = Opcode(this, "POP AF      ", 3, 1, 0, 0, &LR35902::POP_AF);
+	ops[242] = Opcode(this, "LD A,(C)    ", 2, 1, 2, 0, &LR35902::LD_A_aC);
+	ops[243] = Opcode(this, "DI          ", 1, 1, 0, 0, &LR35902::DI);
+	ops[244] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[245] = Opcode(this, "PUSH AF     ", 4, 1, 0, 0, &LR35902::PUSH_AF);
+	ops[246] = Opcode(this, "OR d8       ", 2, 2, 0, 0, &LR35902::OR_d8);
+	ops[247] = Opcode(this, "RST 30H     ", 4, 1, 0, 0, &LR35902::RST_30H);
+	ops[248] = Opcode(this, "LD HL,SP+r8 ", 3, 2, 0, 0, &LR35902::LD_HL_SP_r8);
+	ops[249] = Opcode(this, "LD SP,HL    ", 2, 1, 0, 0, &LR35902::LD_SP_HL);
+	ops[250] = Opcode(this, "LD A,(a16)  ", 4, 3, 4, 0, &LR35902::LD_A_a16);
+	ops[251] = Opcode(this, "EI          ", 1, 1, 0, 0, &LR35902::EI);
+	ops[252] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[253] = Opcode(this, "            ", 0, 1, 0, 0, &LR35902::NOP);
+	ops[254] = Opcode(this, "CP d8       ", 2, 2, 0, 0, &LR35902::CP_d8);
+	ops[255] = Opcode(this, "RST 38H     ", 4, 1, 0, 0, &LR35902::RST_38H);
+
+	ops = opcodes.getOpcodesCB();
 
 	// CB prefix opcodes
 	//                      Mnemonic        C  L  R  W  Pointer
-	opcodesCB[0]   = Opcode(this, "RLC B       ", 2, 1, 0, 0, &LR35902::RLC_B);
-	opcodesCB[1]   = Opcode(this, "RLC C       ", 2, 1, 0, 0, &LR35902::RLC_C);
-	opcodesCB[2]   = Opcode(this, "RLC D       ", 2, 1, 0, 0, &LR35902::RLC_D);
-	opcodesCB[3]   = Opcode(this, "RLC E       ", 2, 1, 0, 0, &LR35902::RLC_E);
-	opcodesCB[4]   = Opcode(this, "RLC H       ", 2, 1, 0, 0, &LR35902::RLC_H);
-	opcodesCB[5]   = Opcode(this, "RLC L       ", 2, 1, 0, 0, &LR35902::RLC_L);
-	opcodesCB[6]   = Opcode(this, "RLC (HL)    ", 4, 1, 3, 4, &LR35902::RLC_aHL);
-	opcodesCB[7]   = Opcode(this, "RLC A       ", 2, 1, 0, 0, &LR35902::RLC_A);
-	opcodesCB[8]   = Opcode(this, "RRC B       ", 2, 1, 0, 0, &LR35902::RRC_B);
-	opcodesCB[9]   = Opcode(this, "RRC C       ", 2, 1, 0, 0, &LR35902::RRC_C);
-	opcodesCB[10]  = Opcode(this, "RRC D       ", 2, 1, 0, 0, &LR35902::RRC_D);
-	opcodesCB[11]  = Opcode(this, "RRC E       ", 2, 1, 0, 0, &LR35902::RRC_E);
-	opcodesCB[12]  = Opcode(this, "RRC H       ", 2, 1, 0, 0, &LR35902::RRC_H);
-	opcodesCB[13]  = Opcode(this, "RRC L       ", 2, 1, 0, 0, &LR35902::RRC_L);
-	opcodesCB[14]  = Opcode(this, "RRC (HL)    ", 4, 1, 3, 4, &LR35902::RRC_aHL);
-	opcodesCB[15]  = Opcode(this, "RRC A       ", 2, 1, 0, 0, &LR35902::RRC_A);
-	opcodesCB[16]  = Opcode(this, "RL B        ", 2, 1, 0, 0, &LR35902::RL_B);
-	opcodesCB[17]  = Opcode(this, "RL C        ", 2, 1, 0, 0, &LR35902::RL_C);
-	opcodesCB[18]  = Opcode(this, "RL D        ", 2, 1, 0, 0, &LR35902::RL_D);
-	opcodesCB[19]  = Opcode(this, "RL E        ", 2, 1, 0, 0, &LR35902::RL_E);
-	opcodesCB[20]  = Opcode(this, "RL H        ", 2, 1, 0, 0, &LR35902::RL_H);
-	opcodesCB[21]  = Opcode(this, "RL L        ", 2, 1, 0, 0, &LR35902::RL_L);
-	opcodesCB[22]  = Opcode(this, "RL (HL)     ", 4, 1, 3, 4, &LR35902::RL_aHL);
-	opcodesCB[23]  = Opcode(this, "RL A        ", 2, 1, 0, 0, &LR35902::RL_A);
-	opcodesCB[24]  = Opcode(this, "RR B        ", 2, 1, 0, 0, &LR35902::RR_B);
-	opcodesCB[25]  = Opcode(this, "RR C        ", 2, 1, 0, 0, &LR35902::RR_C);
-	opcodesCB[26]  = Opcode(this, "RR D        ", 2, 1, 0, 0, &LR35902::RR_D);
-	opcodesCB[27]  = Opcode(this, "RR E        ", 2, 1, 0, 0, &LR35902::RR_E);
-	opcodesCB[28]  = Opcode(this, "RR H        ", 2, 1, 0, 0, &LR35902::RR_H);
-	opcodesCB[29]  = Opcode(this, "RR L        ", 2, 1, 0, 0, &LR35902::RR_L);
-	opcodesCB[30]  = Opcode(this, "RR (HL)     ", 4, 1, 3, 4, &LR35902::RR_aHL);
-	opcodesCB[31]  = Opcode(this, "RR A        ", 2, 1, 0, 0, &LR35902::RR_A);
-	opcodesCB[32]  = Opcode(this, "SLA B       ", 2, 1, 0, 0, &LR35902::SLA_B);
-	opcodesCB[33]  = Opcode(this, "SLA C       ", 2, 1, 0, 0, &LR35902::SLA_C);
-	opcodesCB[34]  = Opcode(this, "SLA D       ", 2, 1, 0, 0, &LR35902::SLA_D);
-	opcodesCB[35]  = Opcode(this, "SLA E       ", 2, 1, 0, 0, &LR35902::SLA_E);
-	opcodesCB[36]  = Opcode(this, "SLA H       ", 2, 1, 0, 0, &LR35902::SLA_H);
-	opcodesCB[37]  = Opcode(this, "SLA L       ", 2, 1, 0, 0, &LR35902::SLA_L);
-	opcodesCB[38]  = Opcode(this, "SLA (HL)    ", 4, 1, 3, 4, &LR35902::SLA_aHL);
-	opcodesCB[39]  = Opcode(this, "SLA A       ", 2, 1, 0, 0, &LR35902::SLA_A);
-	opcodesCB[40]  = Opcode(this, "SRA B       ", 2, 1, 0, 0, &LR35902::SRA_B);
-	opcodesCB[41]  = Opcode(this, "SRA C       ", 2, 1, 0, 0, &LR35902::SRA_C);
-	opcodesCB[42]  = Opcode(this, "SRA D       ", 2, 1, 0, 0, &LR35902::SRA_D);
-	opcodesCB[43]  = Opcode(this, "SRA E       ", 2, 1, 0, 0, &LR35902::SRA_E);
-	opcodesCB[44]  = Opcode(this, "SRA H       ", 2, 1, 0, 0, &LR35902::SRA_H);
-	opcodesCB[45]  = Opcode(this, "SRA L       ", 2, 1, 0, 0, &LR35902::SRA_L);
-	opcodesCB[46]  = Opcode(this, "SRA (HL)    ", 4, 1, 3, 4, &LR35902::SRA_aHL);
-	opcodesCB[47]  = Opcode(this, "SRA A       ", 2, 1, 0, 0, &LR35902::SRA_A);
-	opcodesCB[48]  = Opcode(this, "SWAP B      ", 2, 1, 0, 0, &LR35902::SWAP_B);
-	opcodesCB[49]  = Opcode(this, "SWAP C      ", 2, 1, 0, 0, &LR35902::SWAP_C);
-	opcodesCB[50]  = Opcode(this, "SWAP D      ", 2, 1, 0, 0, &LR35902::SWAP_D);
-	opcodesCB[51]  = Opcode(this, "SWAP E      ", 2, 1, 0, 0, &LR35902::SWAP_E);
-	opcodesCB[52]  = Opcode(this, "SWAP H      ", 2, 1, 0, 0, &LR35902::SWAP_H);
-	opcodesCB[53]  = Opcode(this, "SWAP L      ", 2, 1, 0, 0, &LR35902::SWAP_L);
-	opcodesCB[54]  = Opcode(this, "SWAP (HL)   ", 4, 1, 3, 4, &LR35902::SWAP_aHL);
-	opcodesCB[55]  = Opcode(this, "SWAP A      ", 2, 1, 0, 0, &LR35902::SWAP_A);
-	opcodesCB[56]  = Opcode(this, "SRL B       ", 2, 1, 0, 0, &LR35902::SRL_B);
-	opcodesCB[57]  = Opcode(this, "SRL C       ", 2, 1, 0, 0, &LR35902::SRL_C);
-	opcodesCB[58]  = Opcode(this, "SRL D       ", 2, 1, 0, 0, &LR35902::SRL_D);
-	opcodesCB[59]  = Opcode(this, "SRL E       ", 2, 1, 0, 0, &LR35902::SRL_E);
-	opcodesCB[60]  = Opcode(this, "SRL H       ", 2, 1, 0, 0, &LR35902::SRL_H);
-	opcodesCB[61]  = Opcode(this, "SRL L       ", 2, 1, 0, 0, &LR35902::SRL_L);
-	opcodesCB[62]  = Opcode(this, "SRL (HL)    ", 4, 1, 3, 4, &LR35902::SRL_aHL);
-	opcodesCB[63]  = Opcode(this, "SRL A       ", 2, 1, 0, 0, &LR35902::SRL_A);
-	opcodesCB[64]  = Opcode(this, "BIT 0,B     ", 2, 1, 0, 0, &LR35902::BIT_0_B);
-	opcodesCB[65]  = Opcode(this, "BIT 0,C     ", 2, 1, 0, 0, &LR35902::BIT_0_C);
-	opcodesCB[66]  = Opcode(this, "BIT 0,D     ", 2, 1, 0, 0, &LR35902::BIT_0_D);
-	opcodesCB[67]  = Opcode(this, "BIT 0,E     ", 2, 1, 0, 0, &LR35902::BIT_0_E);
-	opcodesCB[68]  = Opcode(this, "BIT 0,H     ", 2, 1, 0, 0, &LR35902::BIT_0_H);
-	opcodesCB[69]  = Opcode(this, "BIT 0,L     ", 2, 1, 0, 0, &LR35902::BIT_0_L);
-	opcodesCB[70]  = Opcode(this, "BIT 0,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_0_aHL);
-	opcodesCB[71]  = Opcode(this, "BIT 0,A     ", 2, 1, 0, 0, &LR35902::BIT_0_A);
-	opcodesCB[72]  = Opcode(this, "BIT 1,B     ", 2, 1, 0, 0, &LR35902::BIT_1_B);
-	opcodesCB[73]  = Opcode(this, "BIT 1,C     ", 2, 1, 0, 0, &LR35902::BIT_1_C);
-	opcodesCB[74]  = Opcode(this, "BIT 1,D     ", 2, 1, 0, 0, &LR35902::BIT_1_D);
-	opcodesCB[75]  = Opcode(this, "BIT 1,E     ", 2, 1, 0, 0, &LR35902::BIT_1_E);
-	opcodesCB[76]  = Opcode(this, "BIT 1,H     ", 2, 1, 0, 0, &LR35902::BIT_1_H);
-	opcodesCB[77]  = Opcode(this, "BIT 1,L     ", 2, 1, 0, 0, &LR35902::BIT_1_L);
-	opcodesCB[78]  = Opcode(this, "BIT 1,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_1_aHL);
-	opcodesCB[79]  = Opcode(this, "BIT 1,A     ", 2, 1, 0, 0, &LR35902::BIT_1_A);
-	opcodesCB[80]  = Opcode(this, "BIT 2,B     ", 2, 1, 0, 0, &LR35902::BIT_2_B);
-	opcodesCB[81]  = Opcode(this, "BIT 2,C     ", 2, 1, 0, 0, &LR35902::BIT_2_C);
-	opcodesCB[82]  = Opcode(this, "BIT 2,D     ", 2, 1, 0, 0, &LR35902::BIT_2_D);
-	opcodesCB[83]  = Opcode(this, "BIT 2,E     ", 2, 1, 0, 0, &LR35902::BIT_2_E);
-	opcodesCB[84]  = Opcode(this, "BIT 2,H     ", 2, 1, 0, 0, &LR35902::BIT_2_H);
-	opcodesCB[85]  = Opcode(this, "BIT 2,L     ", 2, 1, 0, 0, &LR35902::BIT_2_L);
-	opcodesCB[86]  = Opcode(this, "BIT 2,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_2_aHL);
-	opcodesCB[87]  = Opcode(this, "BIT 2,A     ", 2, 1, 0, 0, &LR35902::BIT_2_A);
-	opcodesCB[88]  = Opcode(this, "BIT 3,B     ", 2, 1, 0, 0, &LR35902::BIT_3_B);
-	opcodesCB[89]  = Opcode(this, "BIT 3,C     ", 2, 1, 0, 0, &LR35902::BIT_3_C);
-	opcodesCB[90]  = Opcode(this, "BIT 3,D     ", 2, 1, 0, 0, &LR35902::BIT_3_D);
-	opcodesCB[91]  = Opcode(this, "BIT 3,E     ", 2, 1, 0, 0, &LR35902::BIT_3_E);
-	opcodesCB[92]  = Opcode(this, "BIT 3,H     ", 2, 1, 0, 0, &LR35902::BIT_3_H);
-	opcodesCB[93]  = Opcode(this, "BIT 3,L     ", 2, 1, 0, 0, &LR35902::BIT_3_L);
-	opcodesCB[94]  = Opcode(this, "BIT 3,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_3_aHL);
-	opcodesCB[95]  = Opcode(this, "BIT 3,A     ", 2, 1, 0, 0, &LR35902::BIT_3_A);
-	opcodesCB[96]  = Opcode(this, "BIT 4,B     ", 2, 1, 0, 0, &LR35902::BIT_4_B);
-	opcodesCB[97]  = Opcode(this, "BIT 4,C     ", 2, 1, 0, 0, &LR35902::BIT_4_C);
-	opcodesCB[98]  = Opcode(this, "BIT 4,D     ", 2, 1, 0, 0, &LR35902::BIT_4_D);
-	opcodesCB[99]  = Opcode(this, "BIT 4,E     ", 2, 1, 0, 0, &LR35902::BIT_4_E);
-	opcodesCB[100] = Opcode(this, "BIT 4,H     ", 2, 1, 0, 0, &LR35902::BIT_4_H);
-	opcodesCB[101] = Opcode(this, "BIT 4,L     ", 2, 1, 0, 0, &LR35902::BIT_4_L);
-	opcodesCB[102] = Opcode(this, "BIT 4,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_4_aHL);
-	opcodesCB[103] = Opcode(this, "BIT 4,A     ", 2, 1, 0, 0, &LR35902::BIT_4_A);
-	opcodesCB[104] = Opcode(this, "BIT 5,B     ", 2, 1, 0, 0, &LR35902::BIT_5_B);
-	opcodesCB[105] = Opcode(this, "BIT 5,C     ", 2, 1, 0, 0, &LR35902::BIT_5_C);
-	opcodesCB[106] = Opcode(this, "BIT 5,D     ", 2, 1, 0, 0, &LR35902::BIT_5_D);
-	opcodesCB[107] = Opcode(this, "BIT 5,E     ", 2, 1, 0, 0, &LR35902::BIT_5_E);
-	opcodesCB[108] = Opcode(this, "BIT 5,H     ", 2, 1, 0, 0, &LR35902::BIT_5_H);
-	opcodesCB[109] = Opcode(this, "BIT 5,L     ", 2, 1, 0, 0, &LR35902::BIT_5_L);
-	opcodesCB[110] = Opcode(this, "BIT 5,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_5_aHL);
-	opcodesCB[111] = Opcode(this, "BIT 5,A     ", 2, 1, 0, 0, &LR35902::BIT_5_A);
-	opcodesCB[112] = Opcode(this, "BIT 6,B     ", 2, 1, 0, 0, &LR35902::BIT_6_B);
-	opcodesCB[113] = Opcode(this, "BIT 6,C     ", 2, 1, 0, 0, &LR35902::BIT_6_C);
-	opcodesCB[114] = Opcode(this, "BIT 6,D     ", 2, 1, 0, 0, &LR35902::BIT_6_D);
-	opcodesCB[115] = Opcode(this, "BIT 6,E     ", 2, 1, 0, 0, &LR35902::BIT_6_E);
-	opcodesCB[116] = Opcode(this, "BIT 6,H     ", 2, 1, 0, 0, &LR35902::BIT_6_H);
-	opcodesCB[117] = Opcode(this, "BIT 6,L     ", 2, 1, 0, 0, &LR35902::BIT_6_L);
-	opcodesCB[118] = Opcode(this, "BIT 6,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_6_aHL);
-	opcodesCB[119] = Opcode(this, "BIT 6,A     ", 2, 1, 0, 0, &LR35902::BIT_6_A);
-	opcodesCB[120] = Opcode(this, "BIT 7,B     ", 2, 1, 0, 0, &LR35902::BIT_7_B);
-	opcodesCB[121] = Opcode(this, "BIT 7,C     ", 2, 1, 0, 0, &LR35902::BIT_7_C);
-	opcodesCB[122] = Opcode(this, "BIT 7,D     ", 2, 1, 0, 0, &LR35902::BIT_7_D);
-	opcodesCB[123] = Opcode(this, "BIT 7,E     ", 2, 1, 0, 0, &LR35902::BIT_7_E);
-	opcodesCB[124] = Opcode(this, "BIT 7,H     ", 2, 1, 0, 0, &LR35902::BIT_7_H);
-	opcodesCB[125] = Opcode(this, "BIT 7,L     ", 2, 1, 0, 0, &LR35902::BIT_7_L);
-	opcodesCB[126] = Opcode(this, "BIT 7,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_7_aHL);
-	opcodesCB[127] = Opcode(this, "BIT 7,A     ", 2, 1, 0, 0, &LR35902::BIT_7_A);
-	opcodesCB[128] = Opcode(this, "RES 0,B     ", 2, 1, 0, 0, &LR35902::RES_0_B);
-	opcodesCB[129] = Opcode(this, "RES 0,C     ", 2, 1, 0, 0, &LR35902::RES_0_C);
-	opcodesCB[130] = Opcode(this, "RES 0,D     ", 2, 1, 0, 0, &LR35902::RES_0_D);
-	opcodesCB[131] = Opcode(this, "RES 0,E     ", 2, 1, 0, 0, &LR35902::RES_0_E);
-	opcodesCB[132] = Opcode(this, "RES 0,H     ", 2, 1, 0, 0, &LR35902::RES_0_H);
-	opcodesCB[133] = Opcode(this, "RES 0,L     ", 2, 1, 0, 0, &LR35902::RES_0_L);
-	opcodesCB[134] = Opcode(this, "RES 0,(HL)  ", 4, 1, 3, 4, &LR35902::RES_0_aHL);
-	opcodesCB[135] = Opcode(this, "RES 0,A     ", 2, 1, 0, 0, &LR35902::RES_0_A);
-	opcodesCB[136] = Opcode(this, "RES 1,B     ", 2, 1, 0, 0, &LR35902::RES_1_B);
-	opcodesCB[137] = Opcode(this, "RES 1,C     ", 2, 1, 0, 0, &LR35902::RES_1_C);
-	opcodesCB[138] = Opcode(this, "RES 1,D     ", 2, 1, 0, 0, &LR35902::RES_1_D);
-	opcodesCB[139] = Opcode(this, "RES 1,E     ", 2, 1, 0, 0, &LR35902::RES_1_E);
-	opcodesCB[140] = Opcode(this, "RES 1,H     ", 2, 1, 0, 0, &LR35902::RES_1_H);
-	opcodesCB[141] = Opcode(this, "RES 1,L     ", 2, 1, 0, 0, &LR35902::RES_1_L);
-	opcodesCB[142] = Opcode(this, "RES 1,(HL)  ", 4, 1, 3, 4, &LR35902::RES_1_aHL);
-	opcodesCB[143] = Opcode(this, "RES 1,A     ", 2, 1, 0, 0, &LR35902::RES_1_A);
-	opcodesCB[144] = Opcode(this, "RES 2,B     ", 2, 1, 0, 0, &LR35902::RES_2_B);
-	opcodesCB[145] = Opcode(this, "RES 2,C     ", 2, 1, 0, 0, &LR35902::RES_2_C);
-	opcodesCB[146] = Opcode(this, "RES 2,D     ", 2, 1, 0, 0, &LR35902::RES_2_D);
-	opcodesCB[147] = Opcode(this, "RES 2,E     ", 2, 1, 0, 0, &LR35902::RES_2_E);
-	opcodesCB[148] = Opcode(this, "RES 2,H     ", 2, 1, 0, 0, &LR35902::RES_2_H);
-	opcodesCB[149] = Opcode(this, "RES 2,L     ", 2, 1, 0, 0, &LR35902::RES_2_L);
-	opcodesCB[150] = Opcode(this, "RES 2,(HL)  ", 4, 1, 3, 4, &LR35902::RES_2_aHL);
-	opcodesCB[151] = Opcode(this, "RES 2,A     ", 2, 1, 0, 0, &LR35902::RES_2_A);
-	opcodesCB[152] = Opcode(this, "RES 3,B     ", 2, 1, 0, 0, &LR35902::RES_3_B);
-	opcodesCB[153] = Opcode(this, "RES 3,C     ", 2, 1, 0, 0, &LR35902::RES_3_C);
-	opcodesCB[154] = Opcode(this, "RES 3,D     ", 2, 1, 0, 0, &LR35902::RES_3_D);
-	opcodesCB[155] = Opcode(this, "RES 3,E     ", 2, 1, 0, 0, &LR35902::RES_3_E);
-	opcodesCB[156] = Opcode(this, "RES 3,H     ", 2, 1, 0, 0, &LR35902::RES_3_H);
-	opcodesCB[157] = Opcode(this, "RES 3,L     ", 2, 1, 0, 0, &LR35902::RES_3_L);
-	opcodesCB[158] = Opcode(this, "RES 3,(HL)  ", 4, 1, 3, 4, &LR35902::RES_3_aHL);
-	opcodesCB[159] = Opcode(this, "RES 3,A     ", 2, 1, 0, 0, &LR35902::RES_3_A);
-	opcodesCB[160] = Opcode(this, "RES 4,B     ", 2, 1, 0, 0, &LR35902::RES_4_B);
-	opcodesCB[161] = Opcode(this, "RES 4,C     ", 2, 1, 0, 0, &LR35902::RES_4_C);
-	opcodesCB[162] = Opcode(this, "RES 4,D     ", 2, 1, 0, 0, &LR35902::RES_4_D);
-	opcodesCB[163] = Opcode(this, "RES 4,E     ", 2, 1, 0, 0, &LR35902::RES_4_E);
-	opcodesCB[164] = Opcode(this, "RES 4,H     ", 2, 1, 0, 0, &LR35902::RES_4_H);
-	opcodesCB[165] = Opcode(this, "RES 4,L     ", 2, 1, 0, 0, &LR35902::RES_4_L);
-	opcodesCB[166] = Opcode(this, "RES 4,(HL)  ", 4, 1, 3, 4, &LR35902::RES_4_aHL);
-	opcodesCB[167] = Opcode(this, "RES 4,A     ", 2, 1, 0, 0, &LR35902::RES_4_A);
-	opcodesCB[168] = Opcode(this, "RES 5,B     ", 2, 1, 0, 0, &LR35902::RES_5_B);
-	opcodesCB[169] = Opcode(this, "RES 5,C     ", 2, 1, 0, 0, &LR35902::RES_5_C);
-	opcodesCB[170] = Opcode(this, "RES 5,D     ", 2, 1, 0, 0, &LR35902::RES_5_D);
-	opcodesCB[171] = Opcode(this, "RES 5,E     ", 2, 1, 0, 0, &LR35902::RES_5_E);
-	opcodesCB[172] = Opcode(this, "RES 5,H     ", 2, 1, 0, 0, &LR35902::RES_5_H);
-	opcodesCB[173] = Opcode(this, "RES 5,L     ", 2, 1, 0, 0, &LR35902::RES_5_L);
-	opcodesCB[174] = Opcode(this, "RES 5,(HL)  ", 4, 1, 3, 4, &LR35902::RES_5_aHL);
-	opcodesCB[175] = Opcode(this, "RES 5,A     ", 2, 1, 0, 0, &LR35902::RES_5_A);
-	opcodesCB[176] = Opcode(this, "RES 6,B     ", 2, 1, 0, 0, &LR35902::RES_6_B);
-	opcodesCB[177] = Opcode(this, "RES 6,C     ", 2, 1, 0, 0, &LR35902::RES_6_C);
-	opcodesCB[178] = Opcode(this, "RES 6,D     ", 2, 1, 0, 0, &LR35902::RES_6_D);
-	opcodesCB[179] = Opcode(this, "RES 6,E     ", 2, 1, 0, 0, &LR35902::RES_6_E);
-	opcodesCB[180] = Opcode(this, "RES 6,H     ", 2, 1, 0, 0, &LR35902::RES_6_H);
-	opcodesCB[181] = Opcode(this, "RES 6,L     ", 2, 1, 0, 0, &LR35902::RES_6_L);
-	opcodesCB[182] = Opcode(this, "RES 6,(HL)  ", 4, 1, 3, 4, &LR35902::RES_6_aHL);
-	opcodesCB[183] = Opcode(this, "RES 6,A     ", 2, 1, 0, 0, &LR35902::RES_6_A);
-	opcodesCB[184] = Opcode(this, "RES 7,B     ", 2, 1, 0, 0, &LR35902::RES_7_B);
-	opcodesCB[185] = Opcode(this, "RES 7,C     ", 2, 1, 0, 0, &LR35902::RES_7_C);
-	opcodesCB[186] = Opcode(this, "RES 7,D     ", 2, 1, 0, 0, &LR35902::RES_7_D);
-	opcodesCB[187] = Opcode(this, "RES 7,E     ", 2, 1, 0, 0, &LR35902::RES_7_E);
-	opcodesCB[188] = Opcode(this, "RES 7,H     ", 2, 1, 0, 0, &LR35902::RES_7_H);
-	opcodesCB[189] = Opcode(this, "RES 7,L     ", 2, 1, 0, 0, &LR35902::RES_7_L);
-	opcodesCB[190] = Opcode(this, "RES 7,(HL)  ", 4, 1, 3, 4, &LR35902::RES_7_aHL);
-	opcodesCB[191] = Opcode(this, "RES 7,A     ", 2, 1, 0, 0, &LR35902::RES_7_A);
-	opcodesCB[192] = Opcode(this, "SET 0,B     ", 2, 1, 0, 0, &LR35902::SET_0_B);
-	opcodesCB[193] = Opcode(this, "SET 0,C     ", 2, 1, 0, 0, &LR35902::SET_0_C);
-	opcodesCB[194] = Opcode(this, "SET 0,D     ", 2, 1, 0, 0, &LR35902::SET_0_D);
-	opcodesCB[195] = Opcode(this, "SET 0,E     ", 2, 1, 0, 0, &LR35902::SET_0_E);
-	opcodesCB[196] = Opcode(this, "SET 0,H     ", 2, 1, 0, 0, &LR35902::SET_0_H);
-	opcodesCB[197] = Opcode(this, "SET 0,L     ", 2, 1, 0, 0, &LR35902::SET_0_L);
-	opcodesCB[198] = Opcode(this, "SET 0,(HL)  ", 4, 1, 3, 4, &LR35902::SET_0_aHL);
-	opcodesCB[199] = Opcode(this, "SET 0,A     ", 2, 1, 0, 0, &LR35902::SET_0_A);
-	opcodesCB[200] = Opcode(this, "SET 1,B     ", 2, 1, 0, 0, &LR35902::SET_1_B);
-	opcodesCB[201] = Opcode(this, "SET 1,C     ", 2, 1, 0, 0, &LR35902::SET_1_C);
-	opcodesCB[202] = Opcode(this, "SET 1,D     ", 2, 1, 0, 0, &LR35902::SET_1_D);
-	opcodesCB[203] = Opcode(this, "SET 1,E     ", 2, 1, 0, 0, &LR35902::SET_1_E);
-	opcodesCB[204] = Opcode(this, "SET 1,H     ", 2, 1, 0, 0, &LR35902::SET_1_H);
-	opcodesCB[205] = Opcode(this, "SET 1,L     ", 2, 1, 0, 0, &LR35902::SET_1_L);
-	opcodesCB[206] = Opcode(this, "SET 1,(HL)  ", 4, 1, 3, 4, &LR35902::SET_1_aHL);
-	opcodesCB[207] = Opcode(this, "SET 1,A     ", 2, 1, 0, 0, &LR35902::SET_1_A);
-	opcodesCB[208] = Opcode(this, "SET 2,B     ", 2, 1, 0, 0, &LR35902::SET_2_B);
-	opcodesCB[209] = Opcode(this, "SET 2,C     ", 2, 1, 0, 0, &LR35902::SET_2_C);
-	opcodesCB[210] = Opcode(this, "SET 2,D     ", 2, 1, 0, 0, &LR35902::SET_2_D);
-	opcodesCB[211] = Opcode(this, "SET 2,E     ", 2, 1, 0, 0, &LR35902::SET_2_E);
-	opcodesCB[212] = Opcode(this, "SET 2,H     ", 2, 1, 0, 0, &LR35902::SET_2_H);
-	opcodesCB[213] = Opcode(this, "SET 2,L     ", 2, 1, 0, 0, &LR35902::SET_2_L);
-	opcodesCB[214] = Opcode(this, "SET 2,(HL)  ", 4, 1, 3, 4, &LR35902::SET_2_aHL);
-	opcodesCB[215] = Opcode(this, "SET 2,A     ", 2, 1, 0, 0, &LR35902::SET_2_A);
-	opcodesCB[216] = Opcode(this, "SET 3,B     ", 2, 1, 0, 0, &LR35902::SET_3_B);
-	opcodesCB[217] = Opcode(this, "SET 3,C     ", 2, 1, 0, 0, &LR35902::SET_3_C);
-	opcodesCB[218] = Opcode(this, "SET 3,D     ", 2, 1, 0, 0, &LR35902::SET_3_D);
-	opcodesCB[219] = Opcode(this, "SET 3,E     ", 2, 1, 0, 0, &LR35902::SET_3_E);
-	opcodesCB[220] = Opcode(this, "SET 3,H     ", 2, 1, 0, 0, &LR35902::SET_3_H);
-	opcodesCB[221] = Opcode(this, "SET 3,L     ", 2, 1, 0, 0, &LR35902::SET_3_L);
-	opcodesCB[222] = Opcode(this, "SET 3,(HL)  ", 4, 1, 3, 4, &LR35902::SET_3_aHL);
-	opcodesCB[223] = Opcode(this, "SET 3,A     ", 2, 1, 0, 0, &LR35902::SET_3_A);
-	opcodesCB[224] = Opcode(this, "SET 4,B     ", 2, 1, 0, 0, &LR35902::SET_4_B);
-	opcodesCB[225] = Opcode(this, "SET 4,C     ", 2, 1, 0, 0, &LR35902::SET_4_C);
-	opcodesCB[226] = Opcode(this, "SET 4,D     ", 2, 1, 0, 0, &LR35902::SET_4_D);
-	opcodesCB[227] = Opcode(this, "SET 4,E     ", 2, 1, 0, 0, &LR35902::SET_4_E);
-	opcodesCB[228] = Opcode(this, "SET 4,H     ", 2, 1, 0, 0, &LR35902::SET_4_H);
-	opcodesCB[229] = Opcode(this, "SET 4,L     ", 2, 1, 0, 0, &LR35902::SET_4_L);
-	opcodesCB[230] = Opcode(this, "SET 4,(HL)  ", 4, 1, 3, 4, &LR35902::SET_4_aHL);
-	opcodesCB[231] = Opcode(this, "SET 4,A     ", 2, 1, 0, 0, &LR35902::SET_4_A);
-	opcodesCB[232] = Opcode(this, "SET 5,B     ", 2, 1, 0, 0, &LR35902::SET_5_B);
-	opcodesCB[233] = Opcode(this, "SET 5,C     ", 2, 1, 0, 0, &LR35902::SET_5_C);
-	opcodesCB[234] = Opcode(this, "SET 5,D     ", 2, 1, 0, 0, &LR35902::SET_5_D);
-	opcodesCB[235] = Opcode(this, "SET 5,E     ", 2, 1, 0, 0, &LR35902::SET_5_E);
-	opcodesCB[236] = Opcode(this, "SET 5,H     ", 2, 1, 0, 0, &LR35902::SET_5_H);
-	opcodesCB[237] = Opcode(this, "SET 5,L     ", 2, 1, 0, 0, &LR35902::SET_5_L);
-	opcodesCB[238] = Opcode(this, "SET 5,(HL)  ", 4, 1, 3, 4, &LR35902::SET_5_aHL);
-	opcodesCB[239] = Opcode(this, "SET 5,A     ", 2, 1, 0, 0, &LR35902::SET_5_A);
-	opcodesCB[240] = Opcode(this, "SET 6,B     ", 2, 1, 0, 0, &LR35902::SET_6_B);
-	opcodesCB[241] = Opcode(this, "SET 6,C     ", 2, 1, 0, 0, &LR35902::SET_6_C);
-	opcodesCB[242] = Opcode(this, "SET 6,D     ", 2, 1, 0, 0, &LR35902::SET_6_D);
-	opcodesCB[243] = Opcode(this, "SET 6,E     ", 2, 1, 0, 0, &LR35902::SET_6_E);
-	opcodesCB[244] = Opcode(this, "SET 6,H     ", 2, 1, 0, 0, &LR35902::SET_6_H);
-	opcodesCB[245] = Opcode(this, "SET 6,L     ", 2, 1, 0, 0, &LR35902::SET_6_L);
-	opcodesCB[246] = Opcode(this, "SET 6,(HL)  ", 4, 1, 3, 4, &LR35902::SET_6_aHL);
-	opcodesCB[247] = Opcode(this, "SET 6,A     ", 2, 1, 0, 0, &LR35902::SET_6_A);
-	opcodesCB[248] = Opcode(this, "SET 7,B     ", 2, 1, 0, 0, &LR35902::SET_7_B);
-	opcodesCB[249] = Opcode(this, "SET 7,C     ", 2, 1, 0, 0, &LR35902::SET_7_C);
-	opcodesCB[250] = Opcode(this, "SET 7,D     ", 2, 1, 0, 0, &LR35902::SET_7_D);
-	opcodesCB[251] = Opcode(this, "SET 7,E     ", 2, 1, 0, 0, &LR35902::SET_7_E);
-	opcodesCB[252] = Opcode(this, "SET 7,H     ", 2, 1, 0, 0, &LR35902::SET_7_H);
-	opcodesCB[253] = Opcode(this, "SET 7,L     ", 2, 1, 0, 0, &LR35902::SET_7_L);
-	opcodesCB[254] = Opcode(this, "SET 7,(HL)  ", 4, 1, 3, 4, &LR35902::SET_7_aHL);
-	opcodesCB[255] = Opcode(this, "SET 7,A     ", 2, 1, 0, 0, &LR35902::SET_7_A);	
+	ops[0]   = Opcode(this, "RLC B       ", 2, 1, 0, 0, &LR35902::RLC_B);
+	ops[1]   = Opcode(this, "RLC C       ", 2, 1, 0, 0, &LR35902::RLC_C);
+	ops[2]   = Opcode(this, "RLC D       ", 2, 1, 0, 0, &LR35902::RLC_D);
+	ops[3]   = Opcode(this, "RLC E       ", 2, 1, 0, 0, &LR35902::RLC_E);
+	ops[4]   = Opcode(this, "RLC H       ", 2, 1, 0, 0, &LR35902::RLC_H);
+	ops[5]   = Opcode(this, "RLC L       ", 2, 1, 0, 0, &LR35902::RLC_L);
+	ops[6]   = Opcode(this, "RLC (HL)    ", 4, 1, 3, 4, &LR35902::RLC_aHL);
+	ops[7]   = Opcode(this, "RLC A       ", 2, 1, 0, 0, &LR35902::RLC_A);
+	ops[8]   = Opcode(this, "RRC B       ", 2, 1, 0, 0, &LR35902::RRC_B);
+	ops[9]   = Opcode(this, "RRC C       ", 2, 1, 0, 0, &LR35902::RRC_C);
+	ops[10]  = Opcode(this, "RRC D       ", 2, 1, 0, 0, &LR35902::RRC_D);
+	ops[11]  = Opcode(this, "RRC E       ", 2, 1, 0, 0, &LR35902::RRC_E);
+	ops[12]  = Opcode(this, "RRC H       ", 2, 1, 0, 0, &LR35902::RRC_H);
+	ops[13]  = Opcode(this, "RRC L       ", 2, 1, 0, 0, &LR35902::RRC_L);
+	ops[14]  = Opcode(this, "RRC (HL)    ", 4, 1, 3, 4, &LR35902::RRC_aHL);
+	ops[15]  = Opcode(this, "RRC A       ", 2, 1, 0, 0, &LR35902::RRC_A);
+	ops[16]  = Opcode(this, "RL B        ", 2, 1, 0, 0, &LR35902::RL_B);
+	ops[17]  = Opcode(this, "RL C        ", 2, 1, 0, 0, &LR35902::RL_C);
+	ops[18]  = Opcode(this, "RL D        ", 2, 1, 0, 0, &LR35902::RL_D);
+	ops[19]  = Opcode(this, "RL E        ", 2, 1, 0, 0, &LR35902::RL_E);
+	ops[20]  = Opcode(this, "RL H        ", 2, 1, 0, 0, &LR35902::RL_H);
+	ops[21]  = Opcode(this, "RL L        ", 2, 1, 0, 0, &LR35902::RL_L);
+	ops[22]  = Opcode(this, "RL (HL)     ", 4, 1, 3, 4, &LR35902::RL_aHL);
+	ops[23]  = Opcode(this, "RL A        ", 2, 1, 0, 0, &LR35902::RL_A);
+	ops[24]  = Opcode(this, "RR B        ", 2, 1, 0, 0, &LR35902::RR_B);
+	ops[25]  = Opcode(this, "RR C        ", 2, 1, 0, 0, &LR35902::RR_C);
+	ops[26]  = Opcode(this, "RR D        ", 2, 1, 0, 0, &LR35902::RR_D);
+	ops[27]  = Opcode(this, "RR E        ", 2, 1, 0, 0, &LR35902::RR_E);
+	ops[28]  = Opcode(this, "RR H        ", 2, 1, 0, 0, &LR35902::RR_H);
+	ops[29]  = Opcode(this, "RR L        ", 2, 1, 0, 0, &LR35902::RR_L);
+	ops[30]  = Opcode(this, "RR (HL)     ", 4, 1, 3, 4, &LR35902::RR_aHL);
+	ops[31]  = Opcode(this, "RR A        ", 2, 1, 0, 0, &LR35902::RR_A);
+	ops[32]  = Opcode(this, "SLA B       ", 2, 1, 0, 0, &LR35902::SLA_B);
+	ops[33]  = Opcode(this, "SLA C       ", 2, 1, 0, 0, &LR35902::SLA_C);
+	ops[34]  = Opcode(this, "SLA D       ", 2, 1, 0, 0, &LR35902::SLA_D);
+	ops[35]  = Opcode(this, "SLA E       ", 2, 1, 0, 0, &LR35902::SLA_E);
+	ops[36]  = Opcode(this, "SLA H       ", 2, 1, 0, 0, &LR35902::SLA_H);
+	ops[37]  = Opcode(this, "SLA L       ", 2, 1, 0, 0, &LR35902::SLA_L);
+	ops[38]  = Opcode(this, "SLA (HL)    ", 4, 1, 3, 4, &LR35902::SLA_aHL);
+	ops[39]  = Opcode(this, "SLA A       ", 2, 1, 0, 0, &LR35902::SLA_A);
+	ops[40]  = Opcode(this, "SRA B       ", 2, 1, 0, 0, &LR35902::SRA_B);
+	ops[41]  = Opcode(this, "SRA C       ", 2, 1, 0, 0, &LR35902::SRA_C);
+	ops[42]  = Opcode(this, "SRA D       ", 2, 1, 0, 0, &LR35902::SRA_D);
+	ops[43]  = Opcode(this, "SRA E       ", 2, 1, 0, 0, &LR35902::SRA_E);
+	ops[44]  = Opcode(this, "SRA H       ", 2, 1, 0, 0, &LR35902::SRA_H);
+	ops[45]  = Opcode(this, "SRA L       ", 2, 1, 0, 0, &LR35902::SRA_L);
+	ops[46]  = Opcode(this, "SRA (HL)    ", 4, 1, 3, 4, &LR35902::SRA_aHL);
+	ops[47]  = Opcode(this, "SRA A       ", 2, 1, 0, 0, &LR35902::SRA_A);
+	ops[48]  = Opcode(this, "SWAP B      ", 2, 1, 0, 0, &LR35902::SWAP_B);
+	ops[49]  = Opcode(this, "SWAP C      ", 2, 1, 0, 0, &LR35902::SWAP_C);
+	ops[50]  = Opcode(this, "SWAP D      ", 2, 1, 0, 0, &LR35902::SWAP_D);
+	ops[51]  = Opcode(this, "SWAP E      ", 2, 1, 0, 0, &LR35902::SWAP_E);
+	ops[52]  = Opcode(this, "SWAP H      ", 2, 1, 0, 0, &LR35902::SWAP_H);
+	ops[53]  = Opcode(this, "SWAP L      ", 2, 1, 0, 0, &LR35902::SWAP_L);
+	ops[54]  = Opcode(this, "SWAP (HL)   ", 4, 1, 3, 4, &LR35902::SWAP_aHL);
+	ops[55]  = Opcode(this, "SWAP A      ", 2, 1, 0, 0, &LR35902::SWAP_A);
+	ops[56]  = Opcode(this, "SRL B       ", 2, 1, 0, 0, &LR35902::SRL_B);
+	ops[57]  = Opcode(this, "SRL C       ", 2, 1, 0, 0, &LR35902::SRL_C);
+	ops[58]  = Opcode(this, "SRL D       ", 2, 1, 0, 0, &LR35902::SRL_D);
+	ops[59]  = Opcode(this, "SRL E       ", 2, 1, 0, 0, &LR35902::SRL_E);
+	ops[60]  = Opcode(this, "SRL H       ", 2, 1, 0, 0, &LR35902::SRL_H);
+	ops[61]  = Opcode(this, "SRL L       ", 2, 1, 0, 0, &LR35902::SRL_L);
+	ops[62]  = Opcode(this, "SRL (HL)    ", 4, 1, 3, 4, &LR35902::SRL_aHL);
+	ops[63]  = Opcode(this, "SRL A       ", 2, 1, 0, 0, &LR35902::SRL_A);
+	ops[64]  = Opcode(this, "BIT 0,B     ", 2, 1, 0, 0, &LR35902::BIT_0_B);
+	ops[65]  = Opcode(this, "BIT 0,C     ", 2, 1, 0, 0, &LR35902::BIT_0_C);
+	ops[66]  = Opcode(this, "BIT 0,D     ", 2, 1, 0, 0, &LR35902::BIT_0_D);
+	ops[67]  = Opcode(this, "BIT 0,E     ", 2, 1, 0, 0, &LR35902::BIT_0_E);
+	ops[68]  = Opcode(this, "BIT 0,H     ", 2, 1, 0, 0, &LR35902::BIT_0_H);
+	ops[69]  = Opcode(this, "BIT 0,L     ", 2, 1, 0, 0, &LR35902::BIT_0_L);
+	ops[70]  = Opcode(this, "BIT 0,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_0_aHL);
+	ops[71]  = Opcode(this, "BIT 0,A     ", 2, 1, 0, 0, &LR35902::BIT_0_A);
+	ops[72]  = Opcode(this, "BIT 1,B     ", 2, 1, 0, 0, &LR35902::BIT_1_B);
+	ops[73]  = Opcode(this, "BIT 1,C     ", 2, 1, 0, 0, &LR35902::BIT_1_C);
+	ops[74]  = Opcode(this, "BIT 1,D     ", 2, 1, 0, 0, &LR35902::BIT_1_D);
+	ops[75]  = Opcode(this, "BIT 1,E     ", 2, 1, 0, 0, &LR35902::BIT_1_E);
+	ops[76]  = Opcode(this, "BIT 1,H     ", 2, 1, 0, 0, &LR35902::BIT_1_H);
+	ops[77]  = Opcode(this, "BIT 1,L     ", 2, 1, 0, 0, &LR35902::BIT_1_L);
+	ops[78]  = Opcode(this, "BIT 1,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_1_aHL);
+	ops[79]  = Opcode(this, "BIT 1,A     ", 2, 1, 0, 0, &LR35902::BIT_1_A);
+	ops[80]  = Opcode(this, "BIT 2,B     ", 2, 1, 0, 0, &LR35902::BIT_2_B);
+	ops[81]  = Opcode(this, "BIT 2,C     ", 2, 1, 0, 0, &LR35902::BIT_2_C);
+	ops[82]  = Opcode(this, "BIT 2,D     ", 2, 1, 0, 0, &LR35902::BIT_2_D);
+	ops[83]  = Opcode(this, "BIT 2,E     ", 2, 1, 0, 0, &LR35902::BIT_2_E);
+	ops[84]  = Opcode(this, "BIT 2,H     ", 2, 1, 0, 0, &LR35902::BIT_2_H);
+	ops[85]  = Opcode(this, "BIT 2,L     ", 2, 1, 0, 0, &LR35902::BIT_2_L);
+	ops[86]  = Opcode(this, "BIT 2,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_2_aHL);
+	ops[87]  = Opcode(this, "BIT 2,A     ", 2, 1, 0, 0, &LR35902::BIT_2_A);
+	ops[88]  = Opcode(this, "BIT 3,B     ", 2, 1, 0, 0, &LR35902::BIT_3_B);
+	ops[89]  = Opcode(this, "BIT 3,C     ", 2, 1, 0, 0, &LR35902::BIT_3_C);
+	ops[90]  = Opcode(this, "BIT 3,D     ", 2, 1, 0, 0, &LR35902::BIT_3_D);
+	ops[91]  = Opcode(this, "BIT 3,E     ", 2, 1, 0, 0, &LR35902::BIT_3_E);
+	ops[92]  = Opcode(this, "BIT 3,H     ", 2, 1, 0, 0, &LR35902::BIT_3_H);
+	ops[93]  = Opcode(this, "BIT 3,L     ", 2, 1, 0, 0, &LR35902::BIT_3_L);
+	ops[94]  = Opcode(this, "BIT 3,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_3_aHL);
+	ops[95]  = Opcode(this, "BIT 3,A     ", 2, 1, 0, 0, &LR35902::BIT_3_A);
+	ops[96]  = Opcode(this, "BIT 4,B     ", 2, 1, 0, 0, &LR35902::BIT_4_B);
+	ops[97]  = Opcode(this, "BIT 4,C     ", 2, 1, 0, 0, &LR35902::BIT_4_C);
+	ops[98]  = Opcode(this, "BIT 4,D     ", 2, 1, 0, 0, &LR35902::BIT_4_D);
+	ops[99]  = Opcode(this, "BIT 4,E     ", 2, 1, 0, 0, &LR35902::BIT_4_E);
+	ops[100] = Opcode(this, "BIT 4,H     ", 2, 1, 0, 0, &LR35902::BIT_4_H);
+	ops[101] = Opcode(this, "BIT 4,L     ", 2, 1, 0, 0, &LR35902::BIT_4_L);
+	ops[102] = Opcode(this, "BIT 4,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_4_aHL);
+	ops[103] = Opcode(this, "BIT 4,A     ", 2, 1, 0, 0, &LR35902::BIT_4_A);
+	ops[104] = Opcode(this, "BIT 5,B     ", 2, 1, 0, 0, &LR35902::BIT_5_B);
+	ops[105] = Opcode(this, "BIT 5,C     ", 2, 1, 0, 0, &LR35902::BIT_5_C);
+	ops[106] = Opcode(this, "BIT 5,D     ", 2, 1, 0, 0, &LR35902::BIT_5_D);
+	ops[107] = Opcode(this, "BIT 5,E     ", 2, 1, 0, 0, &LR35902::BIT_5_E);
+	ops[108] = Opcode(this, "BIT 5,H     ", 2, 1, 0, 0, &LR35902::BIT_5_H);
+	ops[109] = Opcode(this, "BIT 5,L     ", 2, 1, 0, 0, &LR35902::BIT_5_L);
+	ops[110] = Opcode(this, "BIT 5,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_5_aHL);
+	ops[111] = Opcode(this, "BIT 5,A     ", 2, 1, 0, 0, &LR35902::BIT_5_A);
+	ops[112] = Opcode(this, "BIT 6,B     ", 2, 1, 0, 0, &LR35902::BIT_6_B);
+	ops[113] = Opcode(this, "BIT 6,C     ", 2, 1, 0, 0, &LR35902::BIT_6_C);
+	ops[114] = Opcode(this, "BIT 6,D     ", 2, 1, 0, 0, &LR35902::BIT_6_D);
+	ops[115] = Opcode(this, "BIT 6,E     ", 2, 1, 0, 0, &LR35902::BIT_6_E);
+	ops[116] = Opcode(this, "BIT 6,H     ", 2, 1, 0, 0, &LR35902::BIT_6_H);
+	ops[117] = Opcode(this, "BIT 6,L     ", 2, 1, 0, 0, &LR35902::BIT_6_L);
+	ops[118] = Opcode(this, "BIT 6,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_6_aHL);
+	ops[119] = Opcode(this, "BIT 6,A     ", 2, 1, 0, 0, &LR35902::BIT_6_A);
+	ops[120] = Opcode(this, "BIT 7,B     ", 2, 1, 0, 0, &LR35902::BIT_7_B);
+	ops[121] = Opcode(this, "BIT 7,C     ", 2, 1, 0, 0, &LR35902::BIT_7_C);
+	ops[122] = Opcode(this, "BIT 7,D     ", 2, 1, 0, 0, &LR35902::BIT_7_D);
+	ops[123] = Opcode(this, "BIT 7,E     ", 2, 1, 0, 0, &LR35902::BIT_7_E);
+	ops[124] = Opcode(this, "BIT 7,H     ", 2, 1, 0, 0, &LR35902::BIT_7_H);
+	ops[125] = Opcode(this, "BIT 7,L     ", 2, 1, 0, 0, &LR35902::BIT_7_L);
+	ops[126] = Opcode(this, "BIT 7,(HL)  ", 3, 1, 3, 0, &LR35902::BIT_7_aHL);
+	ops[127] = Opcode(this, "BIT 7,A     ", 2, 1, 0, 0, &LR35902::BIT_7_A);
+	ops[128] = Opcode(this, "RES 0,B     ", 2, 1, 0, 0, &LR35902::RES_0_B);
+	ops[129] = Opcode(this, "RES 0,C     ", 2, 1, 0, 0, &LR35902::RES_0_C);
+	ops[130] = Opcode(this, "RES 0,D     ", 2, 1, 0, 0, &LR35902::RES_0_D);
+	ops[131] = Opcode(this, "RES 0,E     ", 2, 1, 0, 0, &LR35902::RES_0_E);
+	ops[132] = Opcode(this, "RES 0,H     ", 2, 1, 0, 0, &LR35902::RES_0_H);
+	ops[133] = Opcode(this, "RES 0,L     ", 2, 1, 0, 0, &LR35902::RES_0_L);
+	ops[134] = Opcode(this, "RES 0,(HL)  ", 4, 1, 3, 4, &LR35902::RES_0_aHL);
+	ops[135] = Opcode(this, "RES 0,A     ", 2, 1, 0, 0, &LR35902::RES_0_A);
+	ops[136] = Opcode(this, "RES 1,B     ", 2, 1, 0, 0, &LR35902::RES_1_B);
+	ops[137] = Opcode(this, "RES 1,C     ", 2, 1, 0, 0, &LR35902::RES_1_C);
+	ops[138] = Opcode(this, "RES 1,D     ", 2, 1, 0, 0, &LR35902::RES_1_D);
+	ops[139] = Opcode(this, "RES 1,E     ", 2, 1, 0, 0, &LR35902::RES_1_E);
+	ops[140] = Opcode(this, "RES 1,H     ", 2, 1, 0, 0, &LR35902::RES_1_H);
+	ops[141] = Opcode(this, "RES 1,L     ", 2, 1, 0, 0, &LR35902::RES_1_L);
+	ops[142] = Opcode(this, "RES 1,(HL)  ", 4, 1, 3, 4, &LR35902::RES_1_aHL);
+	ops[143] = Opcode(this, "RES 1,A     ", 2, 1, 0, 0, &LR35902::RES_1_A);
+	ops[144] = Opcode(this, "RES 2,B     ", 2, 1, 0, 0, &LR35902::RES_2_B);
+	ops[145] = Opcode(this, "RES 2,C     ", 2, 1, 0, 0, &LR35902::RES_2_C);
+	ops[146] = Opcode(this, "RES 2,D     ", 2, 1, 0, 0, &LR35902::RES_2_D);
+	ops[147] = Opcode(this, "RES 2,E     ", 2, 1, 0, 0, &LR35902::RES_2_E);
+	ops[148] = Opcode(this, "RES 2,H     ", 2, 1, 0, 0, &LR35902::RES_2_H);
+	ops[149] = Opcode(this, "RES 2,L     ", 2, 1, 0, 0, &LR35902::RES_2_L);
+	ops[150] = Opcode(this, "RES 2,(HL)  ", 4, 1, 3, 4, &LR35902::RES_2_aHL);
+	ops[151] = Opcode(this, "RES 2,A     ", 2, 1, 0, 0, &LR35902::RES_2_A);
+	ops[152] = Opcode(this, "RES 3,B     ", 2, 1, 0, 0, &LR35902::RES_3_B);
+	ops[153] = Opcode(this, "RES 3,C     ", 2, 1, 0, 0, &LR35902::RES_3_C);
+	ops[154] = Opcode(this, "RES 3,D     ", 2, 1, 0, 0, &LR35902::RES_3_D);
+	ops[155] = Opcode(this, "RES 3,E     ", 2, 1, 0, 0, &LR35902::RES_3_E);
+	ops[156] = Opcode(this, "RES 3,H     ", 2, 1, 0, 0, &LR35902::RES_3_H);
+	ops[157] = Opcode(this, "RES 3,L     ", 2, 1, 0, 0, &LR35902::RES_3_L);
+	ops[158] = Opcode(this, "RES 3,(HL)  ", 4, 1, 3, 4, &LR35902::RES_3_aHL);
+	ops[159] = Opcode(this, "RES 3,A     ", 2, 1, 0, 0, &LR35902::RES_3_A);
+	ops[160] = Opcode(this, "RES 4,B     ", 2, 1, 0, 0, &LR35902::RES_4_B);
+	ops[161] = Opcode(this, "RES 4,C     ", 2, 1, 0, 0, &LR35902::RES_4_C);
+	ops[162] = Opcode(this, "RES 4,D     ", 2, 1, 0, 0, &LR35902::RES_4_D);
+	ops[163] = Opcode(this, "RES 4,E     ", 2, 1, 0, 0, &LR35902::RES_4_E);
+	ops[164] = Opcode(this, "RES 4,H     ", 2, 1, 0, 0, &LR35902::RES_4_H);
+	ops[165] = Opcode(this, "RES 4,L     ", 2, 1, 0, 0, &LR35902::RES_4_L);
+	ops[166] = Opcode(this, "RES 4,(HL)  ", 4, 1, 3, 4, &LR35902::RES_4_aHL);
+	ops[167] = Opcode(this, "RES 4,A     ", 2, 1, 0, 0, &LR35902::RES_4_A);
+	ops[168] = Opcode(this, "RES 5,B     ", 2, 1, 0, 0, &LR35902::RES_5_B);
+	ops[169] = Opcode(this, "RES 5,C     ", 2, 1, 0, 0, &LR35902::RES_5_C);
+	ops[170] = Opcode(this, "RES 5,D     ", 2, 1, 0, 0, &LR35902::RES_5_D);
+	ops[171] = Opcode(this, "RES 5,E     ", 2, 1, 0, 0, &LR35902::RES_5_E);
+	ops[172] = Opcode(this, "RES 5,H     ", 2, 1, 0, 0, &LR35902::RES_5_H);
+	ops[173] = Opcode(this, "RES 5,L     ", 2, 1, 0, 0, &LR35902::RES_5_L);
+	ops[174] = Opcode(this, "RES 5,(HL)  ", 4, 1, 3, 4, &LR35902::RES_5_aHL);
+	ops[175] = Opcode(this, "RES 5,A     ", 2, 1, 0, 0, &LR35902::RES_5_A);
+	ops[176] = Opcode(this, "RES 6,B     ", 2, 1, 0, 0, &LR35902::RES_6_B);
+	ops[177] = Opcode(this, "RES 6,C     ", 2, 1, 0, 0, &LR35902::RES_6_C);
+	ops[178] = Opcode(this, "RES 6,D     ", 2, 1, 0, 0, &LR35902::RES_6_D);
+	ops[179] = Opcode(this, "RES 6,E     ", 2, 1, 0, 0, &LR35902::RES_6_E);
+	ops[180] = Opcode(this, "RES 6,H     ", 2, 1, 0, 0, &LR35902::RES_6_H);
+	ops[181] = Opcode(this, "RES 6,L     ", 2, 1, 0, 0, &LR35902::RES_6_L);
+	ops[182] = Opcode(this, "RES 6,(HL)  ", 4, 1, 3, 4, &LR35902::RES_6_aHL);
+	ops[183] = Opcode(this, "RES 6,A     ", 2, 1, 0, 0, &LR35902::RES_6_A);
+	ops[184] = Opcode(this, "RES 7,B     ", 2, 1, 0, 0, &LR35902::RES_7_B);
+	ops[185] = Opcode(this, "RES 7,C     ", 2, 1, 0, 0, &LR35902::RES_7_C);
+	ops[186] = Opcode(this, "RES 7,D     ", 2, 1, 0, 0, &LR35902::RES_7_D);
+	ops[187] = Opcode(this, "RES 7,E     ", 2, 1, 0, 0, &LR35902::RES_7_E);
+	ops[188] = Opcode(this, "RES 7,H     ", 2, 1, 0, 0, &LR35902::RES_7_H);
+	ops[189] = Opcode(this, "RES 7,L     ", 2, 1, 0, 0, &LR35902::RES_7_L);
+	ops[190] = Opcode(this, "RES 7,(HL)  ", 4, 1, 3, 4, &LR35902::RES_7_aHL);
+	ops[191] = Opcode(this, "RES 7,A     ", 2, 1, 0, 0, &LR35902::RES_7_A);
+	ops[192] = Opcode(this, "SET 0,B     ", 2, 1, 0, 0, &LR35902::SET_0_B);
+	ops[193] = Opcode(this, "SET 0,C     ", 2, 1, 0, 0, &LR35902::SET_0_C);
+	ops[194] = Opcode(this, "SET 0,D     ", 2, 1, 0, 0, &LR35902::SET_0_D);
+	ops[195] = Opcode(this, "SET 0,E     ", 2, 1, 0, 0, &LR35902::SET_0_E);
+	ops[196] = Opcode(this, "SET 0,H     ", 2, 1, 0, 0, &LR35902::SET_0_H);
+	ops[197] = Opcode(this, "SET 0,L     ", 2, 1, 0, 0, &LR35902::SET_0_L);
+	ops[198] = Opcode(this, "SET 0,(HL)  ", 4, 1, 3, 4, &LR35902::SET_0_aHL);
+	ops[199] = Opcode(this, "SET 0,A     ", 2, 1, 0, 0, &LR35902::SET_0_A);
+	ops[200] = Opcode(this, "SET 1,B     ", 2, 1, 0, 0, &LR35902::SET_1_B);
+	ops[201] = Opcode(this, "SET 1,C     ", 2, 1, 0, 0, &LR35902::SET_1_C);
+	ops[202] = Opcode(this, "SET 1,D     ", 2, 1, 0, 0, &LR35902::SET_1_D);
+	ops[203] = Opcode(this, "SET 1,E     ", 2, 1, 0, 0, &LR35902::SET_1_E);
+	ops[204] = Opcode(this, "SET 1,H     ", 2, 1, 0, 0, &LR35902::SET_1_H);
+	ops[205] = Opcode(this, "SET 1,L     ", 2, 1, 0, 0, &LR35902::SET_1_L);
+	ops[206] = Opcode(this, "SET 1,(HL)  ", 4, 1, 3, 4, &LR35902::SET_1_aHL);
+	ops[207] = Opcode(this, "SET 1,A     ", 2, 1, 0, 0, &LR35902::SET_1_A);
+	ops[208] = Opcode(this, "SET 2,B     ", 2, 1, 0, 0, &LR35902::SET_2_B);
+	ops[209] = Opcode(this, "SET 2,C     ", 2, 1, 0, 0, &LR35902::SET_2_C);
+	ops[210] = Opcode(this, "SET 2,D     ", 2, 1, 0, 0, &LR35902::SET_2_D);
+	ops[211] = Opcode(this, "SET 2,E     ", 2, 1, 0, 0, &LR35902::SET_2_E);
+	ops[212] = Opcode(this, "SET 2,H     ", 2, 1, 0, 0, &LR35902::SET_2_H);
+	ops[213] = Opcode(this, "SET 2,L     ", 2, 1, 0, 0, &LR35902::SET_2_L);
+	ops[214] = Opcode(this, "SET 2,(HL)  ", 4, 1, 3, 4, &LR35902::SET_2_aHL);
+	ops[215] = Opcode(this, "SET 2,A     ", 2, 1, 0, 0, &LR35902::SET_2_A);
+	ops[216] = Opcode(this, "SET 3,B     ", 2, 1, 0, 0, &LR35902::SET_3_B);
+	ops[217] = Opcode(this, "SET 3,C     ", 2, 1, 0, 0, &LR35902::SET_3_C);
+	ops[218] = Opcode(this, "SET 3,D     ", 2, 1, 0, 0, &LR35902::SET_3_D);
+	ops[219] = Opcode(this, "SET 3,E     ", 2, 1, 0, 0, &LR35902::SET_3_E);
+	ops[220] = Opcode(this, "SET 3,H     ", 2, 1, 0, 0, &LR35902::SET_3_H);
+	ops[221] = Opcode(this, "SET 3,L     ", 2, 1, 0, 0, &LR35902::SET_3_L);
+	ops[222] = Opcode(this, "SET 3,(HL)  ", 4, 1, 3, 4, &LR35902::SET_3_aHL);
+	ops[223] = Opcode(this, "SET 3,A     ", 2, 1, 0, 0, &LR35902::SET_3_A);
+	ops[224] = Opcode(this, "SET 4,B     ", 2, 1, 0, 0, &LR35902::SET_4_B);
+	ops[225] = Opcode(this, "SET 4,C     ", 2, 1, 0, 0, &LR35902::SET_4_C);
+	ops[226] = Opcode(this, "SET 4,D     ", 2, 1, 0, 0, &LR35902::SET_4_D);
+	ops[227] = Opcode(this, "SET 4,E     ", 2, 1, 0, 0, &LR35902::SET_4_E);
+	ops[228] = Opcode(this, "SET 4,H     ", 2, 1, 0, 0, &LR35902::SET_4_H);
+	ops[229] = Opcode(this, "SET 4,L     ", 2, 1, 0, 0, &LR35902::SET_4_L);
+	ops[230] = Opcode(this, "SET 4,(HL)  ", 4, 1, 3, 4, &LR35902::SET_4_aHL);
+	ops[231] = Opcode(this, "SET 4,A     ", 2, 1, 0, 0, &LR35902::SET_4_A);
+	ops[232] = Opcode(this, "SET 5,B     ", 2, 1, 0, 0, &LR35902::SET_5_B);
+	ops[233] = Opcode(this, "SET 5,C     ", 2, 1, 0, 0, &LR35902::SET_5_C);
+	ops[234] = Opcode(this, "SET 5,D     ", 2, 1, 0, 0, &LR35902::SET_5_D);
+	ops[235] = Opcode(this, "SET 5,E     ", 2, 1, 0, 0, &LR35902::SET_5_E);
+	ops[236] = Opcode(this, "SET 5,H     ", 2, 1, 0, 0, &LR35902::SET_5_H);
+	ops[237] = Opcode(this, "SET 5,L     ", 2, 1, 0, 0, &LR35902::SET_5_L);
+	ops[238] = Opcode(this, "SET 5,(HL)  ", 4, 1, 3, 4, &LR35902::SET_5_aHL);
+	ops[239] = Opcode(this, "SET 5,A     ", 2, 1, 0, 0, &LR35902::SET_5_A);
+	ops[240] = Opcode(this, "SET 6,B     ", 2, 1, 0, 0, &LR35902::SET_6_B);
+	ops[241] = Opcode(this, "SET 6,C     ", 2, 1, 0, 0, &LR35902::SET_6_C);
+	ops[242] = Opcode(this, "SET 6,D     ", 2, 1, 0, 0, &LR35902::SET_6_D);
+	ops[243] = Opcode(this, "SET 6,E     ", 2, 1, 0, 0, &LR35902::SET_6_E);
+	ops[244] = Opcode(this, "SET 6,H     ", 2, 1, 0, 0, &LR35902::SET_6_H);
+	ops[245] = Opcode(this, "SET 6,L     ", 2, 1, 0, 0, &LR35902::SET_6_L);
+	ops[246] = Opcode(this, "SET 6,(HL)  ", 4, 1, 3, 4, &LR35902::SET_6_aHL);
+	ops[247] = Opcode(this, "SET 6,A     ", 2, 1, 0, 0, &LR35902::SET_6_A);
+	ops[248] = Opcode(this, "SET 7,B     ", 2, 1, 0, 0, &LR35902::SET_7_B);
+	ops[249] = Opcode(this, "SET 7,C     ", 2, 1, 0, 0, &LR35902::SET_7_C);
+	ops[250] = Opcode(this, "SET 7,D     ", 2, 1, 0, 0, &LR35902::SET_7_D);
+	ops[251] = Opcode(this, "SET 7,E     ", 2, 1, 0, 0, &LR35902::SET_7_E);
+	ops[252] = Opcode(this, "SET 7,H     ", 2, 1, 0, 0, &LR35902::SET_7_H);
+	ops[253] = Opcode(this, "SET 7,L     ", 2, 1, 0, 0, &LR35902::SET_7_L);
+	ops[254] = Opcode(this, "SET 7,(HL)  ", 4, 1, 3, 4, &LR35902::SET_7_aHL);
+	ops[255] = Opcode(this, "SET 7,A     ", 2, 1, 0, 0, &LR35902::SET_7_A);	
 }
 
 void LR35902::reset(){

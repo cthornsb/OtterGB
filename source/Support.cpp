@@ -3,11 +3,11 @@
 
 #include "Support.hpp"
 
-const unsigned char LOWERCASE_LOW  = 97;
-const unsigned char LOWERCASE_HIGH = 122;
+const char LOWERCASE_LOW  = 97;
+const char LOWERCASE_HIGH = 122;
 
-const unsigned char UPPERCASE_LOW  = 65;
-const unsigned char UPPERCASE_HIGH = 90;
+const char UPPERCASE_LOW  = 65;
+const char UPPERCASE_HIGH = 90;
 
 // Return true if an input string is numerical
 bool isNumeric(const std::string& str) {
@@ -15,6 +15,43 @@ bool isNumeric(const std::string& str) {
 		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
 			return false;
 	return true;
+}
+
+bool isInteger(const std::string& str) {
+	for (auto i = 0; i < str.length(); i++)
+		if (str[i] < '0' || str[i] > '9')
+			return false;
+	return true;
+}
+
+bool isDecimal(const std::string& str) {
+	for (auto i = 0; i < str.length(); i++)
+		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
+			return false;
+	return true;
+}
+
+bool isHexadecimal(const std::string& str) {
+	if (str.length() < 2 || str.find('$') == std::string::npos)
+		return false;
+	for (auto i = 0; i < str.length(); i++) {
+		if((str[i] < '0' || str[i] > '9') && (str[i] < 'a' || str[i] > 'f') && (str[i] < 'A' || str[i] > 'F') && str[i] != '$')
+			return false;
+	}
+	return true;
+}
+
+bool isBinary(const std::string& str) {
+	if (str.length() < 2 || str.find('b') == std::string::npos)
+		return false;
+	for (auto i = 0; i < str.length(); i++)
+		if (str[i] != '0' && str[i] != '1' && str[i] != 'b')
+			return false;
+	return true;
+}
+
+bool isNotNumeric(const std::string& str) {
+	return (!isDecimal(str) && !isHexadecimal(str) && !isBinary(str));
 }
 
 // Compute the two's compliment of an unsigned byte
@@ -44,6 +81,30 @@ unsigned int splitString(const std::string &input, std::vector<std::string> &out
 		start = stop+1;
 	}
 	return (unsigned int)output.size();
+}
+
+std::string extractString(std::string& str, const char& c1, const char& c2, const std::string& repstr/*=""*/) {
+	size_t index1 = str.find_last_of(c1);
+	if (index1 == std::string::npos) {
+		return "";
+	}
+	index1;
+	size_t index2 = str.find_first_of(c2, index1 + 1);
+	if (index2 == std::string::npos) {
+		return "";
+	}
+	std::string retval = str.substr(index1 + 1, index2 - (index1 + 1));
+	str.replace(index1, retval.length() + 2, repstr);
+	return retval;
+}
+
+unsigned int countOccurances(const std::string& str, const char& c) {
+	unsigned int retval = 0;
+	for (auto strc = str.begin(); strc != str.end(); strc++) {
+		if (*strc == c)
+			retval++;
+	}
+	return retval;
 }
 
 std::string getHex(const unsigned char &input){
@@ -136,11 +197,23 @@ std::string stripWhitespace(const std::string &str){
 	return str.substr(0, str.find_last_not_of(' ')+1);
 }
 
-void removeCharacter(std::string& str, const char& c){
+std::string stripAllWhitespace(const std::string& str) {
+	std::string retval = "";
+	for (auto c = str.begin(); c != str.end(); c++) {
+		if (*c != ' ' && *c != '\n' && *c != '\t') {
+			retval += *c;
+		}
+	}
+	return retval;
+}
+
+bool removeCharacter(std::string& str, const char& c){
 	size_t index = str.find(c);
 	if(index != std::string::npos){
 		str.replace(index, 1, "");
+		return true;
 	}
+	return false;
 }
 
 unsigned char getUserInputUChar(const std::string& str){
@@ -148,17 +221,21 @@ unsigned char getUserInputUChar(const std::string& str){
 }
 
 unsigned short getUserInputUShort(const std::string& str){
+	return (unsigned short)getUserInputUShort(str);
+}
+
+unsigned int getUserInputUInt(const std::string& str) {
 	std::string input = str;
-	if(str.find('$') != std::string::npos){ // Hex
+	if (isHexadecimal(str)) { // Hex
 		removeCharacter(input, '$');
-		return (unsigned short)stoul(input, 0, 16);
+		return stoul(input, 0, 16);
 	}
-	else if(str.find('b') != std::string::npos){ // Binary
+	else if (isBinary(str)) { // Binary
 		removeCharacter(input, 'b');
-		return (unsigned short)stoul(input, 0, 2);
+		return stoul(input, 0, 2);
 	}
 	else if (isNumeric(str)) { // Decimal
-		return (unsigned short)stoul(input, 0, 10);
+		return stoul(input, 0, 10);
 	}
 	return 0;
 }

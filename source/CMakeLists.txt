@@ -1,19 +1,29 @@
-set(CORE_SOURCES Bitmap.cpp
-                 Cartridge.cpp 
-                 ConfigFile.cpp
-                 Console.cpp
-                 DmaController.cpp 
-                 GPU.cpp 
-                 Joystick.cpp
-                 LR35902.cpp 
-                 SerialController.cpp 
-                 Sound.cpp 
-                 Support.cpp
-                 SystemComponent.cpp
-                 SystemGBC.cpp
-                 SystemRegisters.cpp 
-                 SystemTimer.cpp 
-                 WorkRam.cpp)
+
+set(CORE_SOURCES ConfigFile.cpp
+                 Opcode.cpp
+                 Support.cpp)
+
+# Generate the core library
+add_library(BLAH_OBJECTS OBJECT ${CORE_SOURCES})
+add_library(BLAH_LIB STATIC $<TARGET_OBJECTS:BLAH_OBJECTS>)
+
+add_definitions(-DPROJECT_GBC)
+
+set(SYSTEM_SOURCES Bitmap.cpp
+                   Cartridge.cpp
+                   Console.cpp
+                   DmaController.cpp
+                   GPU.cpp
+                   Joystick.cpp
+                   LR35902.cpp
+                   SerialController.cpp
+                   Sound.cpp
+                   SystemComponent.cpp
+                   SystemGBC.cpp
+                   SystemRegisters.cpp
+                   SystemTimer.cpp
+                   TextParser.cpp
+                   WorkRam.cpp)
 
 if(NOT WIN32)
 	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
@@ -31,12 +41,16 @@ endif()
 add_library(CORE_OBJECTS OBJECT ${CORE_SOURCES})
 add_library(CORE_LIB STATIC $<TARGET_OBJECTS:CORE_OBJECTS>)
 
+# Generate the system component library
+add_library(SYSTEM_OBJECTS OBJECT ${SYSTEM_SOURCES})
+add_library(SYSTEM_LIB STATIC $<TARGET_OBJECTS:SYSTEM_OBJECTS>)
+
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
 if(NOT BUILD_DEBUG)
-	target_link_libraries(gbc CORE_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
+	target_link_libraries(gbc CORE_LIB SYSTEM_LIB GRAPHICS_LIB ${GRAPHICS_LIBS})
 else()
-	target_link_libraries(gbc CORE_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${GRAPHICS_LIBS})
+	target_link_libraries(gbc CORE_LIB SYSTEM_LIB GRAPHICS_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${GRAPHICS_LIBS})
 endif()
 install(TARGETS gbc DESTINATION bin)
 #Copy default configuration file (if it doesn't already exist)
