@@ -122,6 +122,10 @@ public:
 
 	bool getRegister16bit(const std::string& name, unsigned short& val);
 
+	unsigned char* getPointerToRegister8bit(const std::string& name);
+
+	unsigned short* getPointerToRegister16bit(const std::string& name);
+
 	bool setRegister8bit(const std::string& name, const unsigned char& val);
 
 	bool setRegister16bit(const std::string& name, const unsigned short& val);

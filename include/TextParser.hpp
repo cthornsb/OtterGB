@@ -16,6 +16,8 @@ enum class OPERATION { NONE, ARITHMETIC, LOGICAL, ASSIGNMENT };
 
 enum class NUMTYPE { NONE, BOOLEAN, INTEGER };
 
+enum class CPPTYPE { NONE, BOOL, UINT8, UINT16, UINT32, INT8, INT16, INT32, FLOAT };
+
 class OperatorType {
 public:
 	std::string sName; ///< The string representing the mathematical operator
@@ -144,6 +146,10 @@ public:
 	*/
 	bool checkType(const NumericalString& oper) const { return (type == oper.op->operands); }
 
+	virtual NumericalString get() { return (*this); }
+
+	virtual NumericalString set(const NumericalString& rhs) { return (*this = rhs); }
+
 	/** Get the required mathematical operand type for this operator.
 	*/
 	NUMTYPE getOperandType() const { return (op->operands); }
@@ -179,6 +185,35 @@ public:
 	void setResult(const NumericalString& res, const NUMTYPE& newType=NUMTYPE::NONE);
 };
 
+class ExternalVariable : public NumericalString {
+public:
+	ExternalVariable() :
+		NumericalString(),
+		dtype(CPPTYPE::NONE),
+		ptr(0x0)
+	{
+	}
+
+	/**Pointer constructor.
+	* @param val Numerical value to initialize to
+	*/
+	ExternalVariable(void* val, const CPPTYPE& type_) :
+		NumericalString(),
+		dtype(type_),
+		ptr(val)
+	{
+	}
+
+	virtual NumericalString get();
+
+	virtual NumericalString set(const NumericalString& rhs);
+
+private:
+	CPPTYPE dtype; ///< Type of variable pointed to by ptr
+
+	void* ptr; ///< Pointer to value
+};
+
 class TextParser {
 public:
 	/** Default constructor.
@@ -208,6 +243,15 @@ public:
 		defines[name] = value; 
 	}
 
+	/** Add an externally defined variable definition.
+	* @param name The name of the variable (case-sensitive)
+	* @param type The data type of the variable
+	* @param ptr Pointer to the value
+	*/
+	void addExternalDefinition(const std::string& name, const CPPTYPE& type, void* ptr) {
+		externalDefines[name] = ExternalVariable(ptr, type);
+	}
+
 	/** Parse an input mathematical string and compute the result.
 	* @param str Input string to parse and compute
 	* @param result The returned computational result
@@ -228,6 +272,8 @@ private:
 	std::map<std::string, NumericalString> defines; ///< List of user-defined variables and their values
 
 	std::map<std::string, NumericalString> tempDefines; ///< Temporary list of definitions representing the results of sub-evaluations
+
+	std::map<std::string, ExternalVariable> externalDefines; ///< List of externally defined variables and pointers to their values
 
 	std::map<NUMTYPE, std::string> numTypes; ///< Map of numerical types with user friendly names
 

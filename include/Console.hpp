@@ -54,7 +54,7 @@ class ConsoleGBC : public CharacterMap {
 public:
 	ConsoleGBC();
 	
-	void setSystem(SystemGBC *ptr){ sys = ptr; }
+	void setSystem(SystemGBC* ptr);
 	
 	template <typename T>
 	ConsoleGBC& operator << (const T& val){

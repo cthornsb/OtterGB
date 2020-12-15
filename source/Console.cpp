@@ -48,6 +48,29 @@ ConsoleGBC::ConsoleGBC() :
 	put('>');
 }
 
+void ConsoleGBC::setSystem(SystemGBC* ptr) { 
+	sys = ptr;
+
+	// Add parser definitions for all system registers
+	std::vector<Register>* registers = sys->getRegisters();
+	for (auto reg = registers->begin(); reg != registers->end(); reg++) {
+		parser.addExternalDefinition(toLowercase(reg->getName()), CPPTYPE::UINT8, reg->getPtr());
+	}
+
+	// Add parser definitions for all cpu registers
+	LR35902* cpu = sys->getCPU();
+	parser.addExternalDefinition("a", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("a"));
+	parser.addExternalDefinition("b", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("b"));
+	parser.addExternalDefinition("c", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("c"));
+	parser.addExternalDefinition("d", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("d"));
+	parser.addExternalDefinition("e", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("e"));
+	parser.addExternalDefinition("f", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("f"));
+	parser.addExternalDefinition("h", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("h"));
+	parser.addExternalDefinition("l", CPPTYPE::UINT8, cpu->getPointerToRegister8bit("l"));
+	parser.addExternalDefinition("pc", CPPTYPE::UINT16, cpu->getPointerToRegister16bit("pc"));
+	parser.addExternalDefinition("sp", CPPTYPE::UINT16, cpu->getPointerToRegister16bit("sp"));
+}
+
 void ConsoleGBC::newline(){
 	buffer.pop_front();
 	if(nX > 1)

@@ -38,6 +38,73 @@ void NumericalString::setResult(const NumericalString& res, const NUMTYPE& newTy
 		type = newType;
 }
 
+NumericalString ExternalVariable::get() {
+	NumericalString retval;
+	switch (dtype) {
+	case CPPTYPE::BOOL:
+		retval.result = *(static_cast<bool*>(ptr));
+		retval.type = NUMTYPE::BOOLEAN;
+		break;
+	case CPPTYPE::UINT8:
+		retval.result = *(static_cast<unsigned char*>(ptr));
+		break;
+	case CPPTYPE::UINT16:
+		retval.result = *(static_cast<unsigned short*>(ptr));
+		break;
+	case CPPTYPE::UINT32:
+		retval.result = *(static_cast<unsigned int*>(ptr));
+		break;
+	case CPPTYPE::INT8:
+		retval.result = *(static_cast<char*>(ptr));
+		break;
+	case CPPTYPE::INT16:
+		retval.result = *(static_cast<short*>(ptr));
+		break;
+	case CPPTYPE::INT32:
+		retval.result = *(static_cast<int*>(ptr));
+		break;
+	case CPPTYPE::FLOAT:
+		retval.result = *(static_cast<float*>(ptr));
+		//retval.type = NUMTYPE::FLOAT;
+		break;
+	default:
+		break;
+	}
+	return retval;
+}
+
+NumericalString ExternalVariable::set(const NumericalString& rhs) {
+	switch (dtype) {
+	case CPPTYPE::BOOL:
+		*(static_cast<bool*>(ptr)) = static_cast<bool>(rhs.result);
+		break;
+	case CPPTYPE::UINT8:
+		*(static_cast<unsigned char*>(ptr)) = static_cast<unsigned char>(rhs.result);
+		break;
+	case CPPTYPE::UINT16:
+		*(static_cast<unsigned short*>(ptr)) = static_cast<unsigned short>(rhs.result);
+		break;
+	case CPPTYPE::UINT32:
+		*(static_cast<unsigned int*>(ptr)) = static_cast<unsigned int>(rhs.result);
+		break;
+	case CPPTYPE::INT8:
+		*(static_cast<char*>(ptr)) = static_cast<char>(rhs.result);
+		break;
+	case CPPTYPE::INT16:
+		*(static_cast<short*>(ptr)) = static_cast<short>(rhs.result);
+		break;
+	case CPPTYPE::INT32:
+		*(static_cast<int*>(ptr)) = static_cast<int>(rhs.result);
+		break;
+	case CPPTYPE::FLOAT:
+		*(static_cast<float*>(ptr)) = static_cast<float>(rhs.result);
+		break;
+	default:
+		break;
+	}
+	return (*this);
+}
+
 TextParser::TextParser() :
 	debugMode(false),
 	fatalError(false),
@@ -163,9 +230,15 @@ bool TextParser::getInput(const NumericalString& name, NumericalString& val){
 			val = def->second;
 		}
 		else {
-			errorStr << " variable (" << name.str << ") is not defined!\n";
-			fatalError = true;
-			return false;
+			auto ext = externalDefines.find(name.str);
+			if (ext != externalDefines.end()) {
+				val = ext->second.get();
+			}
+			else {
+				errorStr << " variable (" << name.str << ") is not defined!\n";
+				fatalError = true;
+				return false;
+			}
 		}
 	}
 	return true;
@@ -192,16 +265,23 @@ bool TextParser::compute(NumericalString& lhs, const NumericalString& rhs, const
 				valL = def->second;
 				ptr = &def->second;
 			}
-			else if (op.getOperator() == OPERATOR::ASSIGNMENT) { // New definition
-				addDefinition(lhs.str, 0);
-				def = defines.find(lhs.str);
-				valL = def->second;
-				ptr = &def->second;
-			}
 			else {
-				errorStr << " variable (" << lhs.str << ") is not defined!\n";
-				fatalError = true;
-				return false;
+				auto ext = externalDefines.find(lhs.str);
+				if (ext != externalDefines.end()) {
+					valL = ext->second.get();
+					ptr = &ext->second;
+				}
+				else if (op.getOperator() == OPERATOR::ASSIGNMENT) { // New definition
+					addDefinition(lhs.str, 0);
+					def = defines.find(lhs.str);
+					valL = def->second;
+					ptr = &def->second;
+				}
+				else {
+					errorStr << " variable (" << lhs.str << ") is not defined!\n";
+					fatalError = true;
+					return false;
+				}
 			}
 		}
 	}
@@ -280,7 +360,7 @@ bool TextParser::compute(NumericalString& lhs, const NumericalString& rhs, const
 		break;
 	}
 	if (op.isAssignmentOperator()) { // Assignment operators
-		(*ptr) = result;
+		ptr->set(result);
 	}
 	if (debugMode)
 		debugStr << "  >compute(): l=" << valL.getUInt() << ", r=" << valR.getUInt() << ", op=" << op.str << ", result=" << result.getUInt() << std::endl;

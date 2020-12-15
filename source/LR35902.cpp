@@ -186,6 +186,56 @@ bool LR35902::getRegister16bit(const std::string& name, unsigned short& val){
 	return true;
 }
 
+unsigned char* LR35902::getPointerToRegister8bit(const std::string& name) {
+	if (name == "a") {
+		return &A;
+	}
+	else if (name == "b") {
+		return &B;
+	}
+	else if (name == "c") {
+		return &C;
+	}
+	else if (name == "d") {
+		return &D;
+	}
+	else if (name == "e") {
+		return &E;
+	}
+	else if (name == "f") {
+		return &F;
+	}
+	else if (name == "h") {
+		return &H;
+	}
+	else if (name == "l") {
+		return &L;
+	}
+	return 0x0;
+}
+
+unsigned short* LR35902::getPointerToRegister16bit(const std::string& name) {
+	if (name == "af") {
+		return 0x0;
+	}
+	else if (name == "bc") {
+		return 0x0;
+	}
+	else if (name == "de") {
+		return 0x0;
+	}
+	else if (name == "hl") {
+		return 0x0;
+	}
+	else if (name == "pc") {
+		return &PC;
+	}
+	else if (name == "sp") {
+		return &SP;
+	}
+	return 0x0;
+}
+
 bool LR35902::setRegister8bit(const std::string& name, const unsigned char& val){
 	auto reg = rset8.find(name);
 	if(reg == rset8.end())
