@@ -59,14 +59,14 @@ public:
 	
 	/** Constructor taking the width and height of the window
 	  */
-	Window(const int &w, const int &h) : 
+	Window(const int &w, const int &h, const int& scale=1) : 
 		W(w), 
 		H(h),
 		A(float(w)/h),
 		width(w),
 		height(h),
 		aspect(float(w)/h),
-		nMult(1), 
+		nMult(scale), 
 		init(false)
 	{
 	}
@@ -77,7 +77,7 @@ public:
 	
 	void close();
 
-	void processEvents();
+	bool processEvents();
 
 	GPU *getGPU(){ return gpu; }
 

@@ -1238,9 +1238,9 @@ void SystemGBC::checkSystemKeys(){
 		quickload();
 	else if (keys->poll(0xFA)) // F10 (No function)
 		return;
-	else if (keys->poll(0xFA)) // F11 (No function)
+	else if (keys->poll(0xFB)) // F11 (No function)
 		return;
-	else if (keys->poll(0xFA)) // F12 Screenshot
+	else if (keys->poll(0xFC)) // F12 Screenshot
 		screenshot();
 	else if (keys->poll(0x2D)) // '-'    Decrease frame skip
 		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);

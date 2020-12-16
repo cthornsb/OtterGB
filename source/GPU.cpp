@@ -154,7 +154,7 @@ void GPU::initialize(){
 	}
 	
 	// Create a new window
-	window = std::unique_ptr<Window>(new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS));
+	window = std::unique_ptr<Window>(new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS, 2));
 #ifdef USE_OPENGL 
 	// Create a link to the LCD driver
 	window->setGPU(this);

@@ -1,4 +1,3 @@
-#include <iostream>
 #include <map>
 
 #include <GL/freeglut.h>
@@ -212,8 +211,11 @@ void Window::close(){
 	init = false;
 }
 
-void Window::processEvents(){
+bool Window::processEvents(){
+	if(!status())
+		return false;
 	glutMainLoopEvent();
+	return true;
 }
 
 void Window::setScalingFactor(const int &scale){ 
@@ -288,10 +290,8 @@ void Window::initialize(){
 
 	// Dummy command line arguments
 	int dummyArgc = 1;
-	
-	nMult = 2;
 
-	// Open the SDL window
+	// Open the graphics window
 	static bool firstInit = true;
 	if(firstInit){ // Stupid glut
 		glutInit(&dummyArgc, NULL);
