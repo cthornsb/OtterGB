@@ -2,13 +2,17 @@
 #include <iostream>
 #include <math.h>
 
-#include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Sound.hpp"
 
 // 512 Hz sequencer
-SoundProcessor::SoundProcessor() : SystemComponent("APU"), ComponentTimer(512) { 
+SoundProcessor::SoundProcessor() : 
+	SystemComponent("APU"), 
+	ComponentTimer(512),
+	audio(new SoundManager())
+{ 
 	masterSoundEnable = false;
+	audio->init();
 }
 
 bool SoundProcessor::checkRegister(const unsigned short &reg){
@@ -136,9 +140,11 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			masterSoundEnable = rNR52->getBit(7);
 			if(masterSoundEnable){ // Power on the frame sequencer
+				audio->start(); // Start audio interface
 				this->reset();
 			}
 			else{
+				audio->stop(); // Stop audio interface
 				rNR52->resetBit(3); // Ch 4 OFF
 				rNR52->resetBit(2); // Ch 3 OFF
 				rNR52->resetBit(1); // Ch 2 OFF

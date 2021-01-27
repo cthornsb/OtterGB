@@ -85,7 +85,7 @@ if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 	if(NOT WIN32)
 		# To install OpenGL and freeglut:
 		#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
-		set(GRAPHICS_LIBS -lglut -lGLU -lGL)
+		set(GRAPHICS_LIBS -lglut -lGLU -lGL -lportaudio)
 	else()
 		#Find OpenGL install on Windows (eventually make a CMake module for this)
 		#Precompiled freeglut libs from https://www.transmissionzero.co.uk/software/freeglut-devel/
@@ -119,6 +119,7 @@ add_definitions(-DPROJECT_GBC)
 
 #Add the include directories.
 include_directories(include)
+include_directories(audio/include)
 include_directories(graphics/include)
 
 if(BUILD_DEBUG)
@@ -163,6 +164,9 @@ endif(NOT GBC_BOOT_ROM)
 
 #Add the graphics directory.
 add_subdirectory(graphics/source)
+
+#Add the sound directory.
+add_subdirectory(audio/source)
 
 #Add the source directory.
 add_subdirectory(source)

@@ -1,6 +1,9 @@
 #ifndef SOUND_HPP
 #define SOUND_HPP
 
+#include <memory>
+
+#include "SoundManager.hpp"
 #include "SystemComponent.hpp"
 #include "SystemTimer.hpp"
 
@@ -31,6 +34,8 @@ public:
 	virtual void defineRegisters();
 
 private:
+	std::unique_ptr<SoundManager> audio; ///< System audio interface
+
 	// Channel 1 registers
 	unsigned char ch1SweepTime;
 	unsigned char ch1SweepShift;
