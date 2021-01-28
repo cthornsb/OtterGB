@@ -45,6 +45,10 @@ public:
 	  */
 	unsigned long getFramesPerBuffer() const { return nFramesPerBuffer; }
 
+	/** Return true if the audio interface is running, and return false otherwise
+	  */
+	bool isRunning() const { return running; }
+
 	/** Set the number of audio channels (default = 2)
 	  * Has no effect if called after audio stream is initialized.
 	  */

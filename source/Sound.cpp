@@ -140,11 +140,13 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			masterSoundEnable = rNR52->getBit(7);
 			if(masterSoundEnable){ // Power on the frame sequencer
-				audio->start(); // Start audio interface
+				if (!audio->isRunning())
+					audio->start(); // Start audio interface
 				this->reset();
 			}
 			else{
-				audio->stop(); // Stop audio interface
+				if (audio->isRunning())
+					audio->stop(); // Stop audio interface
 				rNR52->resetBit(3); // Ch 4 OFF
 				rNR52->resetBit(2); // Ch 3 OFF
 				rNR52->resetBit(1); // Ch 2 OFF

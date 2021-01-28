@@ -85,7 +85,8 @@ if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 	if(NOT WIN32)
 		# To install OpenGL and freeglut:
 		#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
-		set(GRAPHICS_LIBS -lglut -lGLU -lGL -lportaudio)
+		set(EXTERNAL_GRAPHICS_LIBS -lglut -lGLU -lGL)
+		set(EXTERNAL_AUDIO_LIBS -lportaudio)
 	else()
 		#Find OpenGL install on Windows (eventually make a CMake module for this)
 		#Precompiled freeglut libs from https://www.transmissionzero.co.uk/software/freeglut-devel/
@@ -95,22 +96,32 @@ if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 		set(FREEGLUT_INCLUDE ${FREEGLUT_DIRECTORY}/include)
 		if(CMAKE_CL_64)
 			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/x64/freeglut.lib)
-			set(FREEGLUT_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/x64/freeglut.dll)
+			set(INSTALL_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/x64/freeglut.dll)
 		else()
 			set(FREEGLUT_LIBRARY ${FREEGLUT_DIRECTORY}/lib/freeglut.lib)
-			set(FREEGLUT_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/freeglut.dll)
+			set(INSTALL_DLL_LIST ${FREEGLUT_DIRECTORY}/bin/freeglut.dll)
 		endif(CMAKE_CL_64)
 		include_directories(${FREEGLUT_INCLUDE})
-		set(GRAPHICS_LIBS ${FREEGLUT_LIBRARY} opengl32.lib)
+		set(EXTERNAL_GRAPHICS_LIBS ${FREEGLUT_LIBRARY} opengl32.lib)
 		#It is necessary to copy freeglut.dll to the build directory containing the executable.
 		#Alternatively it may be copied to the Windows system directory.
 		#This is necessary so that the freeglut headers point to the correct library
 		add_definitions(-DNDEBUG)
+
+		#Audio (Port Audio)
+		if(NOT PORT_AUDIO_DIRECTORY)
+			set(PORT_AUDIO_DIRECTORY "" CACHE STRING "Port Audio install directory" FORCE)
+		endif(NOT PORT_AUDIO_DIRECTORY)
+		set(PORT_AUDIO_INCLUDE ${PORT_AUDIO_DIRECTORY}/include)
+		set(PORT_AUDIO_LIBRARY ${PORT_AUDIO_DIRECTORY}/lib/x64/portaudio_x64.lib)
+		set(INSTALL_DLL_LIST ${INSTALL_DLL_LIST} ${PORT_AUDIO_DIRECTORY}/bin/x64/portaudio_x64.dll)
+		include_directories(${PORT_AUDIO_INCLUDE})
+		set(EXTERNAL_AUDIO_LIBS ${PORT_AUDIO_LIBRARY})
 	endif()
 	
 elseif(GRAPHICS_LIBRARY MATCHES "SDL")
 	#Fix this at some point for Windows!
-	set(GRAPHICS_LIBS -lSDL2)
+	set(EXTERNAL_GRAPHICS_LIBS -lSDL2)
 	add_definitions(-DUSE_SDL_RENDERER)
 endif()
 
@@ -146,7 +157,7 @@ if(BUILD_DEBUG)
 		set(MOC_EXECUTABLE ${QT_TOP_DIRECTORY}/bin/moc)
 		set(UIC_EXECUTABLE ${QT_TOP_DIRECTORY}/bin/uic)
 		#Set a list of Qt dlls
-		set(QT_DLL_LIST ${QT_LIB_DIR}/QtGui4.dll ${QT_LIB_DIR}/QtCore4.dll ${QT_LIB_DIR}/QtOpenGL4.dll)
+		set(INSTALL_DLL_LIST ${INSTALL_DLL_LIST} ${QT_LIB_DIR}/QtGui4.dll ${QT_LIB_DIR}/QtCore4.dll ${QT_LIB_DIR}/QtOpenGL4.dll)
 	endif()
 	include_directories(qtfiles ${QT_INC_DIR} ${QT_CORE_INC_DIR} ${QT_GUI_INC_DIR})
 	add_subdirectory(qtfiles)

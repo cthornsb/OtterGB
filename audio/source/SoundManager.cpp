@@ -44,8 +44,9 @@ bool SoundManager::init(){
 		std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
 		return false;
 	}
-	
-	return (initialized = true);
+
+	initialized = true;
+	return initialized;
 }
 
 bool SoundManager::start(){
@@ -62,6 +63,7 @@ bool SoundManager::start(){
 		return false;
 	}
 	
+	running = true;
 	return true;
 }
 
@@ -82,7 +84,8 @@ bool SoundManager::stop(){
 		return false;
 	}
 	
-	return true;
+	running = false;
+	return false;
 }
 
 int SoundManager::defaultCallback( 
