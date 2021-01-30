@@ -9,6 +9,134 @@
 
 #include "SystemRegisters.hpp"
 
+class LengthCounter{
+public:
+	LengthCounter() :
+		bEnabled(false),
+		nMaximum(64),
+		nCounter(0)
+	{
+	}
+	
+	LengthCounter(const unsigned short& maxLength) :
+		bEnabled(false),
+		nMaximum(maxLength),
+		nCounter(0)
+	{
+	}
+	
+	unsigned char getLength() const { 
+		return nCounter; 
+	}
+	
+	bool isEnabled() const { 
+		return (bEnabled && nCounter != 0); 
+	}
+	
+	void setLength(const unsigned char& length){
+		nCounter = nMaximum - length;
+	}
+	
+	void enable() { 
+		bEnabled = true; 
+	}
+	
+	void disable() { 
+		bEnabled = false; 
+	}
+	
+	bool onClockUpdate();
+	
+	void onTriggerEvent();
+	
+private:
+	bool bEnabled;
+
+	unsigned short nMaximum;
+
+	unsigned short nCounter;
+};
+
+class VolumeEnvelope{
+public:
+	VolumeEnvelope() :
+		bAdd(true),
+		nPeriod(0),
+		nVolume(0),
+		nCounter(0)
+	{ 
+	}
+	
+	unsigned char getPeriod() const { return nPeriod; }
+	
+	float getVolume() const { return (nVolume / 15.f); }
+
+	void setPeriod(const unsigned char& period) { nPeriod = period; }
+	
+	void setVolume(const unsigned char& volume) { nVolume = volume; }
+	
+	void setAddMode(const bool& add) { bAdd = add; }
+
+	bool onClockUpdate();
+	
+	void onTriggerEvent();
+
+private:
+	bool bAdd;
+
+	unsigned char nPeriod;
+
+	unsigned char nVolume;
+	
+	unsigned char nCounter;
+};
+
+class FrequencySweep{
+public:
+	FrequencySweep() :
+		bEnabled(false),
+		bNegate(false),
+		nTimer(0),
+		nPeriod(0),
+		nShift(0),
+		nCounter(0),
+		nShadowFrequency(0),
+		frequency(0x0)
+	{
+	}
+	
+	bool isEnabled() const { return bEnabled; }
+
+	void setNegate(const bool& negate) { bNegate = negate; }
+
+	void setPeriod(const unsigned char& period) { nPeriod = period; }
+	
+	void setBitShift(const unsigned char& shift) { nShift = shift; }
+			
+	void setFrequency(float* freq) { frequency = freq; }
+			
+	bool onClockUpdate();
+	
+	void onTriggerEvent();
+
+private:
+	bool bEnabled;
+	
+	bool bNegate;
+	
+	unsigned char nTimer; // Sweep timer
+	
+	unsigned char nPeriod; // Sweep period
+	
+	unsigned char nShift; // Sweep shift
+	
+	unsigned char nCounter;
+	
+	unsigned short nShadowFrequency;
+	
+	float* frequency;
+};
+
 class SoundProcessor : public SystemComponent, public ComponentTimer {
 public:
 	SoundProcessor();
@@ -36,56 +164,37 @@ public:
 private:
 	std::unique_ptr<SoundManager> audio; ///< System audio interface
 
-	// Channel 1 registers
-	unsigned char ch1SweepTime;
-	unsigned char ch1SweepShift;
+	// Channel 1 registers (square)
+	FrequencySweep ch1FrequencySweep;
+	LengthCounter ch1SoundLengthData;
+	VolumeEnvelope ch1VolumeEnvelope;
 	unsigned char ch1WavePatternDuty;
-	unsigned char ch1SoundLengthData;
-	unsigned char ch1InitialVolumeEnv; 
-	unsigned char ch1NumberSweepEnv; 
-	float ch1Frequency0; ///< Initial 11-bit frequency
 	float ch1Frequency; ///< Current 11-bit frequency
-	bool ch1SweepIncDec;
-	bool ch1DirectionEnv;
-	bool ch1Restart;
-	bool ch1CounterSelect;
 	bool ch1ToSO1;
 	bool ch1ToSO2;
 
-	// Channel 2 registers
+	// Channel 2 registers (square)
+	LengthCounter ch2SoundLengthData;
+	VolumeEnvelope ch2VolumeEnvelope;
 	unsigned char ch2WavePatternDuty;
-	unsigned char ch2SoundLengthData;
-	unsigned char ch2InitialVolumeEnv; 
-	unsigned char ch2NumberSweepEnv; 
-	float ch2Frequency0; ///< Initial 11-bit frequency
 	float ch2Frequency; ///< Current 11-bit frequency
-	bool ch2DirectionEnv;
-	bool ch2Restart;
-	bool ch2CounterSelect;
 	bool ch2ToSO1;
 	bool ch2ToSO2;
 	
-	// Channel 3 registers
-	unsigned char ch3SoundLengthData;
+	// Channel 3 registers (wave)
+	LengthCounter ch3SoundLengthData;
 	unsigned char ch3OutputLevel;
-	float ch3Frequency0; ///< Initial 11-bit frequency
 	float ch3Frequency; ///< Current 11-bit frequency
-	bool ch3Enable;
-	bool ch3Restart;
-	bool ch3CounterSelect;
 	bool ch3ToSO1;
 	bool ch3ToSO2;
 
-	// Channel 4 registers
-	unsigned char ch4SoundLengthData;
-	unsigned char ch4InitialVolumeEnv;
-	unsigned char ch4NumberSweepEnv;
+	// Channel 4 registers (noise)
+	LengthCounter ch4SoundLengthData;
+	VolumeEnvelope ch4VolumeEnvelope;
 	unsigned char ch4ShiftClockFreq;
 	unsigned char ch4DividingRation;
 	bool ch4DirectionEnv;
 	bool ch4CounterStepWidth;
-	bool ch4Restart;
-	bool ch4CounterSelect;
 	bool ch4ToSO1;
 	bool ch4ToSO2;
 
@@ -94,12 +203,16 @@ private:
 	unsigned char outputLevelSO2;
 	unsigned char wavePatternRAM[16];
 	bool masterSoundEnable;
+	
+	unsigned int sequencerTicks;
 
 	void triggerLengthCounter();
 	
 	void triggerVolumeEnvelope();
 		
 	void triggerSweepTimer();
+	
+	virtual void rollOver();
 };
 
 #endif

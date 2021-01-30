@@ -302,8 +302,8 @@ void SystemGBC::initialize(){
 	// Must connect the system bus BEFORE initializing the CPU.
 	cpu->initialize();
 	
-	// Disable the system timer->
-	timer->disable();
+	// Disable the system timer
+	timer->disableTimer();
 
 	// Initialize the window and link it to the joystick controller	
 	gpu->initialize();

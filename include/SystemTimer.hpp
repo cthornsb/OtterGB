@@ -99,9 +99,9 @@ public:
 	
 	ComponentTimer(const unsigned short &period) : nCyclesSinceLastTick(0), timerPeriod(period), timerCounter(0), timerEnable(true) { }
 	
-	void enable(){ timerEnable = true; }
+	void enableTimer(){ timerEnable = true; }
 	
-	void disable(){ timerEnable = false; }	
+	void disableTimer(){ timerEnable = false; }	
 
 	void setTimerPeriod(const unsigned short &period){ timerPeriod = period; }
 	

@@ -2,17 +2,120 @@
 #include <iostream>
 #include <math.h>
 
+#include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "Sound.hpp"
 
-// 512 Hz sequencer
+bool LengthCounter::onClockUpdate(){
+	if(!bEnabled)
+		return false;
+	if(nCounter == 1){ // Disable the channel
+		nCounter = 0;
+		return true;
+	}
+	nCounter--;
+	return false;
+}
+
+void LengthCounter::onTriggerEvent(){
+	if(!nCounter)
+		nCounter = nMaximum;
+}
+
+bool VolumeEnvelope::onClockUpdate(){
+	if(!nPeriod)
+		return false;
+	if(bAdd){ // Add (louder)
+		if(nVolume + 1 <= 15)
+			nVolume++;
+	}
+	else{ // Subtract (quieter)
+		if(nVolume > 0)
+			nVolume--;
+	}
+}
+
+void VolumeEnvelope::onTriggerEvent(){
+	//Volume envelope timer is reloaded with period.
+	//Channel volume is reloaded from NRx2.
+
+	nCounter = nPeriod;
+	//nVolume = ;
+}
+		
+bool FrequencySweep::onClockUpdate(){
+	if(!bEnabled)
+		return false;
+	nTimer = 0; // Refill?
+	if(nPeriod || nShift)
+		bEnabled = true;
+	else
+		bEnabled = false;
+	if(!nShift)
+		return false;
+	// Compute new frequency (x)
+	// f(x) = 131072 / (2048 - x)
+	// x = 2048 - (131072 / f(x))
+	nShadowFrequency = 2048 - (unsigned short)(131072.f / *frequency);
+	unsigned short newFrequency = nShadowFrequency >> nShift;
+	if(bNegate)
+		newFrequency = ~newFrequency;
+	newFrequency += nShadowFrequency;
+	if(newFrequency > 2047){ // Overflow check
+		bEnabled = false;
+		return false;
+	}
+	nShadowFrequency = newFrequency;
+	// Write new frequency to registers NR13-14
+	*frequency = 131072.f / (2048 - nShadowFrequency);
+	// Calculate frequency and check overflow again immediately, without writing back
+	
+}
+
+void FrequencySweep::onTriggerEvent(){
+	//Frequency timer is reloaded with period.
+	nCounter = nPeriod;
+}
+
 SoundProcessor::SoundProcessor() : 
 	SystemComponent("APU"), 
-	ComponentTimer(512),
-	audio(new SoundManager())
+	ComponentTimer(2048), // 512 Hz sequencer
+	audio(new SoundManager()),
+	ch1FrequencySweep(),
+	ch1SoundLengthData(64),
+	ch1VolumeEnvelope(),
+	ch1WavePatternDuty(0),
+	ch1Frequency(0.f),
+	ch1ToSO1(false),
+	ch1ToSO2(false),
+	ch2SoundLengthData(64),
+	ch2VolumeEnvelope(),
+	ch2WavePatternDuty(0),
+	ch2Frequency(0.f),
+	ch2ToSO1(false),
+	ch2ToSO2(false),
+	ch3SoundLengthData(256),
+	ch3OutputLevel(0),
+	ch3Frequency(0.f),
+	ch3ToSO1(false),
+	ch3ToSO2(false),
+	ch4SoundLengthData(64),
+	ch4VolumeEnvelope(),
+	ch4ShiftClockFreq(0),
+	ch4DividingRation(0),
+	ch4DirectionEnv(false),
+	ch4CounterStepWidth(false),
+	ch4ToSO1(false),
+	ch4ToSO2(false),
+	outputLevelSO1(0),
+	outputLevelSO2(0),
+	wavePatternRAM(),
+	masterSoundEnable(false),
+	sequencerTicks(0)
 { 
-	masterSoundEnable = false;
-	audio->init();
+	//audio->init();
+	ch1FrequencySweep.setFrequency(&ch1Frequency);
+	disableTimer();
 }
 
 bool SoundProcessor::checkRegister(const unsigned short &reg){
@@ -26,92 +129,115 @@ bool SoundProcessor::checkRegister(const unsigned short &reg){
 
 bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned char &val){
 	unsigned short freq16;
+	bool channelEnabled;
 	switch(reg){
 		case 0xFF10: // NR10 ([TONE] Channel 1 sweep register)
-			ch1SweepTime   = rNR10->getBits(4,6); // Sweep time (see below)
-			ch1SweepIncDec = rNR10->getBit (3);   // [0: Increase, 1: Decrease]
-			ch1SweepShift  = rNR10->getBits(0,2); // Number of sweep shift (n=0-7)
+			ch1FrequencySweep.setPeriod(rNR10->getBits(4,6));
+			ch1FrequencySweep.setNegate(rNR10->getBit(3));
+			ch1FrequencySweep.setBitShift(rNR10->getBits(0,2));
 			break;
 		case 0xFF11: // NR11 ([TONE] Channel 1 sound length / wave pattern duty)
 			ch1WavePatternDuty = rNR11->getBits(6,7); // Wave pattern duty (see below)
-			ch1SoundLengthData = rNR11->getBits(0,5); // Length = (64-t1)/256 s (if bit-6 of NR14 set)
-			if(ch1SoundLengthData == 0x0) // Disable the channel
-				rNR52->resetBit(0); // Ch 1 OFF
+			ch1SoundLengthData.setLength(rNR11->getBits(0,5));
 			break;
 		case 0xFF12: // NR12 ([TONE] Channel 1 volume envelope)
-			ch1InitialVolumeEnv = rNR12->getBits(4,7); // Initial envelope volume (0-0F) (0=No sound)
-			ch1DirectionEnv     = rNR12->getBit (3);   // Envelope direction [0: Increase, 1: Decrease]
-			ch1NumberSweepEnv   = rNR12->getBits(0,2); // Number of envelope sweep (n=0-7, if 0 then stop)
+			ch1VolumeEnvelope.setVolume(rNR12->getBits(4,7));
+			ch1VolumeEnvelope.setAddMode(rNR12->getBit(3));
+			ch1VolumeEnvelope.setPeriod(rNR12->getBits(0,2));
+			if(!ch1VolumeEnvelope.getVolume()) // Disable channel with zero volume
+				rNR52->resetBit(0); // Ch 1 OFF
 			break;
 		case 0xFF13: // NR13 ([TONE] Channel 1 frequency low)
 			freq16 = (rNR14->getBits(0,2) << 8) + rNR13->getValue();
-			ch1Frequency0 = 131072.0f/(2048-freq16); // Hz
+			ch1Frequency = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF14: // NR14 ([TONE] Channel 1 frequency high)
-			ch1Restart       = rNR14->getBit(7); // [0: No action, 1: Restart sound]
-			ch1CounterSelect = rNR14->getBit(6); // [0: No action, 1: Stop output when NR11 length expires]
 			freq16 = (rNR14->getBits(0,2) << 8) + rNR13->getValue();
-			ch1Frequency0 = 131072.0f/(2048-freq16); // Hz
+			ch1Frequency = 131072.0f/(2048-freq16); // Hz
+			if(rNR14->getBit(6)){
+				ch1SoundLengthData.enable();
+				rNR52->setBit(0);
+			}
+			else{
+				ch1SoundLengthData.disable();
+			}
+			if(rNR14->getBit(7)){
+				ch1SoundLengthData.onTriggerEvent();
+				ch1VolumeEnvelope.onTriggerEvent();
+				ch1FrequencySweep.onTriggerEvent();
+			}
 			break;
 		case 0xFF15: // Not used
 			break;
 		case 0xFF16: // NR21 ([TONE] Channel 2 sound length / wave pattern duty)
 			ch2WavePatternDuty = rNR21->getBits(6,7); // Wave pattern duty (see below)
-			ch2SoundLengthData = rNR21->getBits(0,5); // Length = (64-t1)/256 s (if bit-6 of NR24 set)
-			if(ch2SoundLengthData == 0x0) // Disable the channel
-				rNR52->resetBit(1); // Ch 2 OFF
+			ch2SoundLengthData.setLength(rNR21->getBits(0,5));
 			break;
 		case 0xFF17: // NR22 ([TONE] Channel 2 volume envelope
-			ch2InitialVolumeEnv = rNR22->getBits(4,7); // Initial envelope volume (0-0F) (0=No sound)
-			ch2DirectionEnv     = rNR22->getBit (3);   // Envelope direction [0: Increase, 1: Decrease]
-			ch2NumberSweepEnv   = rNR22->getBits(0,2); // Number of envelope sweep (n=0-7, if 0 then stop)
+			ch2VolumeEnvelope.setVolume(rNR22->getBits(4,7));
+			ch2VolumeEnvelope.setAddMode(rNR22->getBit(3));
+			ch2VolumeEnvelope.setPeriod(rNR22->getBits(0,2));
+			if(!ch2VolumeEnvelope.getVolume()) // Disable channel with zero volume
+				rNR52->resetBit(1); // Ch 2 OFF
 			break;
 		case 0xFF18: // NR23 ([TONE] Channel 2 frequency low)
 			freq16 = (rNR24->getBits(0,2) << 8) + rNR23->getValue();
-			ch2Frequency0 = 131072.0f/(2048-freq16); // Hz
+			ch2Frequency = 131072.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF19: // NR24 ([TONE] Channel 2 frequency high)
-			ch2Restart       = rNR24->getBit(7); // [0: No action, 1: Restart sound]
-			ch2CounterSelect = rNR24->getBit(6); // [0: No action, 1: Stop output when NR21 length expires]
 			freq16 = (rNR24->getBits(0,2) << 8) + rNR23->getValue();
-			ch2Frequency0 = 131072.0f/(2048-freq16); // Hz
+			ch2Frequency = 131072.0f/(2048-freq16); // Hz
+			if(rNR24->getBit(6)){
+				ch2SoundLengthData.enable();
+				rNR52->setBit(1);
+			}
+			else{
+				ch2SoundLengthData.disable();
+			}
+			if(rNR24->getBit(7)){
+				ch2SoundLengthData.onTriggerEvent();
+				ch2VolumeEnvelope.onTriggerEvent();
+			}
 			break;
 		case 0xFF1A: // NR30 ([TONE] Channel 3 sound on/off)
-			ch3Enable = rNR30->getBit(7); // [0:Stop, 1:Enable]
-			if(ch3Enable)
-				rNR30->setBit(2); // Ch 3 ON
-			else
-				rNR30->resetBit(2); // Ch 3 OFF
+			if(!rNR30->getBit(7))
+				rNR52->resetBit(2); // Ch 3 OFF
 			break;
 		case 0xFF1B: // NR31 ([WAVE] Channel 3 sound length)
-			ch3SoundLengthData = rNR31->getValue(); // t1=0-255
-			if(ch3SoundLengthData == 0x0) // Disable the channel
-				rNR52->resetBit(2); // Ch 3 OFF
+			ch3SoundLengthData.setLength(rNR31->getValue());
 			break;
 		case 0xFF1C: // NR32 ([WAVE] Channel 3 select output level)
 			ch3OutputLevel = rNR32->getBits(5,6); // Select output level (see below)
 			break;
 		case 0xFF1D: // NR33 ([WAVE] Channel 3 frequency low)
 			freq16 = (rNR34->getBits(0,2) << 8) + rNR33->getValue();
-			ch3Frequency0 = 65536.0f/(2048-freq16); // Hz
+			ch3Frequency = 65536.0f/(2048-freq16); // Hz
 			break;
 		case 0xFF1E: // NR34 ([WAVE] Channel 3 frequency high)
-			ch3Restart       = rNR34->getBit(7); // [0: No action, 1: Restart sound]
-			ch3CounterSelect = rNR34->getBit(6); // [0: No action, 1: Stop output when NR31 length expires]
 			freq16 = (rNR34->getBits(0,2) << 8) + rNR33->getValue();
-			ch3Frequency0 = 65536.0f/(2048-freq16); // Hz
+			ch3Frequency = 65536.0f/(2048-freq16); // Hz
+			if(rNR34->getBit(6)){
+				ch3SoundLengthData.enable();
+				rNR52->setBit(2);
+			}
+			else{
+				ch3SoundLengthData.disable();
+			}
+			if(rNR34->getBit(7)){
+				ch3SoundLengthData.onTriggerEvent();
+			}
 			break;		
 		case 0xFF1F: // Not used
 			break;
 		case 0xFF20: // NR41 ([NOISE] Channel 4 sound length)
-			ch4SoundLengthData = rNR41->getBits(0,5); // t1=0-63
-			if(ch4SoundLengthData == 0x0) // Disable the channel
-				rNR52->resetBit(3); // Ch 4 OFF
+			ch4SoundLengthData.setLength(rNR41->getBits(0,5));
 			break;
 		case 0xFF21: // NR42 ([NOISE] Channel 4 volume envelope)
-			ch4InitialVolumeEnv = rNR42->getBits(4,7); // Initial envelope volume (0-0F) (0=No sound)
-			ch4DirectionEnv     = rNR42->getBit (3);   // Envelope direction [0: Increase, 1: Decrease]
-			ch4NumberSweepEnv   = rNR42->getBits(0,2); // Number of envelope sweep (n=0-7, if 0 then stop)
+			ch4VolumeEnvelope.setVolume(rNR42->getBits(4,7));
+			ch4VolumeEnvelope.setAddMode(rNR42->getBit(3));
+			ch4VolumeEnvelope.setPeriod(rNR42->getBits(0,2));
+			if(!ch4VolumeEnvelope.getVolume()) // Disable channel with zero volume
+				rNR52->resetBit(3); // Ch 4 OFF
 			break;
 		case 0xFF22: // NR43 ([NOISE] Channel 4 polynomial counter)
 			ch4ShiftClockFreq   = rNR43->getBits(4,7); // Shift clock frequency (s)
@@ -119,8 +245,17 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch4DividingRation   = rNR43->getBits(0,2); // Dividing ratio of frequency (r)
 			break;
 		case 0xFF23: // NR44 ([NOISE] Channel 4 counter / consecutive, initial)
-			ch4Restart       = rNR44->getBit(7); // [0: No action, 1: Restart sound]
-			ch4CounterSelect = rNR44->getBit(6); // [0: No action, 1: Stop output when NR41 length expires]
+			if(rNR44->getBit(6)){
+				ch4SoundLengthData.enable();
+				rNR52->setBit(3);
+			}
+			else{
+				ch4SoundLengthData.disable();
+			}
+			if(rNR44->getBit(7)){
+				ch4SoundLengthData.onTriggerEvent();
+				ch4VolumeEnvelope.onTriggerEvent();
+			}
 			break;
 		case 0xFF24: // NR50 (Channel control / ON-OFF / volume)
 			// S01 and S02 terminals not emulated
@@ -140,13 +275,14 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			masterSoundEnable = rNR52->getBit(7);
 			if(masterSoundEnable){ // Power on the frame sequencer
-				if (!audio->isRunning())
-					audio->start(); // Start audio interface
+				//if (!audio->isRunning())
+				//	audio->start(); // Start audio interface
 				this->reset();
+				enableTimer();
 			}
 			else{
-				if (audio->isRunning())
-					audio->stop(); // Stop audio interface
+				//if (audio->isRunning())
+				//	audio->stop(); // Stop audio interface
 				rNR52->resetBit(3); // Ch 4 OFF
 				rNR52->resetBit(2); // Ch 3 OFF
 				rNR52->resetBit(1); // Ch 2 OFF
@@ -155,6 +291,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 					if(i == 0x26) continue; // Skip NR52
 					sys->clearRegister(i);
 				}
+				disableTimer();
 			}
 			break;
 		default:
@@ -245,6 +382,7 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 			break;
 		default:
 			if (reg >= 0xFF27 && reg <= 0xFF2F) { // Not used
+				dest |= 0xFF;
 			}
 			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
 				dest = wavePatternRAM[reg - 0xFF30];
@@ -257,53 +395,54 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 }
 
 bool SoundProcessor::onClockUpdate(){
-	// Update the 512 Hz sequencer.
-	if(nCyclesSinceLastTick % 2 == 0) // Length Counter (256 Hz)
-		triggerLengthCounter();
-	if(nCyclesSinceLastTick % 4 == 2) // Sweep Timer (128 Hz)
-		triggerSweepTimer();
-	if(nCyclesSinceLastTick % 8 == 7) // Volume Envelope (64 Hz)
-		triggerVolumeEnvelope();
+	if(!timerEnable) 
+		return false;
+	
+	// Update the 512 Hz frame sequencer.
 	if(++nCyclesSinceLastTick >= timerPeriod){
 		this->reset();
+		this->rollOver();
 		return true;
 	}
+	
 	return false;
 }
 
 void SoundProcessor::triggerLengthCounter(){ 
-	// Handle the length register (256 Hz)
-	if(ch1SoundLengthData){
-		//if(!--ch1SoundLengthData)
-			//ch1Enabled = false;
-	}
+	// Handle the length registers (256 Hz)
+	if(ch1SoundLengthData.onClockUpdate())
+		rNR52->resetBit(0); // Ch 1 OFF
+	if(ch2SoundLengthData.onClockUpdate())
+		rNR52->resetBit(1); // Ch 2 OFF
+	if(ch3SoundLengthData.onClockUpdate())
+		rNR52->resetBit(2); // Ch 3 OFF
+	if(ch4SoundLengthData.onClockUpdate())
+		rNR52->resetBit(3); // Ch 4 OFF
 }
 
 void SoundProcessor::triggerVolumeEnvelope(){ 
 	// Handle the volume envelope register (64 Hz)
-	//ch1InitialVolumeEnv = (val & 0xF0) >> 4; // Initial envelope volume (0-0F) (0=No sound)
-	//ch1DirectionEnv     = (val & 0x8) != 0;  // Envelope direction [0: Increase, 1: Decrease]
-	//ch1NumberSweepEnv   = (val & 0x7);       // Number of envelope sweep (n=0-7, if 0 then stop)
-	if(ch1NumberSweepEnv){
-		if(!ch1DirectionEnv) // Increase volume
-			ch1InitialVolumeEnv++;
-		else // Decrease volume
-			ch1InitialVolumeEnv--;
-		ch1NumberSweepEnv--;
-	}
+	ch1VolumeEnvelope.onClockUpdate();
+	ch2VolumeEnvelope.onClockUpdate();
+	ch4VolumeEnvelope.onClockUpdate();
 }
 	
 void SoundProcessor::triggerSweepTimer(){ 
 	// Handle the frequency sweep register (128 Hz)
 	// x(0) is the initial frequency and x(t-1) is the last frequency
 	//x(t) = x(t-1) +/- x(t-1)/2^n
-	if(ch1SweepTime){
-		if(!ch1SweepIncDec) // Increase frequency
-			ch1Frequency = ch1Frequency * (1 + 1/powf(2, ch1SweepShift));
-		else // Decrease frequency
-			ch1Frequency = ch1Frequency * (1 - 1/powf(2, ch1SweepShift));
-		ch1SweepTime--;
-	}
+	ch1FrequencySweep.onClockUpdate();
+}
+
+void SoundProcessor::rollOver(){
+	// Update the 512 Hz frame sequencer.
+	if(sequencerTicks % 2 == 0) // Length Counter (256 Hz)
+		triggerLengthCounter();
+	if(sequencerTicks % 4 == 2) // Sweep Timer (128 Hz)
+		triggerSweepTimer();
+	if(sequencerTicks % 8 == 7) // Volume Envelope (64 Hz)
+		triggerVolumeEnvelope();
+	sequencerTicks++;
 }
 
 void SoundProcessor::defineRegisters(){
