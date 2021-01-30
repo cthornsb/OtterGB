@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+//#include <pair>
 
 class SoundManager;
 class AudioSampler;
@@ -19,24 +20,18 @@ public:
 
 	~AudioData();
 	
-	AudioSampler* operator [] (const size_t& index) { return samplers[index].get(); }
+	AudioSampler& operator [] (const size_t& index) { return (*samplers[index].get()); }
 
 	AudioSampler* get(const size_t& index) { return samplers[index].get(); }
 
-	void getSamples(float* arr, const unsigned long& nValues);
+	void getSamples(float* arr, const unsigned int& nValues, const unsigned int& nOffset, const unsigned int& nSkip);
 
-	/** Get reference to the left channel phase (assuming there is at least one channel)
-	  */	
-	float& left();
-	
-	/** Get reference to the right channel phase (assuming there are at least two channels)
-	  */
-	float& right();
-	
+	void addInput(AudioSampler* audio);
+
 	/** Replace an audio channel with a new sampler
 	  * The old sampler will be deleted
 	  */
-	void replace(const size_t& chan, AudioSampler* audio);
+	void replaceInput(const size_t& chan, AudioSampler* audio);
 	
 	/** Get the number of audio channels
 	  */
@@ -47,10 +42,11 @@ private:
 	
 	std::vector<std::unique_ptr<AudioSampler> > samplers;
 	
-	const SoundManager *proc;
+	const SoundManager* manager;
 
 	float fSampleRate;	
 	float fTimeStep;
+	float fTotalVolume;
 };
 
 #endif

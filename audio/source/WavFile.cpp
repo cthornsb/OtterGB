@@ -16,10 +16,10 @@ WavFile::~WavFile(){
 	audio.close();
 }
 
-void WavFile::sample(const float& timeStep, float* arr, const unsigned long& N, const unsigned short& channels){
+void WavFile::sample(const float& timeStep, float* arr, const unsigned int& N){
 	if(!nLengthRemaining){ // Audio file completed
 		for(unsigned long i = 0; i < N; i++) { // Over all frames
-			arr[i * channels] = 0.f;
+			arr[i] += 0.f;
 		}
 		return;
 	}
@@ -29,13 +29,13 @@ void WavFile::sample(const float& timeStep, float* arr, const unsigned long& N, 
 	audio.read((char*)tempData.data(), bytesRequested * sizeof(unsigned char));
 	unsigned int prevSample = 0;
 	unsigned int currSample = 0;
-	phase = 0.f;
+	fPhase = 0.f;
 	for(unsigned long i = 0; i < N; i++) { // Over all frames
-		currSample = (unsigned int)(phase / fSamplePeriod);
-		arr[i * channels] = (2.f * tempData[currSample] / 255.f - 1.f);
+		currSample = (unsigned int)(fPhase / fSamplePeriod);
+		arr[i] += (2.f * tempData[currSample] / 255.f - 1.f);
 		if(currSample != prevSample)
 			prevSample = currSample;
-		phase += timeStep;
+		fPhase += timeStep;
 	}
 	nLengthRemaining -= bytesRequested;
 }

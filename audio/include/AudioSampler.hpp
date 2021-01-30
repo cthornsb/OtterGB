@@ -5,27 +5,37 @@ class SoundManager;
 
 class AudioSampler{
 public:
-	float phase;
-
 	AudioSampler() :
-		phase(0.f),
+		fPhase(0.f),
+		fVolume(1.f),
 		proc(0x0)
 	{ 
 	}
 
 	AudioSampler(const SoundManager* parent) :
-		phase(0.f),
+		fPhase(0.f),
+		fVolume(1.f),
 		proc(0x0)
 	{ 
 	}
 	
 	~AudioSampler() { }
 
+	float getPhase() const { return fPhase; }
+
+	float getVolume() const { return fVolume; }
+
+	void setVolume(const float& volume) { fVolume = volume; }
+
 	virtual float sample(const float&) { return 0.f; }
 	
-	virtual void sample(const float& timeStep, float* arr, const unsigned long& N, const unsigned short& channels);
+	virtual void sample(const float& timeStep, float* arr, const unsigned int& N);
 	
 protected:
+	float fPhase;
+
+	float fVolume;
+
 	const SoundManager *proc;
 	
 	float clamp(const float& input){

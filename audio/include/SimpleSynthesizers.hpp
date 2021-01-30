@@ -70,7 +70,7 @@ namespace SimpleSynthesizers{
 		float getPeriod() const { return (1.f / fFrequency); }
 		
 		float sample(const float& dt){
-			return (fAmplitude * clamp(userSample(phase += dt)));
+			return (fAmplitude * clamp(userSample(fPhase += dt)));
 		}
 
 	protected:

@@ -3,27 +3,21 @@
 
 #include "portaudio.h"
 
-#include "AudioData.hpp"
+#include "AudioMixer.hpp"
 
 typedef int (*pulseCallback)( const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void* );
+
+extern AudioMixer *audioptr;
 
 class SoundManager{
 public:
 	/** Default constructor
 	  */
-	SoundManager() :
-		initialized(false),
-		running(false),
-		nChannels(2),
-		dSampleRate(44100),
-		nFramesPerBuffer(256),
-		fTimeStep(1.f / 44100.f),
-		audio(2, this),
-		dptr(static_cast<void*>(&audio)),
-		stream(0x0),
-		callback(defaultCallback)
-	{ 
-	}
+	SoundManager();
+
+	/** Number of voices constructor
+	  */
+	SoundManager(const int& voices);
 
 	SoundManager(const SoundManager&) = delete;
 	
@@ -32,6 +26,10 @@ public:
 	/** Terminate audio stream
 	  */
 	~SoundManager();
+
+	/** Get reference to one of the output audio channels
+	  */
+	AudioData& operator [] (const size_t& index) { return mixer[index]; }
 
 	/** Get the number of audio channels
 	  */
@@ -44,6 +42,8 @@ public:
 	/** Get the number of audio samples per buffer
 	  */
 	unsigned long getFramesPerBuffer() const { return nFramesPerBuffer; }
+
+	AudioMixer* getMixer() { return &mixer; }
 
 	/** Return true if the audio interface is running, and return false otherwise
 	  */
@@ -72,7 +72,7 @@ public:
 	/** Set the audio data pointer
 	  * Has no effect if called after audio stream is initialized
 	  */	
-	void setAudioData(void* data){ dptr = data; }
+	//void setAudioData(void* data){ dptr = data; }
 
 	/** Initialize audio stream
 	  */
@@ -113,7 +113,7 @@ private:
 	
 	float fTimeStep;
 	
-	AudioData audio;
+	AudioMixer mixer;
 	
 	void* dptr;
 	

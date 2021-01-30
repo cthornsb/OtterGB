@@ -1,7 +1,9 @@
 #include <cmath>
 #include <iostream>
 
-#include "Audio.hpp"
+#include "SoundManager.hpp"
+#include "SimpleSynthesizers.hpp"
+#include "WavFile.hpp"
 
 typedef struct{
 	float left;
@@ -37,20 +39,20 @@ using namespace PianoKeys;
 using namespace SimpleSynthesizers;
 
 int main(){
-	SoundProcessor proc;
-	AudioData data(2, &proc);
+	SoundManager proc(3);
 	
 	WavFile* wav = new WavFile("/home/kuras/Downloads/sample.wav");
 	wav->print();
-	data.replace(0, wav);
-	/*SquareWave* swave = new SquareWave();
+	proc[1].replaceInput(0, wav);
+	SquareWave* swave = new SquareWave();
 	SawtoothWave* swave2 = new SawtoothWave();
+	TriangleWave* swave3 = new TriangleWave();
 	swave->setFrequency(Key::C, 4);
 	swave2->setFrequency(Key::E, 4);
-	data.replace(0, swave);
-	data.replace(1, swave2);*/
-	
-	proc.setAudioData(static_cast<void*>(&data));
+	swave3->setFrequency(Key::G, 4);
+	proc[0].replaceInput(0, swave);
+	proc[0].replaceInput(1, swave2);
+	proc[0].replaceInput(2, swave3);
 	
 	proc.init();
 	proc.start();

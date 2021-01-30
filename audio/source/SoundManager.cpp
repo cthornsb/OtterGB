@@ -2,6 +2,38 @@
 
 #include "SoundManager.hpp"
 
+AudioMixer* audioptr = 0x0;
+
+SoundManager::SoundManager() :
+	initialized(false),
+	running(false),
+	nChannels(2),
+	dSampleRate(44100),
+	nFramesPerBuffer(256),
+	fTimeStep(1.f / 44100.f),
+	mixer(2, 1, this),
+	dptr(static_cast<void*>(&mixer)),
+	stream(0x0),
+	callback(defaultCallback)
+{ 
+	audioptr = &mixer;
+}
+
+SoundManager::SoundManager(const int& voices) :
+	initialized(false),
+	running(false),
+	nChannels(2),
+	dSampleRate(44100),
+	nFramesPerBuffer(256),
+	fTimeStep(1.f / 44100.f),
+	mixer(2, voices, this),
+	dptr(static_cast<void*>(&mixer)),
+	stream(0x0),
+	callback(defaultCallback)
+{
+	audioptr = &mixer;
+}
+
 SoundManager::~SoundManager(){
 	// Terminate stream
 	PaError err = Pa_Terminate();
@@ -97,8 +129,8 @@ int SoundManager::defaultCallback(
 	void *data )
 {
 	float* out = static_cast<float*>(output);
-	AudioData* audio = static_cast<AudioData*>(data);
-	audio->getSamples(out, framesPerBuffer);
+	//AudioMixer* audio = static_cast<AudioMixer*>(data);
+	audioptr->getSamples(out, framesPerBuffer);
 	return 0;
 }
 

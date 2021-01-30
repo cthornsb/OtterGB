@@ -1,5 +1,6 @@
 # To install pulse audio library
 set(AUDIO_SOURCES AudioData.cpp
+                  AudioMixer.cpp
                   AudioSampler.cpp
                   SimpleSynthesizers.cpp
                   SoundManager.cpp

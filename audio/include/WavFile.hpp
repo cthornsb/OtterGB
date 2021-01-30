@@ -41,7 +41,7 @@ public:
 	
 	/** Read a specified number of samples from the input wav file and write them to an output array
 	  */
-	virtual void sample(const float& timeStep, float* arr, const unsigned long& N, const unsigned short& channels);
+	virtual void sample(const float& timeStep, float* arr, const unsigned int& N);
 
 	/** Print wav file header information
 	  */
