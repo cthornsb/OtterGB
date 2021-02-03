@@ -302,8 +302,14 @@ public:
 		return nShadowFrequency; 
 	}
 
-	void setNegate(const bool& negate) { 
+	bool setNegate(const bool& negate) { 
+		if(bNegateModeUsed && !negate){ // Negative to positive, channel will be disabled
+			bNegate = negate;
+			return false;
+		}
 		bNegate = negate; 
+		bNegateModeUsed = false; // Reset used flag
+		return true;
 	}
 
 	void setPeriod(const unsigned char& period) { 
@@ -338,6 +344,8 @@ private:
 	bool bOverflow2;
 	
 	bool bNegate;
+	
+	bool bNegateModeUsed; ///< Flag indicating that negate mode was used for a calculation at least once
 	
 	unsigned char nTimer; // Sweep timer
 	

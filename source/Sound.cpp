@@ -6,6 +6,17 @@
 #include "SystemGBC.hpp"
 #include "Sound.hpp"
 
+/** Compute the two's complement of an unsigned 11-bit integer
+  */
+short twosComp11bit(const unsigned short &n){
+	short retval = (short)n;
+	if(n & 0x400) // > 1023 (negative value)
+		retval = (short)(n - 0x800);		
+	else // <= 1023 (positive value, so simply negate it)
+		retval *= -1;
+	return retval;
+}
+
 /////////////////////////////////////////////////////////////////////
 // class UnitTimer
 /////////////////////////////////////////////////////////////////////
@@ -262,22 +273,24 @@ void VolumeEnvelope::trigger(){
 bool FrequencySweep::clock(){
 	if(nSequencerTicks++ % 4 != 2)
 		return false;
-	if(!bEnabled || !nPeriod)
+	if(!bEnabled)
 		return false;
 	if(--nCounter == 0){
 		nCounter = (nPeriod != 0 ? nPeriod : 8); // Reset period counter
-		if(compute()){ // Compute new frequency
-			// Update shadow frequency
-			if(nShift){ // If new frequency <= 2047 and shift is non-zero, update the frequency
-				nShadowFrequency = nNewFrequency;
+		if(nPeriod){ // Only compute new frequency with non-zero period
+			if(compute()){ // Compute new frequency
+				// Update shadow frequency
+				if(nShift){ // If new frequency <= 2047 and shift is non-zero, update the frequency
+					nShadowFrequency = nNewFrequency;
+				}
+				if(!compute()){ // Compute new frequency again immediately
+					bOverflow2 = true;
+				}
 			}
-			if(!compute()){ // Compute new frequency again immediately
-				bOverflow2 = true;
+			else{ // Frequency overflow, disable channel
+				bOverflow = true;
+				disable(); // TEMP
 			}
-		}
-		else{ // Frequency overflow, disable channel
-			bOverflow = true;
-			disable(); // TEMP
 		}
 		return true; // Frequency sweep clock rolled over
 	}
@@ -286,10 +299,11 @@ bool FrequencySweep::clock(){
 
 void FrequencySweep::trigger(){
 	nShadowFrequency = extTimer->getFrequency();
-	nCounter = nPeriod;
-	// Reset overflow flags
+	nCounter = (nPeriod ? nPeriod : 8);
+	// Reset flags
 	bOverflow = false; 
 	bOverflow2 = false;
+	bNegateModeUsed = false;
 	if(nPeriod || nShift)
 		bEnabled = true;
 	else
@@ -303,11 +317,12 @@ void FrequencySweep::trigger(){
 
 bool FrequencySweep::compute(){
 	// Compute new frequency (x)
-	nNewFrequency = nShadowFrequency >> nShift;
 	if(!bNegate)
-		nNewFrequency += nShadowFrequency;
-	else
-		nNewFrequency -= nShadowFrequency;
+		nNewFrequency = (nShadowFrequency >> nShift) + nShadowFrequency;
+	else{
+		nNewFrequency = nShadowFrequency + twosComp11bit(nShadowFrequency >> nShift);
+		bNegateModeUsed = true;
+	}
 	return (nNewFrequency <= 2047); // Overflow check
 }
 
@@ -363,8 +378,11 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 	switch(reg){
 		case 0xFF10: // NR10 ([TONE] Channel 1 sweep register)
 			ch1.getFrequencySweep()->setPeriod(rNR10->getBits(4,6));
-			ch1.getFrequencySweep()->setNegate(rNR10->getBit(3));
 			ch1.getFrequencySweep()->setBitShift(rNR10->getBits(0,2));
+			if(!ch1.getFrequencySweep()->setNegate(rNR10->getBit(3))){
+				// Switching from negative to positive disables the channel
+				disableChannel(1);
+			}
 			break;
 		case 0xFF11: // NR11 ([TONE] Channel 1 sound length / wave pattern duty)
 			ch1.setWaveDuty(rNR11->getBits(6,7)); // Wave pattern duty (see below)
