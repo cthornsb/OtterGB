@@ -260,6 +260,7 @@ public:
 	FrequencySweep() :
 		bEnabled(false),
 		bOverflow(false),
+		bOverflow2(false),
 		bNegate(false),
 		nTimer(0),
 		nPeriod(0),
@@ -267,6 +268,7 @@ public:
 		nCounter(0),
 		nShadowFrequency(0),
 		nNewFrequency(0),
+		nSequencerTicks(0),
 		extTimer(0x0)
 	{
 	}
@@ -276,6 +278,7 @@ public:
 	}
 	
 	void enable() { 
+		nSequencerTicks = 0; // Sync with the sequencer
 		bEnabled = true; 
 	}
 	
@@ -283,21 +286,43 @@ public:
 		bEnabled = false; 
 	}
 	
-	bool overflowed() const { return bOverflow; }
+	bool overflowed() const { 
+		return bOverflow; 
+	}
 	
-	unsigned char getBitShift() const { return nShift; }
+	bool overflowed2() const {
+		return bOverflow2;
+	}
 	
-	unsigned short getNewFrequency() const { return nNewFrequency; }
+	unsigned char getBitShift() const { 
+		return nShift; 
+	}
+	
+	unsigned short getNewFrequency() const { 
+		return nShadowFrequency; 
+	}
 
-	void setNegate(const bool& negate) { bNegate = negate; }
+	void setNegate(const bool& negate) { 
+		bNegate = negate; 
+	}
 
-	void setPeriod(const unsigned char& period) { nPeriod = period; }
+	void setPeriod(const unsigned char& period) { 
+		nPeriod = period; 
+		if(!nCounter) // Handle going from period = 0 to period != 0 with zero counter
+			nCounter = nPeriod;
+	}
 	
-	void setBitShift(const unsigned char& shift) { nShift = shift; }
+	void setBitShift(const unsigned char& shift) { 
+		nShift = shift; 
+	}
 			
-	void setUnitTimer(UnitTimer* timer) { extTimer = timer; }
+	void setUnitTimer(UnitTimer* timer) { 
+		extTimer = timer; 
+	}
 	
-	void updateShadowFrequency() { nShadowFrequency = nNewFrequency; }
+	void updateShadowFrequency() { 
+		nShadowFrequency = nNewFrequency; 
+	}
 	
 	bool clock();
 	
@@ -309,6 +334,8 @@ private:
 	bool bEnabled;
 	
 	bool bOverflow;
+	
+	bool bOverflow2;
 	
 	bool bNegate;
 	
@@ -324,6 +351,8 @@ private:
 	
 	unsigned short nNewFrequency;
 	
+	unsigned int nSequencerTicks;
+	
 	UnitTimer* extTimer;
 };
 
@@ -332,6 +361,7 @@ public:
 	/** Default constructor (maximum audio length of 64)
 	  */
 	AudioUnit() :
+		nSequencerTicks(0),
 		bDisableThisChannel(false),
 		bOutputToSO1(false),
 		bOutputToSO2(false),
@@ -342,6 +372,7 @@ public:
 	/** Maximum audio length constructor
 	  */
 	AudioUnit(const unsigned short& maxLength) :
+		nSequencerTicks(0),
 		bDisableThisChannel(false),
 		bOutputToSO1(false),
 		bOutputToSO2(false),
@@ -417,7 +448,9 @@ public:
 	}
 
 protected:
-	bool bDisableThisChannel; ///< Channel will be disabled on next clock cycle
+	unsigned int nSequencerTicks;
+
+	bool bDisableThisChannel; ///< Channel will be disabled immediately
 
 	bool bOutputToSO1; ///< Output audio to SO1 terminal
 
@@ -428,6 +461,7 @@ protected:
 	/** Enable the length counter
 	  */
 	virtual void userEnable(){
+		//nSequencerTicks = 0;
 		length.enable();
 	}
 	
@@ -513,6 +547,7 @@ private:
 	/** Enable the length counter, volume envelope, and frequency sweep (if in use)
 	  */
 	virtual void userEnable(){
+		nSequencerTicks = 0;
 		length.enable();
 		volume.enable();
 		if(bSweepEnabled)
@@ -751,9 +786,6 @@ private:
 	unsigned char outputLevelSO1;
 	unsigned char outputLevelSO2;
 	unsigned char wavePatternRAM[16];
-	
-	bool willBeEnabled[4];
-	bool willBeDisabled[4];
 	
 	bool masterSoundEnable;
 	

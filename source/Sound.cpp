@@ -53,10 +53,17 @@ unsigned char SquareWave::sample(){
 
 void SquareWave::update(const unsigned int& sequencerTicks){
 	// (Sweep ->) Timer -> Duty -> Length Counter -> Envelope -> Mixer
-	if(bSweepEnabled && sequencerTicks % 4 == 2){ // Clock the frequency sweep (128 Hz)
-		if(frequency->clock()){
-			// If frequency sweep rolls over, get new timer period
-			this->setFrequency(frequency->getNewFrequency()); // P = (2048 - f)
+	if(bSweepEnabled && frequency->clock()){ // Clock the frequency sweep (128 Hz)
+		// Frequency sweep rolled over
+		if(!frequency->overflowed() && !frequency->overflowed2()){ 
+			// Get new timer period and update the channel period and frequency registers
+			unsigned short freq = frequency->getNewFrequency();
+			this->setFrequency(freq); // P = (2048 - f)
+			rNR13->setValue((unsigned char)(freq & 0x00FF));
+			rNR14->setBits(0, 2, (unsigned char)((freq & 0x0700) >> 8));				
+		}
+		else{ // Frequency overflowed, disable channel
+			bDisableThisChannel = true;
 		}
 	}
 	if(this->clock()){ // Unit timer rolled over
@@ -80,18 +87,13 @@ void SquareWave::update(const unsigned int& sequencerTicks){
 			// since the volume unit will simply output 0 volume
 		}
 	}
+	//nSequencerTicks++;
 }
 
 void SquareWave::trigger(){
 	this->reload(); // Reload the main timer with its phase
-	if(bSweepEnabled){
+	if(bSweepEnabled)
 		frequency->trigger();
-		if(frequency->getBitShift() > 0){ // Update frequency on trigger (if non-zero bit-shift)
-			if(frequency->overflowed()){
-				bDisableThisChannel = true;
-			}
-		}	
-	}
 	length.trigger();
 	volume.trigger();
 }
@@ -258,21 +260,24 @@ void VolumeEnvelope::trigger(){
 /////////////////////////////////////////////////////////////////////
 		
 bool FrequencySweep::clock(){
-	if(!bEnabled || !nPeriod)
+	if(nSequencerTicks++ % 4 != 2)
 		return false;
-	if(bOverflow)
+	if(!bEnabled || !nPeriod)
 		return false;
 	if(--nCounter == 0){
 		nCounter = (nPeriod != 0 ? nPeriod : 8); // Reset period counter
 		if(compute()){ // Compute new frequency
 			// Update shadow frequency
-			nShadowFrequency = nNewFrequency;
-			if(!compute()){ // Compute new frequency again immediately
-				// Overflow, disable after next iteration
+			if(nShift){ // If new frequency <= 2047 and shift is non-zero, update the frequency
+				nShadowFrequency = nNewFrequency;
 			}
-			nShadowFrequency = nNewFrequency;
+			if(!compute()){ // Compute new frequency again immediately
+				bOverflow2 = true;
+			}
 		}
 		else{ // Frequency overflow, disable channel
+			bOverflow = true;
+			disable(); // TEMP
 		}
 		return true; // Frequency sweep clock rolled over
 	}
@@ -281,17 +286,17 @@ bool FrequencySweep::clock(){
 
 void FrequencySweep::trigger(){
 	nShadowFrequency = extTimer->getFrequency();
-	nCounter = (nPeriod != 0 ? nPeriod : 8); // Reset period counter
-	bOverflow = false; // Reset overflow flag
+	nCounter = nPeriod;
+	// Reset overflow flags
+	bOverflow = false; 
+	bOverflow2 = false;
 	if(nPeriod || nShift)
 		bEnabled = true;
 	else
 		bEnabled = false;
 	if(nShift){
-		if(compute()){
-			nShadowFrequency = nNewFrequency;
-			rNR13->setValue((unsigned char)(nNewFrequency & 0x00FF));
-			rNR14->setBits(0, 2, (unsigned char)((nNewFrequency & 0x0700) >> 8));
+		if(!compute()){ // Overflow
+			bOverflow = true;
 		}
 	}
 }
@@ -303,12 +308,7 @@ bool FrequencySweep::compute(){
 		nNewFrequency += nShadowFrequency;
 	else
 		nNewFrequency -= nShadowFrequency;
-	bOverflow = (nNewFrequency > 2047); 
-	if(bOverflow){ // Overflow check
-		bOverflow = true;
-		return false;
-	}
-	return true;
+	return (nNewFrequency <= 2047); // Overflow check
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -326,15 +326,9 @@ SoundProcessor::SoundProcessor() :
 	outputLevelSO1(0),
 	outputLevelSO2(0),
 	wavePatternRAM(),
-	willBeEnabled(),
-	willBeDisabled(),
 	masterSoundEnable(false),
 	sequencerTicks(0)
 { 
-	for(int i = 0; i < 4; i++){
-		willBeEnabled[i] = false;
-		willBeDisabled[i] = false;
-	}
 	//audio->init();
 }
 
@@ -366,7 +360,6 @@ bool extraLengthClock(AudioUnit& unit, const unsigned int& nTicks, bool triggere
 }
 
 bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned char &val){
-	bool temp;
 	switch(reg){
 		case 0xFF10: // NR10 ([TONE] Channel 1 sweep register)
 			ch1.getFrequencySweep()->setPeriod(rNR10->getBits(4,6));
@@ -389,7 +382,6 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch1.setFrequency((rNR14->getBits(0,2) << 8) + rNR13->getValue());
 			break;
 		case 0xFF14: // NR14 ([TONE] Channel 1 frequency high)
-			temp = ch1.getLengthCounter()->isEnabled();
 			ch1.setFrequency((rNR14->getBits(0,2) << 8) + rNR13->getValue());
 			if(rNR14->getBit(6)){ // Enable length counter
 				enableChannel(1);
@@ -404,6 +396,9 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 				ch1.trigger();
 				if((sequencerTicks % 2 != 0) && ch1.getLengthCounter()->isEnabled() && ch1.getLengthCounter()->wasRefilled()){
 					ch1.getLengthCounter()->clock();
+				}
+				if(ch1.getFrequencySweep()->overflowed()){
+					disableChannel(1);
 				}
 			}
 			break;
