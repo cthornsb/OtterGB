@@ -36,10 +36,15 @@ SoundManager::SoundManager(const int& voices) :
 
 SoundManager::~SoundManager(){
 	// Terminate stream
-	PaError err = Pa_Terminate();
-	if( err != paNoError ){
-		std::cout << " [error] Failed to initialize port audio\n";
-		std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
+	if(initialized){
+		if(running){
+			stop();
+		}
+		PaError err = Pa_Terminate();
+		if( err != paNoError ){
+			std::cout << " [error] Failed to initialize port audio\n";
+			std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
+		}
 	}
 }
 

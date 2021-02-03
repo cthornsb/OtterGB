@@ -329,6 +329,24 @@ bool SystemGBC::execute(){
 					cpuHalted = false;
 			}
 
+			// Update system timer
+			timer->onClockUpdate();
+
+			// Update sound processor
+			sound->onClockUpdate();
+
+			// Update joypad handler
+			joy->onClockUpdate();
+
+			// Tick the system sclk
+			sclk->onClockUpdate();
+#ifdef USE_QT_DEBUGGER
+			if(pauseAfterNextClock){
+				pauseAfterNextClock = false;					
+				pause();
+			}
+#endif
+
 			// Check if the CPU is halted.
 			if(!cpuHalted && !dma->onClockUpdate()){
 				// Perform one instruction.
@@ -344,24 +362,6 @@ bool SystemGBC::execute(){
 #endif
 				}
 			}
-
-			// Update system timer->
-			timer->onClockUpdate();
-
-			// Update sound processor.
-			sound->onClockUpdate();
-
-			// Update joypad handler.
-			joy->onClockUpdate();
-
-			// Tick the system sclk->
-			sclk->onClockUpdate();
-#ifdef USE_QT_DEBUGGER
-			if(pauseAfterNextClock){
-				pauseAfterNextClock = false;					
-				pause();
-			}
-#endif
 
 			// Sync with the framerate.	
 			if(sclk->pollVSync()){
