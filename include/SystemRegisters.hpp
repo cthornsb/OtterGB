@@ -64,7 +64,7 @@ public:
 	  */
 	unsigned char write(){ return (value = valueBuffer); }
 
-	bool getBit(const unsigned char &bit){ return ((value & (0x1 << bit)) == (0x1 << bit)); }
+	bool getBit(const unsigned char &bit) const { return ((value & (0x1 << bit)) == (0x1 << bit)); }
 
 	unsigned char getBits(const unsigned char &lowBit, const unsigned char &highBit) const ;
 
