@@ -179,10 +179,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		romFilename = romFilename.substr(0, index);
 	}
 
-#ifdef USE_QT_DEBUGGER			
-	app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
-#endif // ifdef USE_QT_DEBUGGER
-
 	// Define all system components
 	serial.reset(new SerialController);
 	dma.reset(new DmaController);
@@ -206,6 +202,12 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	// Initialize system components
 	this->initialize();
 
+#ifdef USE_QT_DEBUGGER
+	// Pre-processor statements to avoid un-used variable warnings
+	bool useTileViewer = false;
+	bool useLayerViewer = false;
+#endif // ifdef USE_QT_DEBUGGER	
+
 	if(cfgFile.good()){ // Handle user input from config file
 		if (cfgFile.search("MASTER_VOLUME", true)) // Set master output volume
 			sound->getMixer()->setVolume(cfgFile.getFloat());
@@ -223,9 +225,9 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
 			setDebugMode(true);
 			if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
-				gui->openTileViewer();
+				useTileViewer = true;
 			if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
-				gui->openLayerViewer();
+				useLayerViewer = true;
 		}
 #endif // ifdef USE_QT_DEBUGGER
 		// Setup key mapping
@@ -247,14 +249,26 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 #ifdef USE_QT_DEBUGGER			
 		if(handler.getOption(7)->active){ // Toggle debug flag
 			setDebugMode(true);
-			if(handler.getOption(8)->active)
-				gui->openTileViewer();
-			if(handler.getOption(9)->active) // Toggle debug flag
-				gui->openLayerViewer();
+			if(handler.getOption(8)->active) // Open tile-viewer window
+				useTileViewer = true;
+			if(handler.getOption(9)->active) // Open layer-viewer window
+				useLayerViewer = true;
 		}
 #endif // ifdef USE_QT_DEBUGGER
 	}
 #endif // ifndef _WIN32
+
+#ifdef USE_QT_DEBUGGER
+	if(debugMode){ // Open Gui window(s)
+		app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
+		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
+		gui->connectToSystem(this);
+		if(useTileViewer) // Open tile-viewer window
+			gui->openTileViewer();
+		if(useLayerViewer) // Open layer-viewer window
+			gui->openLayerViewer();
+	}
+#endif // ifdef USE_QT_DEBUGGER
 
 	pauseAfterNextInstruction = false;
 	pauseAfterNextClock = false;
@@ -662,12 +676,6 @@ void SystemGBC::setDebugMode(bool state/*=true*/){
 	debugMode = state;
 	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++)
 		comp->second->setDebugMode(state);
-#ifdef USE_QT_DEBUGGER
-	if(debugMode){
-		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
-		gui->connectToSystem(this);
-	}
-#endif
 }
 
 // Toggle verbose flag
