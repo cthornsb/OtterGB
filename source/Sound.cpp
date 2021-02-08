@@ -315,15 +315,17 @@ bool SoundProcessor::onClockUpdate(){
 		return false;
 
 	if(masterSoundEnable){
-		// Clock audio units (1 MHz clock)
-		if(ch1.clock())
-			mixer.setInputSample(0, ch1.sample());
-		if(ch2.clock())
-			mixer.setInputSample(1, ch2.sample());
-		if(ch3.clock())
-			mixer.setInputSample(2, ch3.sample());
-		if(ch4.clock())
-			mixer.setInputSample(3, ch4.sample());
+		// Clock audio units (4 MHz clock)
+		for(int i = 0; i < 4; i++){
+			if(ch1.clock())
+				mixer.setInputSample(0, ch1.sample());
+			if(ch2.clock())
+				mixer.setInputSample(1, ch2.sample());
+			if(ch3.clock())
+				mixer.setInputSample(2, ch3.sample());
+			if(ch4.clock())
+				mixer.setInputSample(3, ch4.sample());
+		}
 		// Clock 16 kHz mixer
 		if(mixer.clock()) // Push new sample onto the sample FIFO buffer
 			buffer->pushSample(mixer[0], mixer[1]);
