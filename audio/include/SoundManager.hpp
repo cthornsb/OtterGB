@@ -5,7 +5,7 @@
 
 #include "AudioMixer.hpp"
 
-typedef int (*pulseCallback)( const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void* );
+typedef int (*portCallback)( const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void* );
 
 extern AudioMixer *audioptr;
 
@@ -29,54 +29,73 @@ public:
 
 	/** Get reference to one of the output audio channels
 	  */
-	AudioData& operator [] (const size_t& index) { return mixer[index]; }
+	AudioData& operator [] (const size_t& index) { 
+		return mixer[index]; 
+	}
 
 	/** Get the number of audio channels
 	  */
-	int getNumberOfChannels() const { return nChannels; }
+	int getNumberOfChannels() const { 
+		return nChannels; 
+	}
 	
 	/** Get the audio sample rate (in Hz)
 	  */
-	double getSampleRate() const { return dSampleRate; }
+	double getSampleRate() const { 
+		return dSampleRate; 
+	}
 	
 	/** Get the number of audio samples per buffer
 	  */
-	unsigned long getFramesPerBuffer() const { return nFramesPerBuffer; }
+	unsigned long getFramesPerBuffer() const { 
+		return nFramesPerBuffer; 
+	}
 
-	AudioMixer* getMixer() { return &mixer; }
+	AudioMixer* getMixer() { 
+		return &mixer; 
+	}
 
 	/** Return true if the audio interface is running, and return false otherwise
 	  */
-	bool isRunning() const { return running; }
+	bool isRunning() const { 
+		return bRunning; 
+	}
 
 	/** Set the number of audio channels (default = 2)
 	  * Has no effect if called after audio stream is initialized.
 	  */
-	void setNumberOfChannels(const int& channels){ nChannels = channels; }
+	void setNumberOfChannels(const int& channels){ 
+		nChannels = channels; 
+	}
 	
 	/** Set the audio sample rate in Hz (default = 44100 Hz)
 	  * Has no effect if called after audio stream is initialized
 	  */
-	void setSampleRate(const double& rate){ dSampleRate = rate; }
+	void setSampleRate(const double& rate){ 
+		dSampleRate = rate;
+	}
 
 	/** Set the number of frames per audio buffer (default = 256)
 	  * Has no effect if called after audio stream is initialized
 	  */	
-	void setFramesPerBuffer(const unsigned long& frames){ nFramesPerBuffer = frames; }
+	void setFramesPerBuffer(const unsigned long& frames){ 
+		nFramesPerBuffer = frames;
+	}
 
 	/** Set the audio callback function
 	  * Has no effect if called after audio stream is initialized
 	  */
-	void setCallbackFunction(pulseCallback call){ callback = call; }
-
-	/** Set the audio data pointer
-	  * Has no effect if called after audio stream is initialized
-	  */	
-	//void setAudioData(void* data){ dptr = data; }
+	void setCallbackFunction(portCallback call){ 
+		callback = call;
+	}
 
 	/** Initialize audio stream
 	  */
 	bool init();
+	
+	/** Terminate audio stream
+	  */
+	bool terminate();
 
 	/** Start audio stream
 	  */
@@ -89,8 +108,19 @@ public:
 	/** Stop audio stream
 	  */
 	bool stop();
+	
+	/** 
+	  */
+	void quit(){
+		bQuitting = true;
+	}
+	
+	/** Loop until quit() is called
+	  * Stream will be terminated before returning.
+	  */
+	void execute();
 
-	/** Default pulse callback function
+	/** Default port callback function
 	  */
 	static int defaultCallback( 
 		const void *input, 
@@ -102,8 +132,11 @@ public:
 	);
 
 private:
-	bool initialized;
-	bool running;
+	bool bQuitting;
+
+	bool bInitialized;
+	
+	bool bRunning;
 	
 	int nChannels;
 	
@@ -119,7 +152,7 @@ private:
 	
     PaStream* stream;
     
-    pulseCallback callback;
+    portCallback callback;
 };
 
 #endif

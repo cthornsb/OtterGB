@@ -5,7 +5,8 @@
 SquareWave::SquareWave(FrequencySweep* sweep) :
 	AudioUnit(),
 	bSweepEnabled(true),
-	nWaveform(0),
+	nDuty(0),
+	nWaveform(0x01), // 12.5% duty
 	volume(),
 	frequency(sweep)
 {
@@ -15,25 +16,26 @@ SquareWave::SquareWave(FrequencySweep* sweep) :
 
 void SquareWave::setWaveDuty(const unsigned char& duty){
 	switch(duty){
-	case 0:
+	case 0: // 12.5%
 		nWaveform = 0x01;
 		break;
-	case 1:
+	case 1: // 25%
 		nWaveform = 0x81;
 		break;
-	case 2:
+	case 2: // 50%
 		nWaveform = 0x87;
 		break;
-	case 3:
+	case 3: // 75%
 		nWaveform = 0x7e;
 		break;
-	default:
-		break;
+	default: // Invalid duty cycle
+		return;
 	};
+	nDuty = duty;
 }
 
 unsigned char SquareWave::sample(){
-	return ((nWaveform & 0x1) == 0x1 ? 0xf : 0x0);
+	return (((nWaveform & 0x1) == 0x1 ? 0xf : 0x0) * volume());
 }
 
 void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
@@ -56,6 +58,7 @@ void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
 		}
 	}
 	if(sequencerTicks % 2 == 0){ // Clock the length counter (256 Hz)
+		//if(bSweepEnabled)
 		if(length.clock()){
 			// If length counter rolls over, disable the channel
 			bDisableThisChannel = true;
@@ -71,6 +74,7 @@ void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
 
 void SquareWave::rollover(){
 	// Update square wave duty waveform
+	reload(); // Reset period counter
 	bool lowBit = ((nWaveform & 0x1) == 0x1);
 	nWaveform = nWaveform >> 1;
 	if(lowBit) // Set high bit
@@ -99,6 +103,14 @@ void SquareWave::userDisable(){
 	volume.disable();
 	if(bSweepEnabled)
 		frequency->disable();
+}
+
+void SquareWave::userReset(){
+	//length.reset(); // Length is reset by AudioUnit::reset()
+	volume.reset();
+	if(bSweepEnabled)
+		frequency->reset();	
+	setWaveDuty(nDuty); // Reset duty waveform to starting position
 }
 
 void SquareWave::channelWillBeEnabled(){

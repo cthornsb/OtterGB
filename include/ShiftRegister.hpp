@@ -93,6 +93,10 @@ private:
 		length.disable();
 		volume.disable();
 	}
+
+	/** Upon powering down, reset the volume envelope and shift register values
+	  */
+	virtual void userReset();
 	
 	/** Method called when unit timer clocks over (every N system clock ticks)
 	  */	

@@ -5,8 +5,9 @@
 AudioMixer* audioptr = 0x0;
 
 SoundManager::SoundManager() :
-	initialized(false),
-	running(false),
+	bQuitting(false),
+	bInitialized(false),
+	bRunning(false),
 	nChannels(2),
 	dSampleRate(44100),
 	nFramesPerBuffer(256),
@@ -20,8 +21,9 @@ SoundManager::SoundManager() :
 }
 
 SoundManager::SoundManager(const int& voices) :
-	initialized(false),
-	running(false),
+	bQuitting(false),
+	bInitialized(false),
+	bRunning(false),
 	nChannels(2),
 	dSampleRate(44100),
 	nFramesPerBuffer(256),
@@ -35,21 +37,12 @@ SoundManager::SoundManager(const int& voices) :
 }
 
 SoundManager::~SoundManager(){
-	// Terminate stream
-	if(initialized){
-		if(running){
-			stop();
-		}
-		PaError err = Pa_Terminate();
-		if( err != paNoError ){
-			std::cout << " [error] Failed to initialize port audio\n";
-			std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
-		}
-	}
+	if(bInitialized)
+		terminate(); // Terminate stream
 }
 
 bool SoundManager::init(){
-	if(initialized) // Already initialized
+	if(bInitialized) // Already initialized
 		return true;
 
 	// Initialize port audio
@@ -61,35 +54,47 @@ bool SoundManager::init(){
 	}
 
 	// Open audio stream
-    err = Pa_OpenDefaultStream( &stream,
-                                0,          /* no input channels */
-                                nChannels,          /* stereo output */
-                                paFloat32,  /* 32 bit floating point output */
-                                dSampleRate,
-                                nFramesPerBuffer,        /* frames per buffer, i.e. the number
-                                                   of sample frames that PortAudio will
-                                                   request from the callback. Many apps
-                                                   may want to use
-                                                   paFramesPerBufferUnspecified, which
-                                                   tells PortAudio to pick the best,
-                                                   possibly changing, buffer size.*/
-                                callback, /* this is your callback function */
-                                dptr ); /*This is a pointer that will be passed to
-                                                   your callback*/
+    err = Pa_OpenDefaultStream(
+    	&stream,
+		0,
+		nChannels,
+		paFloat32,
+		dSampleRate,
+		nFramesPerBuffer,
+		callback,
+		dptr 
+	);
+	
     if( err != paNoError ){
     	std::cout << " [error] Failed to initialize audio stream\n";
 		std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
 		return false;
 	}
 
-	initialized = true;
-	return initialized;
+	bInitialized = true;
+	return bInitialized;
+}
+
+bool SoundManager::terminate(){
+	if(bInitialized){
+		if(bRunning){
+			stop();
+		}
+		PaError err = Pa_Terminate();
+		bInitialized = false;
+		if( err != paNoError ){
+			std::cout << " [error] Failed to terminate port audio\n";
+			std::cout << " [error]  err=" << Pa_GetErrorText(err) << std::endl;
+			return false;
+		}
+	}
+	return true;
 }
 
 bool SoundManager::start(){
-	if(!initialized)
+	if(!bInitialized)
 		return false;
-	if(running) // Already started
+	if(bRunning) // Already started
 		return true;
 
 	// Start stream
@@ -100,7 +105,7 @@ bool SoundManager::start(){
 		return false;
 	}
 	
-	running = true;
+	bRunning = true;
 	return true;
 }
 
@@ -109,9 +114,9 @@ void SoundManager::sleep(const long& length){
 }
 
 bool SoundManager::stop(){
-	if(!initialized)
+	if(!bInitialized)
 		return false;
-	if(!running) // Already stopped
+	if(!bRunning) // Already stopped
 		return true;
 
 	PaError err = Pa_StopStream( stream );
@@ -121,8 +126,18 @@ bool SoundManager::stop(){
 		return false;
 	}
 	
-	running = false;
+	bRunning = false;
 	return false;
+}
+
+void SoundManager::execute(){
+	if(!bInitialized)
+		return;
+	while(!bQuitting){
+		Pa_Sleep(500); // Sleep for user specified length of time
+	}
+	// Terminate stream
+	terminate();
 }
 
 int SoundManager::defaultCallback( 

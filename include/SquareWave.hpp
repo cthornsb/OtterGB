@@ -62,6 +62,8 @@ public:
 private:
 	bool bSweepEnabled; ///< Flag indicating frequency sweep is enabled on this channel
 
+	unsigned char nDuty; ///< Square waveform duty cycle
+
 	unsigned char nWaveform; ///< Current square audio waveform
 	
 	VolumeEnvelope volume; ///< Channel's volume envelope
@@ -75,6 +77,10 @@ private:
 	/** Disable the length counter, volume envelope, and frequency sweep (if in use)
 	  */
 	virtual void userDisable();
+	
+	/** Upon powering down, reset the volume envelope and sweep divider (if enabled)
+	  */
+	virtual void userReset();
 	
 	/** Check if sweep frequency calculation overflowed and disable the channel and DAC if it did,
 	  * otherwise do nothing.

@@ -85,6 +85,10 @@ private:
 	/** Disable length counter
 	  */
 	virtual void userDisable();
+	
+	/** Upon powering down, reset the WAVE index and sample buffer
+	  */
+	virtual void userReset();
 };
 
 #endif

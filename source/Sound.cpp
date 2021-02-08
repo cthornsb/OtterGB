@@ -1,10 +1,9 @@
 
-#include <iostream>
-#include <math.h>
-
 #include "Support.hpp"
 #include "SystemGBC.hpp"
+#include "SoundManager.hpp"
 #include "Sound.hpp"
+#include "SoundBuffer.hpp"
 #include "FrequencySweep.hpp"
 
 /////////////////////////////////////////////////////////////////////
@@ -14,18 +13,19 @@
 SoundProcessor::SoundProcessor() : 
 	SystemComponent("APU"), 
 	ComponentTimer(2048), // 512 Hz sequencer
-	audio(new SoundManager()),
+	audio(0x0),
 	ch1(new FrequencySweep()),
 	ch2(),
 	ch3(wavePatternRAM),
 	ch4(),
-	outputLevelSO1(0),
-	outputLevelSO2(0),
+	mixer(),
+	buffer(&SoundBuffer::getInstance()),
 	wavePatternRAM(),
 	masterSoundEnable(false),
 	sequencerTicks(0)
 { 
-	//audio->init();
+	mixer.reload();
+	mixer.enable(); // Start mixer clock
 }
 
 bool SoundProcessor::checkRegister(const unsigned short &reg){
@@ -163,40 +163,47 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		// NR50-52 MASTER CONTROL
 		/////////////////////////////////////////////////////////////////////
 		case 0xFF24: // NR50 (Channel control / ON-OFF / volume)
-			outputLevelSO2 = rNR50->getBits(4,6); // Output level (0-7)
-			outputLevelSO1 = rNR50->getBits(0,2); // Output level (0-7)
+			// Ignore Vin since we do not emulate it
+			mixer.setOutputLevels(rNR50->getBits(4,6) / 7.f, rNR50->getBits(0,2) / 7.f); // 3-bit volumes
 			break;
 		case 0xFF25: // NR51 (Select sound output)
 			// Left channel
-			ch4.sendToSO2(rNR51->getBit(7));
-			ch3.sendToSO2(rNR51->getBit(6));
-			ch2.sendToSO2(rNR51->getBit(5));
-			ch1.sendToSO2(rNR51->getBit(4));
+			mixer.setInputToOutput(3, 0, rNR51->getBit(7)); // ch4
+			mixer.setInputToOutput(2, 0, rNR51->getBit(6)); // ch3
+			mixer.setInputToOutput(1, 0, rNR51->getBit(5)); // ch2
+			mixer.setInputToOutput(0, 0, rNR51->getBit(4)); // ch1
 			// Right channel
-			ch4.sendToSO1(rNR51->getBit(3));
-			ch3.sendToSO1(rNR51->getBit(2));
-			ch2.sendToSO1(rNR51->getBit(1));
-			ch1.sendToSO1(rNR51->getBit(0));
+			mixer.setInputToOutput(3, 1, rNR51->getBit(3)); // ch4
+			mixer.setInputToOutput(2, 1, rNR51->getBit(2)); // ch3
+			mixer.setInputToOutput(1, 1, rNR51->getBit(1)); // ch2
+			mixer.setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
 			break;
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			masterSoundEnable = rNR52->getBit(7);
 			if(masterSoundEnable){ // Power on the frame sequencer
-				//if (!audio->isRunning())
-				//	audio->start(); // Start audio interface
+				// Resume audio output
+				resume(); 
 				// Reset frame sequencer (the 512 Hz clock is always running, even while APU is powered down)
 				sequencerTicks = 0;
 			}
 			else{ // Power off
-				//if (audio->isRunning())
-				//	audio->stop(); // Stop audio interface
+				// Pause audio output
+				pause();
+				// Disable channels
 				disableChannel(4); // Ch 4 OFF
 				disableChannel(3); // Ch 3 OFF
 				disableChannel(2); // Ch 2 OFF
 				disableChannel(1); // Ch 1 OFF
 				for(unsigned char i = 0x10; i < 0x30; i++){ // Clear all sound registers (except NR52 and wave RAM)
-					if(i == 0x26) continue; // Skip NR52
+					if(i == 0x26) // Skip NR52
+						continue; 
 					sys->clearRegister(i); // Set register to zero
 				}
+				// Reset DACs
+				ch1.reset();
+				ch2.reset();
+				ch3.reset();
+				ch4.reset();
 			}
 			break;
 		default:
@@ -283,7 +290,6 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 			dest |= 0x00;
 			break;
 		case 0xFF26: // NR52 (Sound ON-OFF)
-			//std::cout << " (R) NR52=" << getHex(rNR52->getValue()) << std::endl;
 			dest |= 0x70;
 			break;
 		default:
@@ -291,7 +297,7 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 				dest |= 0xFF;
 			}
 			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
-				if(rNR30->getBit(7)){ // DAC powered
+				if(ch3.isEnabled()){ // DAC powered (read back from current WAVE index)
 					dest = ch3.getBuffer();
 				}
 				else
@@ -308,18 +314,26 @@ bool SoundProcessor::onClockUpdate(){
 	if(!timerEnable) 
 		return false;
 
-	// Clock audio units (4 MHz)
-	for(int i = 0; i < 4; i++){
-		ch1.clock();
-		ch2.clock();
-		ch3.clock();
-		ch4.clock();
+	if(masterSoundEnable){
+		// Clock audio units (1 MHz clock)
+		if(ch1.clock())
+			mixer.setInputSample(0, ch1.sample());
+		if(ch2.clock())
+			mixer.setInputSample(1, ch2.sample());
+		if(ch3.clock())
+			mixer.setInputSample(2, ch3.sample());
+		if(ch4.clock())
+			mixer.setInputSample(3, ch4.sample());
+		// Clock 16 kHz mixer
+		if(mixer.clock()) // Push new sample onto the sample FIFO buffer
+			buffer->pushSample(mixer[0], mixer[1]);
 	}
 	
 	// Update the 512 Hz frame sequencer.
 	if(++nCyclesSinceLastTick >= timerPeriod){
 		this->reset();
-		this->rollOver();
+		if(masterSoundEnable)
+			this->rollOver();
 		return true;
 	}
 	
@@ -376,6 +390,16 @@ void SoundProcessor::enableChannel(const Channels& ch){
 	}
 }
 
+void SoundProcessor::pause(){
+	if (audio && audio->isRunning())
+		audio->stop(); // Stop audio interface
+}
+
+void SoundProcessor::resume(){
+	if (audio && !audio->isRunning())
+		audio->start(); // Start audio interface
+}
+
 void SoundProcessor::handleTriggerEnable(const int& ch){
 	switch(ch){
 	case 1:
@@ -408,21 +432,20 @@ void SoundProcessor::handleTriggerEnable(const int& ch){
 }
 
 void SoundProcessor::rollOver(){
-	if(masterSoundEnable){ // Update the 512 Hz frame sequencer.
-		ch1.clockSequencer(sequencerTicks);
-		if(ch1.pollDisable())
-			disableChannel(1);
-		ch2.clockSequencer(sequencerTicks);
-		if(ch2.pollDisable())
-			disableChannel(2);
-		ch3.clockSequencer(sequencerTicks);
-		if(ch3.pollDisable())
-			disableChannel(3);
-		ch4.clockSequencer(sequencerTicks);
-		if(ch4.pollDisable())
-			disableChannel(4);
-		sequencerTicks++;
-	}
+	// Update the 512 Hz frame sequencer.
+	ch1.clockSequencer(sequencerTicks);
+	if(ch1.pollDisable())
+		disableChannel(1);
+	ch2.clockSequencer(sequencerTicks);
+	if(ch2.pollDisable())
+		disableChannel(2);
+	ch3.clockSequencer(sequencerTicks);
+	if(ch3.pollDisable())
+		disableChannel(3);
+	ch4.clockSequencer(sequencerTicks);
+	if(ch4.pollDisable())
+		disableChannel(4);
+	sequencerTicks++;
 }
 
 void SoundProcessor::defineRegisters(){

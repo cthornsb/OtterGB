@@ -14,13 +14,19 @@ public:
 	{ 
 	}
 
+	/** Get the current volume
+	  */
+	unsigned char operator () () const {
+		return nVolume;
+	}
+
 	/** Return true if the current output volume is zero and return false otherwise
 	  */
 	bool silent() const {
 		return (nVolume == 0);
 	}
 
-	/** Get the current volume
+	/** Get the current volume as a float in range [0, 1]
 	  */
 	float getVolume() const { 
 		return (nVolume / 15.f); 

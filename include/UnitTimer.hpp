@@ -55,7 +55,7 @@ public:
 
 	/** Set the period of the timer (in 1 MHz master clock ticks)
 	  */
-	void setPeriod(const unsigned short& period) {
+	virtual void setPeriod(const unsigned short& period) {
 		nPeriod = nPeriodMultiplier * period;
 	}
 
@@ -88,12 +88,6 @@ public:
 		userDisable();
 	}
 
-	/** Reset the counter to the period of the timer
-	  */
-	void reset() {
-		nCounter = nPeriod;
-	}
-
 	/** Clock the timer, returning true if the phase rolled over and returning false otherwise
 	  */
 	bool clock();
@@ -101,6 +95,10 @@ public:
 	/** Reload the unit timer with its period
 	  */
 	virtual void reload();
+
+	/** Reset all timer values and flags
+	  */
+	virtual void reset();
 
 protected:
 	bool bEnabled; ///< Timer enabled flag

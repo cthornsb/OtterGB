@@ -16,7 +16,7 @@ float ShiftRegister::getRealFrequency() const {
 }
 
 unsigned char ShiftRegister::sample(){
-	return ((reg & 0x1) == 0x1 ? 0x0 : 0xf); // Inverted
+	return (((reg & 0x1) == 0x1 ? 0x0 : 0xf) * volume()); // Inverted
 }
 
 void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
@@ -58,5 +58,14 @@ void ShiftRegister::trigger(){
 	reg = 0x7fff; // Set all 15 bits to 1
 	length.trigger();
 	volume.trigger();
+}
+
+void ShiftRegister::userReset(){
+	//length.reset(); // Length is reset by AudioUnit::reset()
+	volume.reset();
+	bWidthMode = false;
+	nClockShift = 0;
+	nDivisor = 0;
+	reg = 0x7fff;
 }
 

@@ -46,3 +46,18 @@ bool AudioUnit::powerOn(const Register* nrx4, const unsigned int& nSequencerTick
 	return (bDisableThisChannel || bEnableThisChannel);
 }
 
+void AudioUnit::reset(){
+	// Timer values & flags
+	bEnabled = false;
+	nPeriod = 0;
+	nCounter = 0;
+	nFrequency = 0;
+	nCyclesSinceLastClock = 0;
+	// DAC values & flags
+	bDisableThisChannel = false;
+	bEnableThisChannel = false;
+	length.reset();
+	// Inherited classes
+	this->userReset();
+}
+

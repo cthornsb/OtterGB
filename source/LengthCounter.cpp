@@ -34,3 +34,11 @@ void LengthCounter::trigger(){
 		bRefilled = false;
 }
 
+void LengthCounter::reset(){
+	// Do not set period to zero because it is used to compute the length
+	bEnabled = false;
+	bRefilled = false;
+	nCounter = 0;
+	nCyclesSinceLastClock = 0;
+}
+

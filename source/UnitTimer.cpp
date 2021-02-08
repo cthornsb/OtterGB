@@ -14,3 +14,11 @@ void UnitTimer::reload(){
 	nCounter = nPeriod;
 }
 
+void UnitTimer::reset(){
+	bEnabled = false;
+	nPeriod = 0;
+	nCounter = 0;
+	nFrequency = 0;
+	nCyclesSinceLastClock = 0;
+}
+	

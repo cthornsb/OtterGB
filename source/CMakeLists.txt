@@ -21,6 +21,8 @@ set(SYSTEM_SOURCES AudioUnit.cpp
                    SerialController.cpp
                    ShiftRegister.cpp
                    Sound.cpp
+                   SoundBuffer.cpp
+                   SoundMixer.cpp
                    SquareWave.cpp
                    SystemComponent.cpp
                    SystemGBC.cpp

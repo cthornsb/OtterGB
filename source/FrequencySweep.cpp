@@ -75,7 +75,7 @@ void FrequencySweep::rollover(){
 		}
 		else{ // Frequency overflow, disable channel
 			bOverflow = true;
-			disable(); // TEMP
+			disable();
 		}
 	}
 }

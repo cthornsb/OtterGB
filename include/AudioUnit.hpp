@@ -14,8 +14,6 @@ public:
 		UnitTimer(),
 		bDisableThisChannel(false),
 		bEnableThisChannel(false),
-		bOutputToSO1(false),
-		bOutputToSO2(false),
 		length(64)
 	{ 
 	}
@@ -26,8 +24,6 @@ public:
 		UnitTimer(master),
 		bDisableThisChannel(false),
 		bEnableThisChannel(false),
-		bOutputToSO1(false),
-		bOutputToSO2(false),
 		length(maxLength)
 	{ 
 	}
@@ -56,18 +52,6 @@ public:
 		length.setLength(len);
 	}
 
-	/** Enable or disable sending this channel's audio to output terminal 1 (right channel)
-	  */
-	void sendToSO1(const bool& state=true) {
-		bOutputToSO1 = state;
-	}
-
-	/** Enable or disable sending this channel's audio to output terminal 2 (left channel)
-	  */
-	void sendToSO2(const bool& state=true) {
-		bOutputToSO2 = state;
-	}
-	
 	/** Poll this channel's disable flag, indicating that the channel should be disabled by the master controller
 	  * If the flag is set, it will be reset.
 	  * @return True if the unit should be disabled and return false otherwise
@@ -114,14 +98,14 @@ public:
 		length.disable();
 	}
 	
+	/** Reset all values and flags
+	  */
+	virtual void reset();
+	
 protected:
 	bool bDisableThisChannel; ///< Channel will be disabled immediately
 	
 	bool bEnableThisChannel; ///< Channel will be enabled immediately
-
-	bool bOutputToSO1; ///< Output audio to SO1 terminal
-
-	bool bOutputToSO2; ///< Output audio to SO2 terminal
 
 	LengthCounter length; ///< Sound length counter
 	
@@ -132,6 +116,10 @@ protected:
 	/** Disable this channel
 	  */
 	virtual void userDisable() { }
+
+	/** Reset all values and flags
+	  */
+	virtual void userReset() { }
 	
 	/** Method called from powerOn() when the channel was triggered and will be enabled
 	  */

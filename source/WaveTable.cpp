@@ -1,5 +1,3 @@
-#include <iostream> // TEMP
-
 #include "WaveTable.hpp"
 
 unsigned char WaveTable::sample(){
@@ -45,10 +43,10 @@ void WaveTable::trigger(){
 	// Reset position counter but do not sample the first byte due to a quirk of the hardware.
 	// The first nibble of the wave table will not be played until it loops
 	nIndex = 0; 
-	std::cout << " WAVE TRIGGER: counter=" << nCounter << "\n";
 }
 
 void WaveTable::rollover(){
+	reload(); // Reset period counter
 	if(nIndex % 2 == 0) // Get the next two nibbles
 		nBuffer = data[nIndex / 2];
 	if(++nIndex >= 32) // Increment sample position
@@ -61,4 +59,11 @@ void WaveTable::userEnable(){
 
 void WaveTable::userDisable(){
 	length.disable();
+}
+
+void WaveTable::userReset(){
+	//length.reset(); // Length is reset by AudioUnit::reset()
+	nIndex = 0;
+	nBuffer = 0;
+	nVolume = 0; // muted
 }

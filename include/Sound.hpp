@@ -3,15 +3,19 @@
 
 #include <memory>
 
-#include "SoundManager.hpp"
 #include "SystemComponent.hpp"
 #include "SystemTimer.hpp"
 
+#include "SoundMixer.hpp"
 #include "SquareWave.hpp"
 #include "WaveTable.hpp"
 #include "ShiftRegister.hpp"
 
 #include "SystemRegisters.hpp"
+
+class SoundManager;
+
+class SoundBuffer;
 
 enum class Channels {
 	CH1, // Square 1
@@ -22,7 +26,21 @@ enum class Channels {
 
 class SoundProcessor : public SystemComponent, public ComponentTimer {
 public:
+	/** Default constructor
+	  */
 	SoundProcessor();
+
+	/** Get pointer to output audio mixer
+	  */
+	SoundMixer* getMixer(){
+		return &mixer;
+	}
+
+	/** Set the audio interface pointer
+	  */
+	void setAudioInterface(SoundManager* ptr){
+		audio = ptr;
+	}
 
 	/** Disable audio channel (indexed from 1)
 	  */
@@ -39,6 +57,14 @@ public:
 	/** Enable audio channel
 	  */	
 	void enableChannel(const Channels& ch);
+
+	/** Pause audio output (if enabled)
+	  */
+	void pause();
+	
+	/** Resume audio output (if enabled)
+	  */
+	void resume();
 
 	// The sound controller has no associated RAM, so return false to avoid trying to access it.
 	virtual bool preWriteAction(){ return false; }
@@ -61,23 +87,20 @@ public:
 	virtual void defineRegisters();
 
 private:
-	std::unique_ptr<SoundManager> audio; ///< System audio interface
+	SoundManager* audio; ///< Main system audio handler
 
-	// Channel 1 (square w/ sweep)
-	SquareWave ch1;
+	SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
 
-	// Channel 2 (square)
-	SquareWave ch2;
+	SquareWave ch2; ///< Channel 2 (square)
 	
-	// Channel 3 (wave)
-	WaveTable ch3;
+	WaveTable ch3; ///< Channel 3 (wave)
+	
+	ShiftRegister ch4; ///< Channel 4 (noise)
 
-	// Channel 4 (noise)
-	ShiftRegister ch4;
-
-	// Master control registers
-	unsigned char outputLevelSO1;
-	unsigned char outputLevelSO2;
+	SoundMixer mixer; ///< Audio output mixer
+	
+	SoundBuffer* buffer; ///< Pointer to audio sample buffer (singleton)
+	
 	unsigned char wavePatternRAM[16];
 	
 	bool masterSoundEnable;

@@ -21,6 +21,7 @@
 #include "WorkRam.hpp"
 #include "DmaController.hpp"
 #include "SerialController.hpp"
+#include "SoundManager.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
@@ -98,7 +99,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	pauseAfterNextInstruction(false),
 	pauseAfterNextClock(false),
 	pauseAfterNextHBlank(false),
-	pauseAfterNextVBlank(false)
+	pauseAfterNextVBlank(false),
+	audioInterface(0x0)
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -205,6 +207,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	this->initialize();
 
 	if(cfgFile.good()){ // Handle user input from config file
+		if (cfgFile.search("MASTER_VOLUME", true)) // Set master output volume
+			sound->getMixer()->setVolume(cfgFile.getFloat());
 		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
 			sclk->setFramerateMultiplier(cfgFile.getFloat());
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
@@ -418,6 +422,8 @@ bool SystemGBC::execute(){
 	if(debugMode)
 		gui->closeAllWindows(); // Clean up the Qt GUI
 #endif
+	if(audioInterface) // Terminate audio stream
+		audioInterface->quit();
 	if(autoLoadExtRam) // Save save data (if available)
 		writeExternalRam();
 	return true;
@@ -712,6 +718,11 @@ void SystemGBC::setOpcodeBreakpoint(const unsigned char &op, bool cb/*=false*/){
 	breakpointOpcode.enable(op);
 }
 
+void SystemGBC::setAudioInterface(SoundManager* ptr){
+	audioInterface = ptr;
+	sound->setAudioInterface(ptr);
+}
+
 void SystemGBC::clearBreakpoint(){
 	breakpointProgramCounter.clear();
 }
@@ -831,12 +842,14 @@ void SystemGBC::resumeCPU(){
 	if(rKEY1->getBit(0)){ // Prepare speed switch
 		if(!bCPUSPEED){ // Normal speed
 			sclk->setDoubleSpeedMode();
+			sound->getMixer()->setDoubleSpeedMode();
 			bCPUSPEED = true;
 			rKEY1->clear();
 			rKEY1->setBit(7);
 		}
 		else{ // Double speed
 			sclk->setNormalSpeedMode();
+			sound->getMixer()->setNormalSpeedMode();
 			bCPUSPEED = false;
 			rKEY1->clear();
 		}
@@ -852,6 +865,7 @@ void SystemGBC::pause(){
 		gui->update();
 	}
 #endif
+	sound->pause(); // Stop audio output
 }
 
 void SystemGBC::unpause(){ 
@@ -860,6 +874,7 @@ void SystemGBC::unpause(){
 	if(debugMode)
 		gui->updatePausedState(false);
 #endif
+	sound->resume(); // Restart audio output
 }
 
 bool SystemGBC::reset() {
@@ -1100,7 +1115,7 @@ bool SystemGBC::readExternalRam(){
 
 void SystemGBC::help(){
 	std::cout << "HELP: Press escape to exit program.\n\n";
-	
+
 	std::cout << " Button Map-\n";
 	std::cout << "  Start = Enter\n";
 	std::cout << " Select = Tab\n";
@@ -1115,16 +1130,18 @@ void SystemGBC::help(){
 	std::cout << "  F1 : Display this help screen\n";
 	std::cout << "  F2 : Pause emulation\n";
 	std::cout << "  F3 : Resume emulation\n";
-	std::cout << "  F4 : Take a screenshot\n";
+	std::cout << "  F4 : Reset emulator\n";
 	std::cout << "  F5 : Quicksave state\n";
-	std::cout << "  F6 : Dump system memory to \"memory.dat\"\n";
-	std::cout << "  F7 : Dump VRAM to \"vram.dat\"\n";
-	std::cout << "  F8 : Dump cartridge RAM to \"sram.dat\"\n";
+	std::cout << "  F6 : Decrease frame-skip (slower)\n";
+	std::cout << "  F7 : Increase frame-skip (faster)\n";
+	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"\n";
 	std::cout << "  F9 : Quickload state\n";
+	std::cout << "  F12: Take screenshot\n";
 	std::cout << "   ` : Open interpreter console\n";
-	std::cout << "   - : Decrease frame skip\n";
-	std::cout << "   + : Increase frame skip\n";
+	std::cout << "   - : Decrease volume\n";
+	std::cout << "   + : Increase volume\n";
 	std::cout << "   f : Show/hide FPS counter on screen\n";
+	std::cout << "   m : Mute output audio\n";
 }
 
 void SystemGBC::openDebugConsole(){
@@ -1228,10 +1245,10 @@ void SystemGBC::checkSystemKeys(){
 		reset();
 	else if (keys->poll(0xF5)) // F5  Quicksave
 		quicksave();
-	else if (keys->poll(0xF6)) // F6  (No function)
-		return;
-	else if (keys->poll(0xF7)) // F7  (No function)
-		return;
+	else if (keys->poll(0xF6)) // F6  Decrease frame-skip (slower)
+		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
+	else if (keys->poll(0xF7)) // F7  Increase freme-skip (faster)
+		frameSkip++;
 	else if (keys->poll(0xF8)) // F8  Save cartridge RAM to file
 		writeExternalRam();
 	else if (keys->poll(0xF9)) // F9  Quickload
@@ -1242,14 +1259,14 @@ void SystemGBC::checkSystemKeys(){
 		return;
 	else if (keys->poll(0xFC)) // F12 Screenshot
 		screenshot();
-	else if (keys->poll(0x2D)) // '-'    Decrease frame skip
-		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
-	else if (keys->poll(0x3D)) // '=(+)' Increase frame skip
-		frameSkip++;
+	else if (keys->poll(0x2D)) // '-'    Decrease volume
+		sound->getMixer()->decreaseVolume();
+	else if (keys->poll(0x3D)) // '=(+)' Increase volume
+		sound->getMixer()->increaseVolume();
 	else if (keys->poll(0x60)) // '`'   Open debugging console
 		openDebugConsole();
 	else if (keys->poll(0x66)) // 'f'    Display framerate
 		displayFramerate = !displayFramerate;
-	else if (keys->poll(0x6E)) // 'n'    Next scanline
-		resumeUntilNextHBlank();
+	else if (keys->poll(0x6D)) // 'm'    Mute
+		sound->getMixer()->mute();
 }

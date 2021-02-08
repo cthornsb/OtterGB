@@ -13,6 +13,7 @@
 	class MainWindow;
 #endif
 
+class SoundManager;
 class SerialController;
 class DmaController;
 class Cartridge;
@@ -44,7 +45,7 @@ public:
 	
 	ComponentList(){ }
 	
-	ComponentList(SystemGBC *sys);
+	ComponentList(SystemGBC* sys);
 };
 
 class Breakpoint{
@@ -78,7 +79,7 @@ private:
 class SystemGBC{
 	friend class ComponentList;
 public:
-	SystemGBC(int &argc, char *argv[]);
+	SystemGBC(int &argc, char* argv[]);
 	
 	~SystemGBC();
 
@@ -86,11 +87,11 @@ public:
 
 	bool execute();
 	
-	bool write(const unsigned short &loc, unsigned char *src){ return write(loc, (*src)); }
+	bool write(const unsigned short &loc, unsigned char* src){ return write(loc, (*src)); }
 	
 	bool write(const unsigned short &loc, const unsigned char &src);
 
-	bool read(const unsigned short &loc, unsigned char *dest){ return read(loc, (*dest)); }
+	bool read(const unsigned short &loc, unsigned char* dest){ return read(loc, (*dest)); }
 	
 	bool read(const unsigned short &loc, unsigned char &dest);
 
@@ -104,36 +105,38 @@ public:
 	
 	unsigned char getValue(const unsigned short &loc);
 	
-	unsigned char *getPtr(const unsigned short &loc);
+	unsigned char* getPtr(const unsigned short &loc);
 	
-	const unsigned char *getConstPtr(const unsigned short &loc);
+	const unsigned char* getConstPtr(const unsigned short &loc);
 	
-	Register *getPtrToRegister(const unsigned short &reg);
+	Register* getPtrToRegister(const unsigned short &reg);
 
-	unsigned char *getPtrToRegisterValue(const unsigned short &reg);
+	unsigned char* getPtrToRegisterValue(const unsigned short &reg);
 
-	const unsigned char *getConstPtrToRegisterValue(const unsigned short &reg);
+	const unsigned char* getConstPtrToRegisterValue(const unsigned short &reg);
 
-	LR35902 *getCPU(){ return cpu.get(); }
+	LR35902* getCPU(){ return cpu.get(); }
 	
-	GPU *getGPU(){ return gpu.get(); }
+	GPU* getGPU(){ return gpu.get(); }
 	
-	SpriteHandler *getOAM(){ return oam.get(); }
+	SoundProcessor* getSound(){ return sound.get(); }
+	
+	SpriteHandler* getOAM(){ return oam.get(); }
 	
 	SystemClock* getClock() { return sclk.get(); }
 	
-	Cartridge *getCartridge(){ return cart.get(); }
+	Cartridge* getCartridge(){ return cart.get(); }
 	
-	WorkRam *getWRAM(){ return wram.get(); }
+	WorkRam* getWRAM(){ return wram.get(); }
 	
-	ComponentList *getListOfComponents(){ return subsystems.get(); }
+	ComponentList* getListOfComponents(){ return subsystems.get(); }
 	
-	std::vector<Register> *getRegisters(){ return &registers; }
+	std::vector<Register>* getRegisters(){ return &registers; }
 	
 #ifdef USE_QT_DEBUGGER
-	QApplication *getQtApplication(){ return app.get(); }
+	QApplication* getQtApplication(){ return app.get(); }
 	
-	MainWindow *getQtGui(){ return gui.get(); }
+	MainWindow* getQtGui(){ return gui.get(); }
 #endif
 	
 	bool cpuIsHalted() const { return cpuHalted; }
@@ -168,6 +171,8 @@ public:
 	
 	void setOpcodeBreakpoint(const unsigned char &op, bool cb=false);
 
+	void setAudioInterface(SoundManager* ptr);
+
 	void clearBreakpoint();
 	
 	void clearMemWriteBreakpoint();
@@ -176,11 +181,11 @@ public:
 	
 	void clearOpcodeBreakpoint();
 
-	void addSystemRegister(SystemComponent *comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
+	void addSystemRegister(SystemComponent* comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 
 	void addSystemRegister(const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
-	void addDummyRegister(SystemComponent *comp, const unsigned char &reg);
+	void addDummyRegister(SystemComponent* comp, const unsigned char &reg);
 
 	void clearRegister(const unsigned char &reg);
 	
@@ -289,6 +294,8 @@ private:
 	bool pauseAfterNextHBlank;
 	bool pauseAfterNextVBlank;
 
+	SoundManager* audioInterface;
+
 	std::unique_ptr<SerialController> serial;
 	std::unique_ptr<DmaController> dma;
 	std::unique_ptr<Cartridge> cart;
@@ -301,7 +308,7 @@ private:
 	std::unique_ptr<SystemClock> sclk;
 	std::unique_ptr<SystemTimer> timer;
 	std::unique_ptr<LR35902> cpu;
-
+	
 #ifdef USE_QT_DEBUGGER
 	std::unique_ptr<QApplication> app;
 
