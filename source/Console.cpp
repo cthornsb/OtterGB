@@ -18,33 +18,35 @@ ConsoleGBC::ConsoleGBC() :
 { 
 	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit console");
 	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit console");
-	addConsoleCommand("help", 0, cmdType::HELP, "", "Print help");
-	addConsoleCommand("a",    0, cmdType::REG8, "", "Print A register");
-	addConsoleCommand("b",    0, cmdType::REG8, "", "Print B register");
-	addConsoleCommand("c",    0, cmdType::REG8, "", "Print C register");
-	addConsoleCommand("d",    0, cmdType::REG8, "", "Print D register");
-	addConsoleCommand("e",    0, cmdType::REG8, "", "Print E register");
-	addConsoleCommand("f",    0, cmdType::REG8, "", "Print F register");
-	addConsoleCommand("h",    0, cmdType::REG8, "", "Print H register");
-	addConsoleCommand("l",    0, cmdType::REG8, "", "Print L register");
-	addConsoleCommand("d8",   0, cmdType::REG8, "", "Print d8 immediate");
-	addConsoleCommand("af",   0, cmdType::REG16, "", "Print AF register");
-	addConsoleCommand("bc",   0, cmdType::REG16, "", "Print BC register");
-	addConsoleCommand("de",   0, cmdType::REG16, "", "Print DE register");
-	addConsoleCommand("hl",   0, cmdType::REG16, "", "Print HL register");
-	addConsoleCommand("pc",   0, cmdType::REG16, "", "Print program counter");
-	addConsoleCommand("sp",   0, cmdType::REG16, "", "Print stack pointer");
-	addConsoleCommand("d16",  0, cmdType::REG16, "", "Print d16 immediate");
+	addConsoleCommand("help", 0, cmdType::HELP, "[cmd]", "Print list of commands or syntax for (cmd)");
+	addConsoleCommand("a",    0, cmdType::REG8, "[val]", "Print A register");
+	addConsoleCommand("b",    0, cmdType::REG8, "[val]", "Print B register");
+	addConsoleCommand("c",    0, cmdType::REG8, "[val]", "Print C register");
+	addConsoleCommand("d",    0, cmdType::REG8, "[val]", "Print D register");
+	addConsoleCommand("e",    0, cmdType::REG8, "[val]", "Print E register");
+	addConsoleCommand("f",    0, cmdType::REG8, "[val]", "Print F register");
+	addConsoleCommand("h",    0, cmdType::REG8, "[val]", "Print H register");
+	addConsoleCommand("l",    0, cmdType::REG8, "[val]", "Print L register");
+	addConsoleCommand("d8",   0, cmdType::REG8, "[val]", "Print d8 immediate");
+	addConsoleCommand("af",   0, cmdType::REG16, "[val]", "Print AF register");
+	addConsoleCommand("bc",   0, cmdType::REG16, "[val]", "Print BC register");
+	addConsoleCommand("de",   0, cmdType::REG16, "[val]", "Print DE register");
+	addConsoleCommand("hl",   0, cmdType::REG16, "[val]", "Print HL register");
+	addConsoleCommand("pc",   0, cmdType::REG16, "[val]", "Print program counter");
+	addConsoleCommand("sp",   0, cmdType::REG16, "[val]", "Print stack pointer");
+	addConsoleCommand("d16",  0, cmdType::REG16, "[val]", "Print d16 immediate");
 	addConsoleCommand("inst", 0, cmdType::INST, "", "Print instruction");
-	addConsoleCommand("rd",   1, cmdType::READ, "<reg,val>", "Read byte at addres");
-	addConsoleCommand("wt",   2, cmdType::WRITE, "<reg,val>", "Write byte to address");
-	addConsoleCommand("hex",  1, cmdType::HEX, "<reg,val>", "Convert to hex");
-	addConsoleCommand("bin",  1, cmdType::BIN, "<reg,val>", "Convert to binary");
-	addConsoleCommand("dec",  1, cmdType::DEC, "<reg,val>", "Convert to decimal");
-	addConsoleCommand("cls",  0, cmdType::CLS, "<reg,val>", "Clear screen");
-	addConsoleCommand("res",  0, cmdType::RES, "<reg,val>", "Reset emulator");
-	addConsoleCommand("qsv", 0, cmdType::QSAVE, "<reg,val>", "Quicksave");
-	addConsoleCommand("qld", 0, cmdType::QLOAD, "<reg,val>", "Quickload");
+	addConsoleCommand("read", 1, cmdType::READ, "<addr>", "Read byte at address");
+	addConsoleCommand("write",2, cmdType::WRITE, "<addr> <val>", "Write byte to address");
+	addConsoleCommand("rreg", 1, cmdType::READREG, "<reg>", "Read system register");
+	addConsoleCommand("wreg", 2, cmdType::WRITEREG, "<reg> <val>", "Write system register");
+	addConsoleCommand("hex",  1, cmdType::HEX, "<val>", "Convert value to hex");
+	addConsoleCommand("bin",  1, cmdType::BIN, "<val>", "Convert value to binary");
+	addConsoleCommand("dec",  1, cmdType::DEC, "<val>", "Convert value to decimal");
+	addConsoleCommand("cls",  0, cmdType::CLS, "", "Clear screen");
+	addConsoleCommand("reset",0, cmdType::RESET, "", "Reset emulator");
+	addConsoleCommand("qsave",0, cmdType::QSAVE, "[fname]", "Quicksave");
+	addConsoleCommand("qload",0, cmdType::QLOAD, "[fname]", "Quickload");
 	put('>');
 }
 
@@ -141,6 +143,8 @@ void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
 void ConsoleGBC::handleInput(){
 	//handle user input commands here
 	LR35902 *cpu = sys->getCPU();
+	std::vector<Register>* registers = sys->getRegisters();
+	Register* reg = 0x0;
 	std::vector<std::string> args;
 	std::string userinput = toLowercase(line);
 	if (parser.isExpression(userinput)) {
@@ -174,18 +178,16 @@ void ConsoleGBC::handleInput(){
 			return;
 		}
 		// System registers
-		std::vector<Register>* registers = sys->getRegisters();
 		std::string regname = toUppercase(args.front());
-		for(auto reg = registers->begin(); reg != registers->end(); reg++){
-			if(regname == reg->getName()){
-				if(nArgs >= 2){ // Write register
-					reg->write(getUserInputUChar(args.at(1)));
-				}
-				else{ // Read register
-					(*this) << getHex(reg->read()) << " (" << getBinary(reg->read()) << ")\n";
-				}
-				return;
+		Register* reg = sys->getRegisterByName(regname);
+		if(reg){
+			if(nArgs >= 2){ // Write register
+				reg->write(getUserInputUChar(args.at(1)));
 			}
+			else{ // Read register
+				(*this) << getHex(reg->read()) << " (" << getBinary(reg->read()) << ")\n";
+			}
+			return;
 		}
 		(*this) << "unknown command\n";
 		return;
@@ -193,6 +195,7 @@ void ConsoleGBC::handleInput(){
 	ConsoleCommand *cmd = &iter->second;
 	if(nArgs-1 < cmd->getRequiredArgs()){
 		(*this) << "syntax error\n";
+		(*this) << cmd->getName() << " " << cmd->getArgStr() << "\n";
 		return;
 	}
 	unsigned char d8;
@@ -202,12 +205,24 @@ void ConsoleGBC::handleInput(){
 			sys->closeDebugConsole();
 			break;
 		case cmdType::HELP:
-			d16 = 0;
-			clear();
-			for(auto allcmd = commands.begin(); allcmd != commands.end(); allcmd++){
-				if(d16++ >= nRows-1)
-					continue;
-				(*this) << allcmd->first << "\n";
+			if(nArgs >= 2){ // User specified command to print syntax for
+				for(auto allcmd = commands.cbegin(); allcmd != commands.cend(); allcmd++){
+					if(allcmd->first == args.at(1)){
+						(*this) << "syntax:\n";
+						(*this) << " " << allcmd->second.getName() << " " << allcmd->second.getArgStr() << "\n";
+						return;
+					}
+				}
+				(*this) << "unknown command\n";
+			}
+			else{
+				d16 = 0;
+				clear();
+				for(auto allcmd = commands.cbegin(); allcmd != commands.cend(); allcmd++){
+					if(d16++ >= nRows-1)
+						continue;
+					(*this) << allcmd->first << "\n";
+				}
 			}
 			break;
 		case cmdType::REG8: // 8 bit cpu registers
@@ -250,6 +265,25 @@ void ConsoleGBC::handleInput(){
 				d16 = getUserInputUShort(args.at(1));
 			sys->write(d16, d8);
 			break;
+		case cmdType::READREG:
+			reg = sys->getRegisterByName(args.at(1));
+			if(reg){
+				(*this) << getHex(reg->getValue()) << "\n";
+			}
+			else{
+				(*this) << "undefined register\n";
+			}
+			break;
+		case cmdType::WRITEREG:
+			reg = sys->getRegisterByName(args.at(1));
+			if(reg){
+				reg->setValue(getUserInputUChar(args.at(2)));
+			}
+			else{
+				(*this) << "undefined register\n";
+			}
+			sys->write(d16, d8);
+			break;
 		case cmdType::HEX:
 			d16 = getUserInputUShort(args.at(1));
 			if(d16 > 255) // 16-bit
@@ -270,14 +304,24 @@ void ConsoleGBC::handleInput(){
 		case cmdType::CLS: // clear screen
 			clear();
 			break;
-		case cmdType::RES: // Reset
+		case cmdType::RESET: // Reset
 			sys->reset();
 			break;
 		case cmdType::QSAVE: // Quicksave
-			sys->quicksave();
+			if(nArgs >= 2){ // User specified filename
+				sys->quicksave(args.at(1));
+			}
+			else{
+				sys->quicksave();
+			}
 			break;
 		case cmdType::QLOAD: // Quickload
-			sys->quickload();
+			if(nArgs >= 2){ // User specified filename
+				sys->quickload(args.at(1));
+			}
+			else{
+				sys->quickload();
+			}
 			break;
 	}
 }

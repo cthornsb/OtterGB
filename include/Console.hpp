@@ -11,7 +11,25 @@
 
 class SystemGBC;
 
-enum class cmdType{ NONE, QUIT, HELP, REG8, REG16, INST, READ, WRITE, HEX, BIN, DEC, CLS, RES, QSAVE, QLOAD};
+enum class cmdType{ 
+	NONE, 
+	QUIT,     // Close interpreter
+	HELP,     // Print help information
+	REG8,     // Get or set 8-bit register
+	REG16,    // Get or set 16-bit register
+	INST,     // Print most recent instruction
+	READ,     // Read from memory
+	WRITE,    // Write to memory
+	READREG,  // Read system register
+	WRITEREG, // Write system register
+	HEX,      // Convert a value to hexadecimal
+	BIN,      // Convert a value to binary
+	DEC,      // Convert a value to decimal
+	CLS,      // Clear terminal
+	RESET,    // Reset emulator
+	QSAVE,    // Quick-save
+	QLOAD     // Quick-load
+};
 
 class ConsoleCommand{
 public:
@@ -33,11 +51,29 @@ public:
 	{
 	}
 
-	unsigned short getRequiredArgs() const { return nReqArgs; }
+	unsigned short getRequiredArgs() const { 
+		return nReqArgs; 
+	}
 	
-	bool operator == (const std::string& name) const { return (sName == name); }
+	bool operator == (const std::string& name) const { 
+		return (sName == name); 
+	}
 
-	cmdType getType() const { return eType; }
+	cmdType getType() const { 
+		return eType; 
+	}
+
+	std::string getName() const {
+		return sName;
+	}
+	
+	std::string getArgStr() const {
+		return sArgs;
+	}
+
+	std::string getHelpStr() const {
+		return sHelp;
+	}
 
 private:
 	std::string sName;

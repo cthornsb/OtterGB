@@ -221,7 +221,7 @@ unsigned char getUserInputUChar(const std::string& str){
 }
 
 unsigned short getUserInputUShort(const std::string& str){
-	return (unsigned short)getUserInputUShort(str);
+	return (unsigned short)getUserInputUInt(str);
 }
 
 unsigned int getUserInputUInt(const std::string& str) {

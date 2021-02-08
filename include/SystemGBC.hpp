@@ -133,6 +133,8 @@ public:
 	
 	std::vector<Register>* getRegisters(){ return &registers; }
 	
+	Register* getRegisterByName(const std::string& name);
+	
 #ifdef USE_QT_DEBUGGER
 	QApplication* getQtApplication(){ return app.get(); }
 	
@@ -227,9 +229,9 @@ public:
 
 	bool screenshot();
 
-	bool quicksave();
+	bool quicksave(const std::string& fname="");
 	
-	bool quickload();
+	bool quickload(const std::string& fname="");
 	
 	bool writeExternalRam();
 

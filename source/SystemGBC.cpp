@@ -672,6 +672,15 @@ const unsigned char *SystemGBC::getConstPtrToRegisterValue(const unsigned short 
 	return registers[reg-0xFF00].getConstPtr();
 }
 
+Register* SystemGBC::getRegisterByName(const std::string& name){
+	std::string capsname = toUppercase(name); // All registers are capitalized
+	for(std::vector<Register>::iterator reg = registers.begin(); reg != registers.end(); reg++){
+		if(capsname == reg->getName())
+			return &(*reg);
+	}
+	return 0x0;
+}
+
 void SystemGBC::setDebugMode(bool state/*=true*/){
 	debugMode = state;
 	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++)
@@ -1010,9 +1019,13 @@ bool SystemGBC::screenshot(){
 	return false;
 }
 
-bool SystemGBC::quicksave(){
+bool SystemGBC::quicksave(const std::string& fname/*=""*/){
 	std::cout << " Quicksaving... ";
-	std::ofstream ofile((romFilename+".sav").c_str(), std::ios::binary);
+	std::ofstream ofile;
+	if(fname.empty())
+		ofile.open((romFilename+".sav").c_str(), std::ios::binary);
+	else
+		ofile.open(fname.c_str(), std::ios::binary);
 	if(!ofile.good()){
 		std::cout << "FAILED!\n";
 		return false;
@@ -1031,7 +1044,7 @@ bool SystemGBC::quicksave(){
 	
 	// Write system registers (128 B)
 	unsigned char byte;
-	for(auto reg = registers.begin(); reg != registers.end(); reg++){
+	for(std::vector<Register>::const_iterator reg = registers.cbegin(); reg != registers.cend(); reg++){
 		byte = reg->getValue();
 		ofile.write((char*)&byte, 1);
 		nBytesWritten++;
@@ -1058,9 +1071,13 @@ bool SystemGBC::quicksave(){
 	return true;
 }
 
-bool SystemGBC::quickload(){
+bool SystemGBC::quickload(const std::string& fname/*=""*/){
 	std::cout << " Loading quicksave... ";
-	std::ifstream ifile((romFilename+".sav").c_str(), std::ios::binary);
+	std::ifstream ifile;
+	if(fname.empty())
+		ifile.open((romFilename+".sav").c_str(), std::ios::binary);
+	else
+		ifile.open(fname.c_str(), std::ios::binary);
 	if(!ifile.good()){
 		std::cout << "FAILED!\n";
 		return false;
@@ -1086,7 +1103,7 @@ bool SystemGBC::quickload(){
 	
 	// Write system registers (128 B)
 	unsigned char byte;
-	for(auto reg = registers.begin(); reg != registers.end(); reg++){
+	for(std::vector<Register>::iterator reg = registers.begin(); reg != registers.end(); reg++){
 		ifile.read((char*)&byte, 1);
 		reg->setValue(byte);
 		nBytesRead++;
