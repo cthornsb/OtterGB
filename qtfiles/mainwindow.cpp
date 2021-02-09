@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <QApplication>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -13,20 +15,22 @@
 #include "DmaController.hpp"
 #include "Cartridge.hpp"
 #include "WorkRam.hpp"
+#include "Sound.hpp"
+#include "SoundMixer.hpp"
 
 QString getQString(const std::string &str)
 {
 	return QString(str.c_str());
 }
 
-MainWindow::MainWindow(QApplication *parent) :
-    QMainWindow(),
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
     ui(new Ui::MainWindow),
-    app(parent),
-    sys(0x0)
+    bQuitting(false),
+    sys(0x0),
+    app(0x0)
 {
     ui->setupUi(this);
-    show();
 }
 
 MainWindow::~MainWindow()
@@ -275,6 +279,38 @@ void MainWindow::updateSpritesTab(){
 }
 
 void MainWindow::updateSoundTab(){
+	SoundProcessor* sound = components->apu;
+	SoundMixer* mixer = sound->getMixer();
+	
+	// Volume / balance
+	ui->checkBox_APU_Mute->setChecked(mixer->isMuted());
+	ui->dial_APU_MasterVolume->setValue((int)(mixer->getVolume() * 100));
+	//ui->dial_APU_Balance->setValue(mixer->getBalance());
+	
+	// Audio output channels
+	/*ui->checkBox_APU_MasterEnable->setChecked(sound->isEnabled());
+	ui->checkBox_APU_Ch1Enable->setChecked(sound->isChannelEnabled(1));
+	ui->checkBox_APU_Ch2Enable->setChecked(sound->isChannelEnabled(2));
+	ui->checkBox_APU_Ch3Enable->setChecked(sound->isChannelEnabled(3));
+	ui->checkBox_APU_Ch4Enable->setChecked(sound->isChannelEnabled(4));*/
+	
+	// Audio DACs
+	setRadioButtonState(ui->radioButton_APU_Ch1, sound->isDacEnabled(1));
+	setRadioButtonState(ui->radioButton_APU_Ch2, sound->isDacEnabled(2));
+	setRadioButtonState(ui->radioButton_APU_Ch3, sound->isDacEnabled(3));
+	setRadioButtonState(ui->radioButton_APU_Ch4, sound->isDacEnabled(4));
+	
+	// Length values
+	setLineEditText(ui->lineEdit_APU_Ch1Length, sound->getChannelLength(1));
+	setLineEditText(ui->lineEdit_APU_Ch2Length, sound->getChannelLength(2));
+	setLineEditText(ui->lineEdit_APU_Ch3Length, sound->getChannelLength(3));
+	setLineEditText(ui->lineEdit_APU_Ch4Length, sound->getChannelLength(4));
+
+	// Frequencies	
+	setLineEditText(ui->lineEdit_APU_Ch1Frequency, sound->getChannelFrequency(1));
+	setLineEditText(ui->lineEdit_APU_Ch2Frequency, sound->getChannelFrequency(2));
+	setLineEditText(ui->lineEdit_APU_Ch3Frequency, sound->getChannelFrequency(3));
+	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelFrequency(4));
 }
 
 void MainWindow::updateCartridgeTab(){
@@ -406,13 +442,11 @@ void MainWindow::connectToSystem(SystemGBC *ptr){
 	sys->clearOpcodeBreakpoint();
 }
 
-void MainWindow::processEvents()
-{
+void MainWindow::processEvents(){
 	app->processEvents();
 }
 
-void MainWindow::closeAllWindows()
-{
+void MainWindow::closeAllWindows(){
 	app->closeAllWindows();
 }
 
@@ -613,9 +647,11 @@ void MainWindow::on_spinBox_ScreenScale_valueChanged(int arg1)
 	components->gpu->getWindow()->setScalingFactor(arg1);
 }
 
-void MainWindow::on_doubleSpinBox_Clock_Multiplier_valueChanged(double arg1)
+void MainWindow::on_doubleSpinBox_Clock_Multiplier_editingFinished()
 {
-	components->sclk->setFramerateMultiplier(arg1);
+	double freq = ui->doubleSpinBox_Clock_Multiplier->value();
+	if(freq > 0)
+		sys->setFramerateMultiplier(freq);
 }
 
 void MainWindow::on_pushButton_PauseResume_pressed()
@@ -677,11 +713,6 @@ void MainWindow::on_spinBox_SpriteIndex_valueChanged(int arg1)
 
 }
 
-void MainWindow::on_checkBox_SoundEnabled_stateChanged(int arg1)
-{
-
-}
-
 void MainWindow::on_radioButton_PPU_Map0_clicked()
 {
 	ui->radioButton_PPU_Map0->setChecked(true);
@@ -720,6 +751,103 @@ void MainWindow::on_lineEdit_MemoryByte_editingFinished()
 }
 
 /////////////////////////////////////////////////////////////////////
+// APU
+/////////////////////////////////////////////////////////////////////
+
+void MainWindow::on_dial_APU_MasterVolume_valueChanged(int arg1)
+{
+	components->apu->getMixer()->setVolume(arg1 / 100.f);
+}
+
+void MainWindow::on_dial_APU_AudioBalance_valueChanged(int arg1)
+{
+	components->apu->getMixer()->setBalance(-1.f + (100 + arg1) / 100.f);
+}
+
+void MainWindow::on_checkBox_APU_MasterEnable_clicked(bool arg1)
+{
+	SoundMixer* mixer = components->apu->getMixer();
+	if(arg1){
+		ui->checkBox_APU_Ch1Enable->setEnabled(true);
+		ui->checkBox_APU_Ch2Enable->setEnabled(true);
+		ui->checkBox_APU_Ch3Enable->setEnabled(true);
+		ui->checkBox_APU_Ch4Enable->setEnabled(true);
+		mixer->mute();
+		mixer->setChannelVolume(0, 1.f);
+		mixer->setChannelVolume(1, 1.f);
+		mixer->setChannelVolume(2, 1.f);
+		mixer->setChannelVolume(3, 1.f);
+	}
+	else{
+		ui->checkBox_APU_Ch1Enable->setEnabled(false);
+		ui->checkBox_APU_Ch2Enable->setEnabled(false);
+		ui->checkBox_APU_Ch3Enable->setEnabled(false);
+		ui->checkBox_APU_Ch4Enable->setEnabled(false);
+		mixer->mute();
+		mixer->setChannelVolume(0, 0.f);
+		mixer->setChannelVolume(1, 0.f);
+		mixer->setChannelVolume(2, 0.f);
+		mixer->setChannelVolume(3, 0.f);
+	}
+}
+
+void MainWindow::on_checkBox_APU_Ch1Enable_clicked(bool arg1)
+{
+	SoundMixer* mixer = components->apu->getMixer();
+	if(arg1) // On
+		mixer->setChannelVolume(0, 1.f);
+	else // Off
+		mixer->setChannelVolume(0, 0.f);
+}
+
+void MainWindow::on_checkBox_APU_Ch2Enable_clicked(bool arg1)
+{
+	SoundMixer* mixer = components->apu->getMixer();
+	if(arg1) // On
+		mixer->setChannelVolume(1, 1.f);
+	else // Off
+		mixer->setChannelVolume(1, 0.f);
+}
+
+void MainWindow::on_checkBox_APU_Ch3Enable_clicked(bool arg1)
+{
+	SoundMixer* mixer = components->apu->getMixer();
+	if(arg1) // On
+		mixer->setChannelVolume(2, 1.f);
+	else // Off
+		mixer->setChannelVolume(2, 0.f);
+}
+
+void MainWindow::on_checkBox_APU_Ch4Enable_clicked(bool arg1)
+{
+	SoundMixer* mixer = components->apu->getMixer();
+	if(arg1) // On
+		mixer->setChannelVolume(3, 1.f);
+	else // Off
+		mixer->setChannelVolume(3, 0.f);
+}
+
+void MainWindow::on_checkBox_APU_Mute_clicked()
+{
+	components->apu->getMixer()->mute();
+}
+
+void MainWindow::on_radioButton_APU_Stereo_clicked()
+{
+	components->apu->getMixer()->setStereoOutput();
+}
+
+void MainWindow::on_radioButton_APU_Mono_clicked()
+{
+	components->apu->getMixer()->setMonoOutput();
+}
+
+void MainWindow::on_pushButton_APU_ClockSequencer_pressed()
+{
+	// Not implemented yet
+}
+
+/////////////////////////////////////////////////////////////////////
 // Menu action slots
 /////////////////////////////////////////////////////////////////////
 
@@ -731,6 +859,7 @@ void MainWindow::on_actionLoad_ROM_triggered()
 void MainWindow::on_actionQuit_triggered()
 {
 	sys->quit();
+	bQuitting = true;
 }
 
 void MainWindow::on_actionPause_Emulation_triggered()

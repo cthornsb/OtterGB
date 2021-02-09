@@ -44,7 +44,7 @@ public:
 	/** Get the actual frequency (in Hz)
 	  */
 	virtual float getRealFrequency() const {
-		return ((1048576.f / nMasterClockPeriod) / (2048 - nFrequency)); // in Hz
+		return ((4194304.f / nMasterClockPeriod) / (2048 - nFrequency)); // in Hz
 	}
 
 	/** Return true if the timer is enabled, and return false otherwise

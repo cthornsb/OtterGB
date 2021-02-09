@@ -36,6 +36,35 @@ public:
 		return &mixer;
 	}
 
+	/** Return true if the APU is enabled (i.e. if it is powered up) and return false otherwise
+	  */
+	bool isEnabled() const {
+		return masterSoundEnable;
+	}
+	
+	/** Return true if the specified channel output is enabled and return false otherwise
+	  * Not to be confused with isDacEnabled(const int&) which returns whether or not the channel DAC is powered
+	  */
+	bool isChannelEnabled(const int& ch) const ;
+	
+	/** Return true if the specified channel DAC is powered up and return false otherwise
+	  * Not to be confused with isChannelEnabled(const int&) which returns whether or not channel output is enabled
+	  */
+	bool isDacEnabled(const int& ch) const ;
+	
+	/** Get the current remaining length (if length counter is active) for an audio channel
+	  * Returned length is in 256 Hz frame sequencer ticks (3.9 ms ticks)
+	  */
+	unsigned short getChannelLength(const int& ch) const ;
+	
+	/** Get the current period for an audio channel in 4 MHz APU ticks
+	  */
+	unsigned short getChannePeriod(const int& ch) const ;
+	
+	/** Get the current frequency for an audio channel in Hz
+	  */
+	float getChannelFrequency(const int& ch) const ;
+	
 	/** Set the audio interface pointer
 	  */
 	void setAudioInterface(SoundManager* ptr){
@@ -108,6 +137,8 @@ private:
 	unsigned int sequencerTicks;
 	
 	void handleTriggerEnable(const int& ch);
+
+	const AudioUnit* getAudioUnit(const int& ch) const ;
 
 	virtual void rollOver();
 };

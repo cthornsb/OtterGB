@@ -29,7 +29,7 @@ bool SoundMixer::update(){
 	for(int i = 0; i < 2; i++){ // Over left and right output channels
 		fOutputSamples[i] = 0.f;
 		for(int j = 0; j < 4; j++){ // Over input channels
-			fOutputSamples[i] += (bSendInputToOutput[i][j] ? fInputSamples[j] : 0.f);
+			fOutputSamples[i] += fInputVolume[j] * (bSendInputToOutput[i][j] ? fInputSamples[j] : 0.f);
 		}
 		// Normalize audio output and apply master and channel volumes
 		fOutputSamples[i] = ((1.f + fOffsetDC) * fMasterVolume * fOutputVolume[i] * (fOutputSamples[i] / 4.f)) - fOffsetDC; // Translate to range [-DC, 1]

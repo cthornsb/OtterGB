@@ -342,6 +342,40 @@ bool SoundProcessor::onClockUpdate(){
 	return false;
 }
 
+bool SoundProcessor::isChannelEnabled(const int& ch) const {
+	if(ch < 1 || ch > 4)
+		return false;
+	return (masterSoundEnable && rNR52->getBit(ch - 1));
+}
+
+bool SoundProcessor::isDacEnabled(const int& ch) const {
+	const AudioUnit* unit = getAudioUnit(ch);
+	if(!unit)
+		return false;
+	return unit->isEnabled();
+}
+
+unsigned short SoundProcessor::getChannelLength(const int& ch) const {
+	const AudioUnit* unit = getAudioUnit(ch);
+	if(!unit)
+		return false;
+	return unit->getLength();
+}
+
+unsigned short SoundProcessor::getChannePeriod(const int& ch) const {
+	const AudioUnit* unit = getAudioUnit(ch);
+	if(!unit)
+		return false;
+	return unit->getPeriod();
+}
+
+float SoundProcessor::getChannelFrequency(const int& ch) const {
+	const AudioUnit* unit = getAudioUnit(ch);
+	if(!unit)
+		return false;
+	return unit->getRealFrequency();
+}
+
 void SoundProcessor::disableChannel(const int& ch){
 	if(ch < 1 || ch > 4) // Invalid channel
 		return;
@@ -450,6 +484,22 @@ void SoundProcessor::rollOver(){
 	sequencerTicks++;
 }
 
+const AudioUnit* SoundProcessor::getAudioUnit(const int& ch) const {
+	switch(ch){
+	case 1:
+		return &ch1;
+	case 2:
+		return &ch2;
+	case 3:
+		return &ch3;
+	case 4:
+		return &ch4;
+	default:
+		break;	
+	}
+	return 0x0;
+}
+
 void SoundProcessor::defineRegisters(){
 	// Channel 1 registers
 	sys->addSystemRegister(this, 0x10, rNR10, "NR10", "33333330");
@@ -492,3 +542,4 @@ void SoundProcessor::defineRegisters(){
 	for(unsigned char i = 0x0; i <= 0xF; i++)
 		sys->addSystemRegister(this, i+0x30, rWAVE[i], "WAVE", "33333333");
 }
+

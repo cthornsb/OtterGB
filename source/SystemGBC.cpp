@@ -24,7 +24,6 @@
 #include "SoundManager.hpp"
 
 #ifdef USE_QT_DEBUGGER
-	#include <QApplication>
 	#include "mainwindow.h"
 #endif
 
@@ -117,6 +116,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	handler.add(optionExt("config", required_argument, NULL, 'c', "<filename>", "Specify an input configuration file."));
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
 	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<multiplier>", "Set target framerate multiplier (default=1)."));
+	handler.add(optionExt("volume", required_argument, NULL, 'V', "<volume>", "Set initial output volume (in range 0 to 1)."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
 	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
@@ -238,20 +238,22 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	if(handler.good()){ // Handle user command line arguments
 		if(handler.getOption(2)->active) // Set framerate multiplier
 			sclk->setFramerateMultiplier(strtod(handler.getOption(2)->argument.c_str(), NULL));
-		if(handler.getOption(3)->active) // Toggle verbose flag
+		if(handler.getOption(3)->active) // Set master output volume
+			sound->getMixer()->setVolume(strtod(handler.getOption(3)->argument.c_str(), NULL));
+		if(handler.getOption(4)->active) // Toggle verbose flag
 			setVerboseMode(true);
-		if(handler.getOption(4)->active) // Set pixel scaling factor
-			gpu->setPixelScale(strtoul(handler.getOption(4)->argument.c_str(), NULL, 10));
-		if(handler.getOption(5)->active) // Use GBC mode for original GB games
+		if(handler.getOption(5)->active) // Set pixel scaling factor
+			gpu->setPixelScale(strtoul(handler.getOption(5)->argument.c_str(), NULL, 10));
+		if(handler.getOption(6)->active) // Use GBC mode for original GB games
 			forceColor = true;
-		if(handler.getOption(6)->active) // Do not automatically save/load external cartridge RAM (SRAM)
+		if(handler.getOption(7)->active) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
 #ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(7)->active){ // Toggle debug flag
+		if(handler.getOption(8)->active){ // Toggle debug flag
 			setDebugMode(true);
-			if(handler.getOption(8)->active) // Open tile-viewer window
+			if(handler.getOption(9)->active) // Open tile-viewer window
 				useTileViewer = true;
-			if(handler.getOption(9)->active) // Open layer-viewer window
+			if(handler.getOption(10)->active) // Open layer-viewer window
 				useLayerViewer = true;
 		}
 #endif // ifdef USE_QT_DEBUGGER
@@ -260,9 +262,9 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 
 #ifdef USE_QT_DEBUGGER
 	if(debugMode){ // Open Gui window(s)
-		app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
-		gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
-		gui->connectToSystem(this);
+		//app = std::unique_ptr<QApplication>(new QApplication(argc, argv));
+		//gui = std::unique_ptr<MainWindow>(new MainWindow(app.get()));
+		//gui->connectToSystem(this);
 		if(useTileViewer) // Open tile-viewer window
 			gui->openTileViewer();
 		if(useLayerViewer) // Open layer-viewer window
@@ -281,6 +283,8 @@ SystemGBC::~SystemGBC(){
 
 void SystemGBC::initialize(){ 
 	if(fatalError) // Check for fatal error
+		return;
+	if(initSuccessful) // Already initialized
 		return;
 
 	hram->initialize(127);
@@ -396,8 +400,7 @@ bool SystemGBC::execute(){
 #ifdef USE_QT_DEBUGGER
 				if(debugMode){
 					if(!pauseAfterNextVBlank){
-						gui->processEvents();
-						gui->update();
+						updateDebugger();
 					}
 					else{
 						pauseAfterNextVBlank = false;
@@ -430,11 +433,11 @@ bool SystemGBC::execute(){
 	}
 #else
 			if(debugMode) // Process events for the Qt GUI
-				gui->processEvents();
+				updateDebugger();
 		}
 	}
 	if(debugMode)
-		gui->closeAllWindows(); // Clean up the Qt GUI
+		gui->quit();
 #endif
 	if(audioInterface) // Terminate audio stream
 		audioInterface->quit();
@@ -624,8 +627,6 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 }
 
 const unsigned char *SystemGBC::getConstPtr(const unsigned short &loc){
-	// Note: Direct access to ROM banks is restricted. 
-	// Use write() and read() methods to access instead.
 	const unsigned char *retval = 0x0;
 	if(loc <= 0x7FFF){ // ROM
 		retval = cart->getConstPtr(loc);
@@ -738,6 +739,18 @@ void SystemGBC::setOpcodeBreakpoint(const unsigned char &op, bool cb/*=false*/){
 void SystemGBC::setAudioInterface(SoundManager* ptr){
 	audioInterface = ptr;
 	sound->setAudioInterface(ptr);
+}
+
+#ifdef USE_QT_DEBUGGER
+void SystemGBC::setQtDebugger(MainWindow* ptr){
+	ptr->connectToSystem(this);
+	gui = ptr; 
+}
+#endif
+
+void SystemGBC::setFramerateMultiplier(const float& freq){
+	sclk->setFramerateMultiplier(freq);
+	sound->getMixer()->setSampleRateMultiplier(freq);
 }
 
 void SystemGBC::clearBreakpoint(){
@@ -873,13 +886,19 @@ void SystemGBC::resumeCPU(){
 	}
 }
 
+#ifdef USE_QT_DEBUGGER
+void SystemGBC::updateDebugger(){
+	gui->update();
+	gui->processEvents();
+}
+#endif
+
 void SystemGBC::pause(){ 
 	emulationPaused = true; 
 #ifdef USE_QT_DEBUGGER
 	if(debugMode){
 		gui->updatePausedState(true);
-		gui->processEvents();
-		gui->update();
+		updateDebugger();
 	}
 #endif
 	sound->pause(); // Stop audio output

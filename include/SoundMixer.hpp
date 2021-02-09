@@ -78,6 +78,13 @@ public:
 	void decreaseVolume(const float& change=0.1f){
 		setVolume(fMasterVolume - change);
 	}
+	
+	/** Set the volume for one of the input channels
+	  */
+	void setChannelVolume(const unsigned char& ch, const float& volume){
+		if(ch < 4)
+			fInputVolume[ch] = clamp(volume);
+	}
 
 	/** Set the negative DC offset of the output audio effectively making the output up to 100% louder (default is 0)
 	  * Offset clamped to range [0, 1]
@@ -122,6 +129,12 @@ public:
 	void setInputSample(const unsigned char& ch, const unsigned char& vol){
 		bModified = true;
 		fInputSamples[ch] = clamp(vol / 15.f, 0.f, 1.f);
+	}
+	
+	/** 
+	  */
+	void setSampleRateMultiplier(const float &freq){
+		nPeriod = (unsigned short)(MIXER_CLOCK_PERIOD * freq);
 	}
 	
 	/** Modify mixer timer period for CGB double speed mode (2 MHz)

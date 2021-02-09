@@ -9,6 +9,8 @@
 
 #include "SystemGBC.hpp"
 
+class QApplication;
+
 class QLineEdit;
 class QRadioButton;
 class Window;
@@ -22,9 +24,19 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QApplication *parent = 0);
+    explicit MainWindow(QWidget *parent = 0);
     
     ~MainWindow();
+    
+    /** Return true if application is exiting and return false otherwise
+      */
+    bool isQuitting() const {
+    	return bQuitting;
+    }
+
+	void setApplication(QApplication* application){
+		app = application;
+	}
 
 	void update();
 
@@ -39,6 +51,12 @@ public:
 	void openTileViewer();
 	
 	void openLayerViewer();
+	
+	/** The application is exiting
+	  */
+	void quit(){
+		bQuitting = true;
+	}
 
 private slots:
     void on_checkBox_Background_stateChanged(int arg1);
@@ -71,7 +89,7 @@ private slots:
     
     void on_spinBox_ScreenScale_valueChanged(int arg1);
     
-    void on_doubleSpinBox_Clock_Multiplier_valueChanged(double arg1);
+    void on_doubleSpinBox_Clock_Multiplier_editingFinished();
 
     void on_pushButton_PauseResume_pressed();
 
@@ -92,8 +110,6 @@ private slots:
 	void on_pushButton_PPU_LayerViewer_pressed();
 
     void on_spinBox_SpriteIndex_valueChanged(int arg1);
-
-    void on_checkBox_SoundEnabled_stateChanged(int arg1);
 
 	void on_radioButton_PPU_Map0_clicked();
 	
@@ -140,15 +156,43 @@ private slots:
 	void on_horizontalSlider_MemoryPage_valueChanged(int arg1);
 
     void on_lineEdit_MemoryByte_editingFinished();
+    
+	/////////////////////////////////////////////////////////////////////
+	// APU
+	/////////////////////////////////////////////////////////////////////
+	
+	void on_dial_APU_MasterVolume_valueChanged(int arg1);
+	
+	void on_dial_APU_AudioBalance_valueChanged(int arg1);
+	
+	void on_checkBox_APU_MasterEnable_clicked(bool arg1);
+	
+	void on_checkBox_APU_Ch1Enable_clicked(bool arg1);
+	
+	void on_checkBox_APU_Ch2Enable_clicked(bool arg1);
+	
+	void on_checkBox_APU_Ch3Enable_clicked(bool arg1);
+	
+	void on_checkBox_APU_Ch4Enable_clicked(bool arg1);
+	
+	void on_checkBox_APU_Mute_clicked();
+
+	void on_radioButton_APU_Stereo_clicked();
+	
+	void on_radioButton_APU_Mono_clicked();
+	
+	void on_pushButton_APU_ClockSequencer_pressed();
 
 private:
     std::unique_ptr<Ui::MainWindow> ui;
     
-    QApplication *app;
+    bool bQuitting;
     
-    SystemGBC *sys;
+    SystemGBC* sys;
 
-	const unsigned char *memoryPtr;
+	QApplication* app;
+
+	const unsigned char* memoryPtr;
 	
 	std::map<std::string, std::vector<Register*> > registers;
 
