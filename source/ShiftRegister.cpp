@@ -1,3 +1,5 @@
+#include <iostream>
+#include "Support.hpp"
 #include <cmath>
 
 #include "ShiftRegister.hpp"
@@ -6,7 +8,7 @@ void ShiftRegister::updatePhase(){
 	if(nDivisor != 0)
 		nPeriod = std::pow(2, nClockShift + 1) / nDivisor;
 	else // For divisor=0, assume divisor=0.5
-		nPeriod = std::pow(2, nClockShift + 1) / 2;
+		nPeriod = 2 * std::pow(2, nClockShift + 1);
 }
 
 float ShiftRegister::getRealFrequency() const {
@@ -39,13 +41,14 @@ void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
 
 void ShiftRegister::rollover(){
 	// Xor the two lowest bits
-	reg = reg >> 1; // Right shift all bits
-	if((reg & 0x1) ^ ((reg & 0x2) >> 1)){ // 1
+	if(bitTest(reg, 0) ^ bitTest(reg, 1)){ // 1
+		reg = reg >> 1; // Right shift all bits
 		reg |= 0x4000; // Set the high bit (14)
 		if(bWidthMode)
 			reg |= 0x40; // Also set bit 6
 	}
 	else{ // 0
+		reg = reg >> 1; // Right shift all bits
 		reg &= 0xbfff; // Clear the high bit (14)
 		if(bWidthMode)
 			reg &= 0xffbf; // Also clear bit 6
@@ -53,6 +56,7 @@ void ShiftRegister::rollover(){
 }
 
 void ShiftRegister::trigger(){
+	//std::cout << " TRIG\n";
 	if(!nCounter)
 		this->reload(); // Reload the main timer with its phase
 	reg = 0x7fff; // Set all 15 bits to 1

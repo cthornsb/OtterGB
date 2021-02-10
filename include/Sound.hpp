@@ -57,6 +57,12 @@ public:
 	  */
 	unsigned short getChannelLength(const int& ch) const ;
 	
+	/** Get the current remaining time (if length counter is active) for an audio channel (in milliseconds)
+	  */
+	float getChannelTime(const int& ch) const {
+		return (getChannelLength(ch) * 3.90625f);
+	}
+	
 	/** Get the current period for an audio channel in 4 MHz APU ticks
 	  */
 	unsigned short getChannelPeriod(const int& ch) const ;

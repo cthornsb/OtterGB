@@ -15,6 +15,7 @@ public:
 		nVolume(0)
 	{
 		nPeriodMultiplier = 2;
+		nWavelengthPeriod = 32; // 32 samples per wavelength period
 	}
 	
 	/** Constructor with pointer to audio sample data
@@ -27,6 +28,7 @@ public:
 		nVolume(0)
 	{
 		nPeriodMultiplier = 2;
+		nWavelengthPeriod = 32; // 32 samples per wavelength period
 	}
 	
 	/** Get the current wave sample index

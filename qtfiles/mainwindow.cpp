@@ -306,16 +306,16 @@ void MainWindow::updateSoundTab(){
 	setRadioButtonState(ui->radioButton_APU_Ch4, sound->isDacEnabled(4));
 	
 	// Length values
-	setLineEditText(ui->lineEdit_APU_Ch1Length, sound->getChannelLength(1));
-	setLineEditText(ui->lineEdit_APU_Ch2Length, sound->getChannelLength(2));
-	setLineEditText(ui->lineEdit_APU_Ch3Length, sound->getChannelLength(3));
-	setLineEditText(ui->lineEdit_APU_Ch4Length, sound->getChannelLength(4));
+	setLineEditText(ui->lineEdit_APU_Ch1Length, sound->getChannelTime(1));
+	setLineEditText(ui->lineEdit_APU_Ch2Length, sound->getChannelTime(2));
+	setLineEditText(ui->lineEdit_APU_Ch3Length, sound->getChannelTime(3));
+	setLineEditText(ui->lineEdit_APU_Ch4Length, sound->getChannelTime(4));
 
 	// Frequencies	
 	setLineEditText(ui->lineEdit_APU_Ch1Frequency, sound->getChannelFrequency(1));
 	setLineEditText(ui->lineEdit_APU_Ch2Frequency, sound->getChannelFrequency(2));
 	setLineEditText(ui->lineEdit_APU_Ch3Frequency, sound->getChannelFrequency(3));
-	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelPeriod(4));
+	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelFrequency(4));
 }
 
 void MainWindow::updateCartridgeTab(){

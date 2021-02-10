@@ -12,7 +12,7 @@ public:
 		nFrequency(0),
 		nPeriodMultiplier(1),
 		nCyclesSinceLastClock(0),
-		nMasterClockPeriod(8)
+		nWavelengthPeriod(8)
 	{
 	}
 
@@ -25,7 +25,7 @@ public:
 		nFrequency(0),
 		nPeriodMultiplier(1),
 		nCyclesSinceLastClock(0),
-		nMasterClockPeriod(8)
+		nWavelengthPeriod(8)
 	{
 	}
 	
@@ -44,7 +44,7 @@ public:
 	/** Get the actual frequency (in Hz)
 	  */
 	virtual float getRealFrequency() const {
-		return ((4194304.f / nMasterClockPeriod) / (2048 - nFrequency)); // in Hz
+		return (4194304.f / (nWavelengthPeriod * nPeriod)); // in Hz
 	}
 
 	/** Return true if the timer is enabled, and return false otherwise
@@ -111,9 +111,9 @@ protected:
 	
 	unsigned short nPeriodMultiplier; ///< Period multiplier factor
 	
-	unsigned int nCyclesSinceLastClock; ///< Number of input clock ticks since last unit clock rollover
+	unsigned int nCyclesSinceLastClock; ///< Number of input clock ticks (4 MHz) since last unit clock rollover
 	
-	unsigned int nMasterClockPeriod; ///< Number of input clock ticks per unit clock tick
+	unsigned int nWavelengthPeriod; ///< Audio output waveform wavelength expressed in input clock ticks (4 MHz)
 	
 	/** Additional operations performed whenever enable() is called
 	  */

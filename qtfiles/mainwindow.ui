@@ -2242,14 +2242,14 @@
      <widget class="QLabel" name="label_15">
       <property name="geometry">
        <rect>
-        <x>338</x>
+        <x>327</x>
         <y>17</y>
-        <width>58</width>
+        <width>71</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Length</string>
+       <string>Length (ms)</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_16">
@@ -2424,14 +2424,14 @@
      <widget class="QLabel" name="label_17">
       <property name="geometry">
        <rect>
-        <x>489</x>
+        <x>486</x>
         <y>18</y>
-        <width>31</width>
+        <width>41</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Key</string>
+       <string>Note</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_APU_Ch3Key">
