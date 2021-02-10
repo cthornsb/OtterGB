@@ -362,7 +362,7 @@ unsigned short SoundProcessor::getChannelLength(const int& ch) const {
 	return unit->getLength();
 }
 
-unsigned short SoundProcessor::getChannePeriod(const int& ch) const {
+unsigned short SoundProcessor::getChannelPeriod(const int& ch) const {
 	const AudioUnit* unit = getAudioUnit(ch);
 	if(!unit)
 		return false;

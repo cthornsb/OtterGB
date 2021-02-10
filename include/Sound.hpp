@@ -59,7 +59,7 @@ public:
 	
 	/** Get the current period for an audio channel in 4 MHz APU ticks
 	  */
-	unsigned short getChannePeriod(const int& ch) const ;
+	unsigned short getChannelPeriod(const int& ch) const ;
 	
 	/** Get the current frequency for an audio channel in Hz
 	  */
