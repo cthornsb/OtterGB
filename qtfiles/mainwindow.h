@@ -8,6 +8,7 @@
 #include <QMainWindow>
 
 #include "SystemGBC.hpp"
+#include "SimpleSynthesizers.hpp"
 
 class QApplication;
 
@@ -182,6 +183,12 @@ private slots:
 	void on_radioButton_APU_Mono_clicked();
 	
 	void on_pushButton_APU_ClockSequencer_pressed();
+	
+	void on_lineEdit_APU_Ch1Frequency_textChanged(QString arg1);
+	
+	void on_lineEdit_APU_Ch2Frequency_textChanged(QString arg1);
+	
+	void on_lineEdit_APU_Ch3Frequency_textChanged(QString arg1);
 
 private:
     std::unique_ptr<Ui::MainWindow> ui;
@@ -193,6 +200,8 @@ private:
 	QApplication* app;
 
 	const unsigned char* memoryPtr;
+	
+	PianoKeys::Keyboard keyboard;
 	
 	std::map<std::string, std::vector<Register*> > registers;
 

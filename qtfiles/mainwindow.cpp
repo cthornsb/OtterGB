@@ -23,6 +23,11 @@ QString getQString(const std::string &str)
 	return QString(str.c_str());
 }
 
+std::string getStdString(const QString& str)
+{
+	return str.toStdString();
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -310,7 +315,7 @@ void MainWindow::updateSoundTab(){
 	setLineEditText(ui->lineEdit_APU_Ch1Frequency, sound->getChannelFrequency(1));
 	setLineEditText(ui->lineEdit_APU_Ch2Frequency, sound->getChannelFrequency(2));
 	setLineEditText(ui->lineEdit_APU_Ch3Frequency, sound->getChannelFrequency(3));
-	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelFrequency(4));
+	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelPeriod(4));
 }
 
 void MainWindow::updateCartridgeTab(){
@@ -845,6 +850,36 @@ void MainWindow::on_radioButton_APU_Mono_clicked()
 void MainWindow::on_pushButton_APU_ClockSequencer_pressed()
 {
 	// Not implemented yet
+}
+
+void MainWindow::on_lineEdit_APU_Ch1Frequency_textChanged(QString arg1)
+{
+	float freq = std::stof(arg1.toStdString()); // Frequency (Hz)
+	std::string text;
+	if(keyboard.getName(freq, text) <= 0.01f) // <= 1% absolute difference in frequency
+		setLineEditText(ui->lineEdit_APU_Ch1Key, text);
+	else // > 1% absolute difference
+		setLineEditText(ui->lineEdit_APU_Ch1Key, text + "?");
+}
+
+void MainWindow::on_lineEdit_APU_Ch2Frequency_textChanged(QString arg1)
+{
+	float freq = std::stof(arg1.toStdString()); // Frequency (Hz)
+	std::string text;
+	if(keyboard.getName(freq, text) <= 0.01f) // <= 1% absolute difference in frequency
+		setLineEditText(ui->lineEdit_APU_Ch2Key, text);
+	else // > 1% absolute difference
+		setLineEditText(ui->lineEdit_APU_Ch2Key, text + "?");
+}
+
+void MainWindow::on_lineEdit_APU_Ch3Frequency_textChanged(QString arg1)
+{
+	float freq = std::stof(arg1.toStdString()); // Frequency (Hz)
+	std::string text;
+	if(keyboard.getName(freq, text) <= 0.01f) // <= 1% absolute difference in frequency
+		setLineEditText(ui->lineEdit_APU_Ch3Key, text);
+	else // > 1% absolute difference
+		setLineEditText(ui->lineEdit_APU_Ch3Key, text + "?");
 }
 
 /////////////////////////////////////////////////////////////////////

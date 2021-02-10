@@ -2138,7 +2138,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch1Length">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>40</y>
         <width>61</width>
         <height>28</height>
@@ -2151,7 +2151,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch2Length">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>80</y>
         <width>61</width>
         <height>28</height>
@@ -2164,7 +2164,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch3Length">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>120</y>
         <width>61</width>
         <height>28</height>
@@ -2177,7 +2177,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch4Length">
       <property name="geometry">
        <rect>
-        <x>350</x>
+        <x>330</x>
         <y>160</y>
         <width>61</width>
         <height>28</height>
@@ -2190,7 +2190,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch4Frequency">
       <property name="geometry">
        <rect>
-        <x>440</x>
+        <x>410</x>
         <y>160</y>
         <width>61</width>
         <height>28</height>
@@ -2203,7 +2203,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch2Frequency">
       <property name="geometry">
        <rect>
-        <x>440</x>
+        <x>410</x>
         <y>80</y>
         <width>61</width>
         <height>28</height>
@@ -2216,7 +2216,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch1Frequency">
       <property name="geometry">
        <rect>
-        <x>440</x>
+        <x>410</x>
         <y>40</y>
         <width>61</width>
         <height>28</height>
@@ -2229,7 +2229,7 @@
      <widget class="QLineEdit" name="lineEdit_APU_Ch3Frequency">
       <property name="geometry">
        <rect>
-        <x>440</x>
+        <x>410</x>
         <y>120</y>
         <width>61</width>
         <height>28</height>
@@ -2242,7 +2242,7 @@
      <widget class="QLabel" name="label_15">
       <property name="geometry">
        <rect>
-        <x>358</x>
+        <x>338</x>
         <y>17</y>
         <width>58</width>
         <height>16</height>
@@ -2255,20 +2255,20 @@
      <widget class="QLabel" name="label_16">
       <property name="geometry">
        <rect>
-        <x>424</x>
+        <x>413</x>
         <y>17</y>
-        <width>91</width>
+        <width>61</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Frequency (Hz)</string>
+       <string>Freq (Hz)</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_85">
       <property name="geometry">
        <rect>
-        <x>293</x>
+        <x>280</x>
         <y>18</y>
         <width>31</width>
         <height>16</height>
@@ -2281,7 +2281,7 @@
      <widget class="QRadioButton" name="radioButton_APU_Ch1">
       <property name="geometry">
        <rect>
-        <x>260</x>
+        <x>247</x>
         <y>43</y>
         <width>71</width>
         <height>21</height>
@@ -2303,7 +2303,7 @@
      <widget class="QRadioButton" name="radioButton_APU_Ch2">
       <property name="geometry">
        <rect>
-        <x>260</x>
+        <x>247</x>
         <y>83</y>
         <width>71</width>
         <height>21</height>
@@ -2325,7 +2325,7 @@
      <widget class="QRadioButton" name="radioButton_APU_Ch3">
       <property name="geometry">
        <rect>
-        <x>260</x>
+        <x>247</x>
         <y>123</y>
         <width>71</width>
         <height>21</height>
@@ -2347,7 +2347,7 @@
      <widget class="QRadioButton" name="radioButton_APU_Ch4">
       <property name="geometry">
        <rect>
-        <x>260</x>
+        <x>247</x>
         <y>163</y>
         <width>71</width>
         <height>21</height>
@@ -2393,6 +2393,58 @@
       </property>
       <property name="text">
        <string>Mute</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_APU_Ch1Key">
+      <property name="geometry">
+       <rect>
+        <x>480</x>
+        <y>40</y>
+        <width>41</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_APU_Ch2Key">
+      <property name="geometry">
+       <rect>
+        <x>480</x>
+        <y>80</y>
+        <width>41</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>489</x>
+        <y>18</y>
+        <width>31</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Key</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_APU_Ch3Key">
+      <property name="geometry">
+       <rect>
+        <x>480</x>
+        <y>120</y>
+        <width>41</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
       </property>
      </widget>
     </widget>

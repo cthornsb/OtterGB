@@ -65,6 +65,60 @@ float PianoKeys::getFrequency(const Key& key, const Modifier& mod/*=Modifier::NO
 	return An; // A key
 }
 
+PianoKeys::Keyboard::Keyboard(){
+	// A0 to C8 (standard 88 key keyboard)
+	// One octave: A, A#, B, C, C#, D, D#, E, F, F#, G, G#
+	const std::string octaves[9] = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
+	for(int i = 0; i <= 8; i++){ // Over 9 octaves
+		frequencies.push_back(std::make_pair("A"  + octaves[i], getFrequency(Key::A, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("A#" + octaves[i], getFrequency(Key::A, Modifier::SHARP, i)));
+		frequencies.push_back(std::make_pair("B"  + octaves[i], getFrequency(Key::B, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("C"  + octaves[i], getFrequency(Key::C, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("C#" + octaves[i], getFrequency(Key::C, Modifier::SHARP, i)));
+		frequencies.push_back(std::make_pair("D"  + octaves[i], getFrequency(Key::D, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("D#" + octaves[i], getFrequency(Key::D, Modifier::SHARP, i)));
+		frequencies.push_back(std::make_pair("E"  + octaves[i], getFrequency(Key::E, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("F"  + octaves[i], getFrequency(Key::F, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("F#" + octaves[i], getFrequency(Key::F, Modifier::SHARP, i)));
+		frequencies.push_back(std::make_pair("G"  + octaves[i], getFrequency(Key::G, Modifier::NONE,  i)));
+		frequencies.push_back(std::make_pair("G#" + octaves[i], getFrequency(Key::G, Modifier::SHARP, i)));
+	}
+}
+
+/** Get the ideal frequency for the key matching the input string
+  * Input string should have the format "kmo" where 'k' is the key (a to g),
+  * 'm' is the modifier (# or b or none if omitted), and 'o' is the octave (0 to 8, 4 assumed if omitted).
+  */
+float PianoKeys::Keyboard::get(const std::string& key){
+	
+}
+
+/** Get the key string whose ideal frequency is closest to the input frequency
+  */
+std::string PianoKeys::Keyboard::getName(const float& freq){
+	std::string retval;
+	getName(freq, retval);
+	return retval;
+}
+
+float PianoKeys::Keyboard::getName(const float& freq, std::string& key){
+	size_t closestMatch = 0;
+	float delta = 999.f; // Percentage difference between input frequency
+	for(size_t i = 0; i != frequencies.size(); i++){
+		if(frequencies[i].second == freq){ // Exact match is unlikely but possible
+			key = frequencies[i].first;
+			return 0.f;
+		}
+		float df = std::abs(2.f * std::abs(frequencies[i].second - freq) / (frequencies[i].second + freq));
+		if(df < delta){
+			closestMatch = i;
+			delta = df;
+		}
+	}
+	key = frequencies[closestMatch].first;
+	return delta;
+}
+
 float SimpleSynthesizers::SineWave::userSample(const float& dt){
 	return std::sin(fPhase * fFrequency * 2 * PI);
 }
