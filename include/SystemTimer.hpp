@@ -6,7 +6,35 @@
 #include "SystemComponent.hpp"
 
 // Make a typedef for clarity when working with chrono.
-typedef std::chrono::high_resolution_clock sclock;
+typedef std::chrono::high_resolution_clock hrclock;
+
+class HighResTimer{
+public:
+	HighResTimer();
+
+	/** Stop the timer and return the duration
+	  */
+	double operator () () {
+		return stop();
+	}
+	
+	/** Start the timer
+	  */
+	void start();
+	
+	/** Stop the timer, storing timer duration to dWallTime and returning the duration
+	  */
+	double stop();
+	
+	/** Get total time since timer initialization
+	  */
+	double uptime() const;
+	
+private:
+	hrclock::time_point tInitialization; ///< The time that the timer was initialized
+	
+	hrclock::time_point tLastStart; ///< The most recent time that the timer was started
+};
 
 class SystemClock : public SystemComponent {
 public:
@@ -67,9 +95,9 @@ private:
 	
 	double framePeriod; ///< Wall clock time between successive frames (microseconds)
 
-	sclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
-	sclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
-	sclock::time_point cycleTimer;
+	hrclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
+	hrclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
+	hrclock::time_point cycleTimer;
 
 	unsigned int cycleCounter;
 

@@ -17,6 +17,10 @@ class SoundManager;
 
 class SoundBuffer;
 
+namespace MidiFile{
+	class MidiFileReader;
+};
+
 enum class Channels {
 	CH1, // Square 1
 	CH2, // Square 2
@@ -39,7 +43,7 @@ public:
 	/** Return true if the APU is enabled (i.e. if it is powered up) and return false otherwise
 	  */
 	bool isEnabled() const {
-		return masterSoundEnable;
+		return bMasterSoundEnable;
 	}
 	
 	/** Return true if the specified channel output is enabled and return false otherwise
@@ -100,6 +104,20 @@ public:
 	/** Resume audio output (if enabled)
 	  */
 	void resume();
+	
+	/** Start recording midi file
+	  */
+	void startMidiFile(const std::string& filename="out.mid");
+	
+	/** Stop recording midi file and write it to disk
+	  */
+	void stopMidiFile();
+	
+	/** Return true if midi file recording is in progress and return false otherwise
+	  */
+	bool midiFileEnabled() const {
+		return bRecordMidi;
+	}
 
 	// The sound controller has no associated RAM, so return false to avoid trying to access it.
 	virtual bool preWriteAction(){ return false; }
@@ -122,6 +140,10 @@ public:
 	virtual void defineRegisters();
 
 private:
+	bool bMasterSoundEnable; ///< Master sound enabled flag
+
+	bool bRecordMidi; ///< Midi recording in progress
+
 	SoundManager* audio; ///< Main system audio handler
 
 	SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
@@ -138,13 +160,21 @@ private:
 	
 	unsigned char wavePatternRAM[16];
 	
-	bool masterSoundEnable;
+	unsigned int nSequencerTicks; ///< Frame sequencer tick counter
 	
-	unsigned int sequencerTicks;
-	
-	void handleTriggerEnable(const int& ch);
+	unsigned int nMidiClockTicks; ///< Midi clock tick counter (if midi recording in progress)
 
-	const AudioUnit* getAudioUnit(const int& ch) const ;
+	std::unique_ptr<MidiFile::MidiFileReader> midiFile; ///< Midi file recorder
+	
+	/** Handle enabling or disabling channel output when that channel's DAC is triggered (by writting to NRx4)
+	  * @param ch Audio channel number (1, 2, 3, or 4)
+	  * @return True if the specified channel is now enabled and return false otherwise
+	  */
+	bool handleTriggerEnable(const int& ch);
+
+	AudioUnit* getAudioUnit(const int& ch);
+
+	const AudioUnit* getConstAudioUnit(const int& ch) const ;
 
 	virtual void rollOver();
 };

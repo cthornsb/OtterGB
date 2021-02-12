@@ -2,6 +2,7 @@
 set(AUDIO_SOURCES AudioData.cpp
                   AudioMixer.cpp
                   AudioSampler.cpp
+                  MidiFile.cpp
                   SimpleSynthesizers.cpp
                   SoundManager.cpp
                   WavFile.cpp)

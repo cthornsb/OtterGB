@@ -16,6 +16,24 @@ constexpr unsigned int MODE1_START = 16416; // STAT mode 1 from 65664 to 70224 (
 constexpr unsigned int VERTICAL_SYNC_CYCLES   = 17556; // CPU cycles per VSYNC (~59.73 Hz)
 constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 114;   // CPU cycles per HSYNC (per 154 scanlines)
 
+HighResTimer::HighResTimer() :
+	tInitialization(hrclock::now()),
+	tLastStart()
+{
+}
+
+void HighResTimer::start(){
+	tLastStart = hrclock::now();
+}
+
+double HighResTimer::stop(){
+	return std::chrono::duration<double>(hrclock::now() - tLastStart).count();
+}
+
+double HighResTimer::uptime() const {
+	return std::chrono::duration<double>(hrclock::now() - tInitialization).count();
+}
+
 SystemClock::SystemClock() : 
 	SystemComponent("Clock"), 
 	vsync(false), 
@@ -27,9 +45,9 @@ SystemClock::SystemClock() :
 	lcdDriverMode(2), 
 	framerate(0),
 	framePeriod(0),
-	timeOfInitialization(sclock::now()),
-	timeOfLastVSync(sclock::now()),
-	cycleTimer(sclock::now()),
+	timeOfInitialization(hrclock::now()),
+	timeOfLastVSync(hrclock::now()),
+	cycleTimer(hrclock::now()),
 	cycleCounter(0),
 	cyclesPerSecond(0)
 {
@@ -67,8 +85,8 @@ void SystemClock::setNormalSpeedMode(){
 // Tick the system clock.
 bool SystemClock::onClockUpdate(){
 	if(++cycleCounter % (currentClockSpeed*10) == 0){ // Every 10 seconds
-		std::chrono::duration<double> wallTime = sclock::now() - cycleTimer;
-		cycleTimer = sclock::now();
+		std::chrono::duration<double> wallTime = hrclock::now() - cycleTimer;
+		cycleTimer = hrclock::now();
 		cyclesPerSecond = currentClockSpeed*10/wallTime.count();
 		if(verboseMode){
 			double percentDifference = 100.0*(cyclesPerSecond-currentClockSpeed)/currentClockSpeed;
@@ -185,17 +203,17 @@ bool SystemClock::incrementScanline(){
 void SystemClock::waitUntilNextVSync(){
 	static unsigned int frameCount = 0;
 	static double totalRenderTime = 0;
-	std::chrono::duration<double, std::micro> wallTime = sclock::now() - timeOfLastVSync;
+	std::chrono::duration<double, std::micro> wallTime = hrclock::now() - timeOfLastVSync;
 	double timeToSleep = framePeriod - wallTime.count(); // microseconds
 	if(timeToSleep > 0)
 		std::this_thread::sleep_for(std::chrono::microseconds((long long)timeToSleep));
-	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(sclock::now() - timeOfLastVSync).count();
+	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(hrclock::now() - timeOfLastVSync).count();
 	if((++frameCount % 60) == 0){
 		framerate = frameCount/totalRenderTime;
 		totalRenderTime = 0;
 		frameCount = 0;
 	}
-	timeOfLastVSync = sclock::now();
+	timeOfLastVSync = hrclock::now();
 	vsync = false;
 }
 

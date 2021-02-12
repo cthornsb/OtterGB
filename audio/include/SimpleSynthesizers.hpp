@@ -8,6 +8,7 @@
 
 namespace PianoKeys {
 	enum class Key {
+		NONE,
 		A,
 		B,
 		C,
@@ -24,6 +25,20 @@ namespace PianoKeys {
 	};
 
 	float getFrequency(const Key& key, const Modifier& mod=Modifier::NONE, const int& octave=4);
+
+	class Note{
+	public:
+		Key key;
+		Modifier mod;
+		int nOctave;
+	
+		Note() :
+			key(Key::NONE),
+			mod(Modifier::NONE),
+			nOctave(4)
+		{
+		}
+	};
 	
 	class Keyboard{
 	public:

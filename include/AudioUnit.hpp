@@ -64,7 +64,9 @@ public:
 	  */
 	bool pollEnable();
 	
-	/**
+	/** Trigger the channel DAC (called when register nrx4 is written to)
+	  * Enable length counter if nrx4 bit 6 is set and trigger DAC if bit 7 is set
+	  * @return True if this channel should now be disabled OR enabled and return false otherwise
 	  */
 	bool powerOn(const Register* nrx4, const unsigned int& nSequencerTicks);
 

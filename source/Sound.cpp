@@ -5,6 +5,7 @@
 #include "Sound.hpp"
 #include "SoundBuffer.hpp"
 #include "FrequencySweep.hpp"
+#include "MidiFile.hpp"
 
 /////////////////////////////////////////////////////////////////////
 // class SoundProcessor
@@ -13,6 +14,8 @@
 SoundProcessor::SoundProcessor() : 
 	SystemComponent("APU"), 
 	ComponentTimer(2048), // 512 Hz sequencer
+	bMasterSoundEnable(false),
+	bRecordMidi(false),
 	audio(0x0),
 	ch1(new FrequencySweep()),
 	ch2(),
@@ -21,8 +24,9 @@ SoundProcessor::SoundProcessor() :
 	mixer(),
 	buffer(&SoundBuffer::getInstance()),
 	wavePatternRAM(),
-	masterSoundEnable(false),
-	sequencerTicks(0)
+	nSequencerTicks(0),
+	nMidiClockTicks(0),
+	midiFile()
 { 
 	mixer.reload();
 	mixer.enable(); // Start mixer clock
@@ -32,7 +36,7 @@ bool SoundProcessor::checkRegister(const unsigned short &reg){
 	// Check if the APU is powered down.
 	// If the APU is powered down, only the APU control register and
 	//  wave RAM may be written to.
-	if(!masterSoundEnable && (reg < 0xFF30 || reg > 0xFF3F) && reg != 0xFF26) 
+	if(!bMasterSoundEnable && (reg < 0xFF30 || reg > 0xFF3F) && reg != 0xFF26) 
 		return false;
 	return true;
 }
@@ -72,7 +76,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF14: // NR14 ([TONE] Channel 1 frequency high)
 			ch1.setFrequency((rNR14->getBits(0,2) << 8) + rNR13->getValue());
-			if(ch1.powerOn(rNR14, sequencerTicks))
+			if(ch1.powerOn(rNR14, nSequencerTicks))
 				handleTriggerEnable(1);
 			break;
 		/////////////////////////////////////////////////////////////////////
@@ -101,7 +105,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF19: // NR24 ([TONE] Channel 2 frequency high)
 			ch2.setFrequency((rNR24->getBits(0,2) << 8) + rNR23->getValue());
-			if(ch2.powerOn(rNR24, sequencerTicks))
+			if(ch2.powerOn(rNR24, nSequencerTicks))
 				handleTriggerEnable(2);
 			break;
 		/////////////////////////////////////////////////////////////////////
@@ -127,7 +131,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF1E: // NR34 ([WAVE] Channel 3 frequency high)
 			ch3.setFrequency((rNR34->getBits(0,2) << 8) + rNR33->getValue());
-			if(ch3.powerOn(rNR34, sequencerTicks))
+			if(ch3.powerOn(rNR34, nSequencerTicks))
 				handleTriggerEnable(3);
 			break;		
 		/////////////////////////////////////////////////////////////////////
@@ -156,7 +160,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch4.setDivisor(rNR43->getBits(0,2));    // Dividing ratio of frequency (r)
 			break;
 		case 0xFF23: // NR44 ([NOISE] Channel 4 counter / consecutive, initial)
-			if(ch4.powerOn(rNR44, sequencerTicks))
+			if(ch4.powerOn(rNR44, nSequencerTicks))
 				handleTriggerEnable(4);
 			break;
 		/////////////////////////////////////////////////////////////////////
@@ -179,12 +183,12 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			mixer.setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
 			break;
 		case 0xFF26: // NR52 (Sound ON-OFF)
-			masterSoundEnable = rNR52->getBit(7);
-			if(masterSoundEnable){ // Power on the frame sequencer
+			bMasterSoundEnable = rNR52->getBit(7);
+			if(bMasterSoundEnable){ // Power on the frame sequencer
 				// Resume audio output
 				resume(); 
 				// Reset frame sequencer (the 512 Hz clock is always running, even while APU is powered down)
-				sequencerTicks = 0;
+				nSequencerTicks = 0;
 			}
 			else{ // Power off
 				// Pause audio output
@@ -314,7 +318,7 @@ bool SoundProcessor::onClockUpdate(){
 	if(!timerEnable) 
 		return false;
 
-	if(masterSoundEnable){
+	if(bMasterSoundEnable){
 		// Clock audio units (4 MHz clock)
 		for(int i = 0; i < 4; i++){
 			if(ch1.clock())
@@ -327,14 +331,17 @@ bool SoundProcessor::onClockUpdate(){
 				mixer.setInputSample(3, ch4.sample());
 		}
 		// Clock 16 kHz mixer
-		if(mixer.clock()) // Push new sample onto the sample FIFO buffer
+		if(mixer.clock()){ // Push new sample onto the sample FIFO buffer
 			buffer->pushSample(mixer[0], mixer[1]);
+			if(bRecordMidi)
+				nMidiClockTicks++;
+		}
 	}
 	
 	// Update the 512 Hz frame sequencer.
 	if(++nCyclesSinceLastTick >= timerPeriod){
 		this->reset();
-		if(masterSoundEnable)
+		if(bMasterSoundEnable)
 			this->rollOver();
 		return true;
 	}
@@ -345,32 +352,32 @@ bool SoundProcessor::onClockUpdate(){
 bool SoundProcessor::isChannelEnabled(const int& ch) const {
 	if(ch < 1 || ch > 4)
 		return false;
-	return (masterSoundEnable && rNR52->getBit(ch - 1));
+	return (bMasterSoundEnable && rNR52->getBit(ch - 1));
 }
 
 bool SoundProcessor::isDacEnabled(const int& ch) const {
-	const AudioUnit* unit = getAudioUnit(ch);
+	const AudioUnit* unit = getConstAudioUnit(ch);
 	if(!unit)
 		return false;
 	return unit->isEnabled();
 }
 
 unsigned short SoundProcessor::getChannelLength(const int& ch) const {
-	const AudioUnit* unit = getAudioUnit(ch);
+	const AudioUnit* unit = getConstAudioUnit(ch);
 	if(!unit)
 		return false;
 	return unit->getLength();
 }
 
 unsigned short SoundProcessor::getChannelPeriod(const int& ch) const {
-	const AudioUnit* unit = getAudioUnit(ch);
+	const AudioUnit* unit = getConstAudioUnit(ch);
 	if(!unit)
 		return false;
 	return unit->getPeriod();
 }
 
 float SoundProcessor::getChannelFrequency(const int& ch) const {
-	const AudioUnit* unit = getAudioUnit(ch);
+	const AudioUnit* unit = getConstAudioUnit(ch);
 	if(!unit)
 		return false;
 	return unit->getRealFrequency();
@@ -436,55 +443,90 @@ void SoundProcessor::resume(){
 		audio->start(); // Start audio interface
 }
 
-void SoundProcessor::handleTriggerEnable(const int& ch){
-	switch(ch){
-	case 1:
-		if(ch1.pollEnable())
-			enableChannel(1);
-		if(ch1.pollDisable())
-			disableChannel(1);
-		break;
-	case 2:
-		if(ch2.pollEnable())
-			enableChannel(2);
-		if(ch2.pollDisable())
-			disableChannel(2);
-		break;
-	case 3:
-		if(ch3.pollEnable())
-			enableChannel(3);
-		if(ch3.pollDisable())
-			disableChannel(3);
-		break;
-	case 4:
-		if(ch4.pollEnable())
-			enableChannel(4);
-		if(ch4.pollDisable())
-			disableChannel(4);
-		break;
-	default:
-		break;	
+void SoundProcessor::startMidiFile(const std::string& filename/*="out.mid"*/){
+	if(bRecordMidi) // Midi recording already in progress
+		return;
+	midiFile.reset(new MidiFile::MidiFileReader(filename, sys->getRomFilename())); // New midi file recorder
+	bRecordMidi = true;
+}
+
+void SoundProcessor::stopMidiFile(){
+	if(!bRecordMidi) // No midi recording in progress
+		return;
+	// Release all notes (if any are held)
+	midiFile->release(1, (unsigned int)(nMidiClockTicks / 341.33f));
+	midiFile->release(2, (unsigned int)(nMidiClockTicks / 341.33f));
+	midiFile->release(3, (unsigned int)(nMidiClockTicks / 341.33f));
+	midiFile->release(4, (unsigned int)(nMidiClockTicks / 341.33f));
+	midiFile->write(); // Write midi file to disk
+	bRecordMidi = false;
+}
+
+bool SoundProcessor::handleTriggerEnable(const int& ch){
+	if(ch < 1 || ch > 4)
+		return false;
+	AudioUnit* unit = getAudioUnit(ch);
+	if(unit->pollEnable())
+		enableChannel(ch);
+	if(unit->pollDisable())
+		disableChannel(ch);
+	if(rNR52->getBit(ch - 1)){ // Trigger has enabled channel
+		if(bRecordMidi && ch < 4){ // Add a note to the output midi file
+			// If a note is currently pressed on this channel, the midi handler will automatically release it.
+			// 16384 audio samples per second
+			// 120 metronome ticks per minute by default
+			// 24 midi clocks per metronome tick
+			//  => 2880 midi clocks per minute
+			// So... 983040 audio samples per minute and 2880 midi clock ticks per minute
+			//  => 341.33 audio samples per midi clock tick
+			
+			// 17681 midi clocks per second
+			// 1060860 midi clocks per minute
+			// 120 metronome ticks per minute
+			// 24 midi clocks per metronome ticks
+			// 2880 midi clocks per minute
+			
+			midiFile->addNote(ch, (unsigned int)(nMidiClockTicks / 341.33f), unit->getRealFrequency());
+		}
+		return true;
 	}
+	return false;
 }
 
 void SoundProcessor::rollOver(){
 	// Update the 512 Hz frame sequencer.
-	ch1.clockSequencer(sequencerTicks);
+	ch1.clockSequencer(nSequencerTicks);
 	if(ch1.pollDisable())
 		disableChannel(1);
-	ch2.clockSequencer(sequencerTicks);
+	ch2.clockSequencer(nSequencerTicks);
 	if(ch2.pollDisable())
 		disableChannel(2);
-	ch3.clockSequencer(sequencerTicks);
+	ch3.clockSequencer(nSequencerTicks);
 	if(ch3.pollDisable())
 		disableChannel(3);
-	ch4.clockSequencer(sequencerTicks);
+	ch4.clockSequencer(nSequencerTicks);
 	if(ch4.pollDisable())
 		disableChannel(4);
-	sequencerTicks++;
+	nSequencerTicks++;
 }
 
-const AudioUnit* SoundProcessor::getAudioUnit(const int& ch) const {
+AudioUnit* SoundProcessor::getAudioUnit(const int& ch){
+	switch(ch){
+	case 1:
+		return &ch1;
+	case 2:
+		return &ch2;
+	case 3:
+		return &ch3;
+	case 4:
+		return &ch4;
+	default:
+		break;	
+	}
+	return 0x0;	
+}
+
+const AudioUnit* SoundProcessor::getConstAudioUnit(const int& ch) const {
 	switch(ch){
 	case 1:
 		return &ch1;

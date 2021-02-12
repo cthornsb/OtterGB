@@ -22,6 +22,7 @@
 #include "DmaController.hpp"
 #include "SerialController.hpp"
 #include "SoundManager.hpp"
+#include "MidiFile.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include "mainwindow.h"
@@ -1180,6 +1181,7 @@ void SystemGBC::help(){
 	std::cout << "  F7 : Increase frame-skip (faster)\n";
 	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"\n";
 	std::cout << "  F9 : Quickload state\n";
+	std::cout << "  F10: Start/stop midi recording\n";
 	std::cout << "  F12: Take screenshot\n";
 	std::cout << "   ` : Open interpreter console\n";
 	std::cout << "   - : Decrease volume\n";
@@ -1297,8 +1299,16 @@ void SystemGBC::checkSystemKeys(){
 		writeExternalRam();
 	else if (keys->poll(0xF9)) // F9  Quickload
 		quickload();
-	else if (keys->poll(0xFA)) // F10 (No function)
-		return;
+	else if (keys->poll(0xFA)){ // F10 Start / stop midi recording
+		if(sound->midiFileEnabled()){
+			std::cout << " Finalizing MIDI recording.\n";
+			sound->stopMidiFile();
+		}
+		else{
+			std::cout << " Starting MIDI recording.\n";
+			sound->startMidiFile("out.mid");
+		}
+	}
 	else if (keys->poll(0xFB)) // F11 (No function)
 		return;
 	else if (keys->poll(0xFC)) // F12 Screenshot
