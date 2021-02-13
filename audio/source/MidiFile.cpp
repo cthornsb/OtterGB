@@ -10,6 +10,8 @@ using namespace MidiFile;
 
 using namespace PianoKeys;
 
+/** Reverse the order of bytes of a 16-bit integer and return the result
+  */
 unsigned short reverseByteOrder(const unsigned short& input){
 	unsigned short retval = 0;
 	for(int i = 0; i < 2; i++){
@@ -18,6 +20,8 @@ unsigned short reverseByteOrder(const unsigned short& input){
 	return retval;
 }
 
+/** Reverse the order of bytes of a 32-bit integer and return the result
+  */
 unsigned int reverseByteOrder(const unsigned int& input){
 	unsigned int retval = 0;
 	for(int i = 0; i < 4; i++){
@@ -26,10 +30,12 @@ unsigned int reverseByteOrder(const unsigned int& input){
 	return retval;
 }
 
-unsigned int reverseByteOrder(const unsigned int& input, const char& bits){
+/** Reverse the order of bytes of an input N-bit integer and return the result
+  */
+unsigned int reverseByteOrder(const unsigned int& input, const char& N){
 	unsigned int retval = 0;
 	for(int i = 0; i < 4; i++){
-		retval += ((input & (0xff << (8 * i))) >> (8 * i)) << (24 - 8 * (i + 1));
+		retval += ((input & (0xff << (8 * i))) >> (8 * i)) << (N - 8 * (i + 1));
 	}
 	return retval;
 }
@@ -243,19 +249,6 @@ unsigned int MidiChunk::readVariableLength(MidiChunk& chunk){
 	return retval;
 }
 	
-void MidiMessage::set(const MidiKey& other){
-	bPressed = other.isPressed();
-	nChannel = other.getChannel();
-	nKeyNumber = other.getKeyNumber();
-	nVelocity = other.getKeyVelocity();
-	nTime = other.getTime();
-	// Set status
-	if(bPressed)
-		nStatus = MidiStatusType::PRESSED;
-	else
-		nStatus = MidiStatusType::RELEASED;
-}
-	
 bool MidiMessage::read(MidiChunk& chunk){
 	unsigned char byte;
 	chunk.getUChar(byte);
@@ -425,84 +418,6 @@ bool MidiMetaEvent::read(MidiChunk& chunk){
 	return true;
 }
 
-void TrackEvent::addNote(const unsigned char& chan, const unsigned int& t, const unsigned char& note){
-	if(chan > 15) // Channel out of range
-		return;
-	if(bNotePressed[chan]) // Release current note
-		release(chan, t);
-	MidiKey newkey;
-	newkey.setChannel(chan);
-	newkey.setKeyNumber(note);
-	newkey.setKeyVelocity(0x40); // Not sensitive to velocity, so use the default
-	newkey.setTime(t); // Absolute midi clock time
-	keylist.push_back(newkey);
-	nPrevTime = t; // Update running midi time
-	if(t < nStartTime)
-		nStartTime = t;
-	//std::cout << " addNote() ch=" << (int)chan << ", note=" << (int)note << ", t=" << t << std::endl;
-	bNotePressed[chan] = true;
-}
-
-void TrackEvent::addNote(const unsigned char& chan, const unsigned int& t, const std::string& note){
-	if(chan > 15) // Channel out of range
-		return;
-	if(bNotePressed[chan]) // Release current note
-		release(chan, t);
-	MidiKey newkey;
-	newkey.setChannel(chan);
-	newkey.setKeyNumber(60);
-	newkey.setKeyVelocity(0x40); // Not sensitive to velocity, so use the default
-	newkey.setTime(t); // Absolute midi clock time
-	keylist.push_back(newkey);
-	nPrevTime = t; // Update running midi time
-	if(t < nStartTime)
-		nStartTime = t;
-	bNotePressed[chan] = true;
-}
-
-void TrackEvent::addNote(const MidiKey& note){
-	unsigned char chan = note.getChannel();
-	if(bNotePressed[chan]) // Release current note
-		release(chan, note.getTime());
-	keylist.push_back(note);
-	nPrevTime = note.getTime(); // Update running midi time
-	if(note.getTime() < nStartTime)
-		nStartTime = note.getTime();
-	bNotePressed[chan] = true;
-}
-
-void TrackEvent::release(const unsigned char& chan, const unsigned int& t){
-	if(chan > 15) // Channel out of range
-		return;
-	if(keylist.empty() || !bNotePressed[chan]) // No note pressed on this channel
-		return;
-	// Find most recent occurance of a played note on this channel
-	MidiKey* recent = 0x0;
-	for(std::deque<MidiKey>::reverse_iterator iter = keylist.rbegin(); iter != keylist.rend(); iter++){
-		if(iter->getChannel() == chan){
-			recent = &(*iter);
-			break;
-		}
-	}
-	if(!recent) // Note not found
-		return;
-	MidiKey newkey(*recent); // Copy the note
-	newkey.release(); // Mark it as released
-	newkey.setTime(t); // Absolute midi clock time
-	keylist.push_back(newkey);
-	nPrevTime = t; // Update running midi time
-	//std::cout << " release() ch=" << (int)chan << ", note=" << (int)newkey.getKeyNumber() << ", t=" << t << std::endl;
-	bNotePressed[chan] = false;
-}
-
-bool TrackEvent::getNote(MidiMessage* msg){
-	if(keylist.empty())
-		return false;
-	msg->set(keylist.front());
-	keylist.pop_front();
-	return true;
-}
-
 bool TrackEvent::read(MidiChunk& chunk){
 	// Read a byte
 	if(chunk.getBytesRemaining() < 2)
@@ -523,23 +438,91 @@ bool TrackEvent::read(MidiChunk& chunk){
 	return true;
 }
 
-void MidiFileReader::addNote(const int& ch, const unsigned int& t, const float& freq){
-	if(ch < 1 || ch > 4)
-		return;
-	if(bFirstNote){ // First recorded midi note
-		bFirstNote = false;
-		timer.start(); // Start the audio timer
-	}
-	unsigned char note = notemap(freq);
-	track.addNote(ch, t, note);
-	nTime = t; // Update midi clocks
+MidiFileReader::MidiFileReader() :
+	bFirstNote(true),
+	bFinalized(false),
+	nTime(0),
+	nFormat(0),
+	nTracks(0),
+	nDivision(0),
+	nDeltaTicksPerQuarter(0),
+	fClockMultiplier(1.f),
+	sFilename("out.mid"),
+	sTrackname(),
+	notemap(),
+	timer(),
+	header(),
+	track(),
+	bNotePressed()
+{
+	// Setup midi chunks
+	header.setType("MThd"); // Header chunk
+	track.setType("MTrk"); // Track chunk
+	midiHeader();
+	if (!sTrackname.empty()) // Midi track title
+		midiTrackName(sTrackname);
+	//midiTemp(120); // Doesn't work currently
+	midiTimeSignature(4, 4, 24, 8); // 4/4 
+	midiKeySignature(0, false); // C Major
 }
 
-void MidiFileReader::release(const int& ch, const unsigned int& t){
-	if(ch < 1 || ch > 4)
+MidiFileReader::MidiFileReader(const std::string& filename, const std::string& title/*=""*/) :
+	MidiFileReader()
+{
+	sFilename = filename;
+	sTrackname = title;
+}
+
+void MidiFileReader::press(const unsigned char& ch, const unsigned int& t, const float& freq){
+	if(ch >= 16)
 		return;
-	track.release(ch, t);
-	nTime = t; // Update midi clocks
+	unsigned int clkT = (unsigned int)(t * fClockMultiplier);
+	if(bFirstNote){ // First recorded midi note
+		bFirstNote = false;
+		nTime = clkT;
+		timer.start(); // Start the audio timer
+	}
+	else if (bNotePressed[ch] == true) { // Note already pressed on this channel, release it first
+		release(ch, t);
+	}
+	MidiMessage msg(MidiKey(clkT, ch, notemap(freq)), nTime);
+	msg.press();
+	msg.write(track); // Write note to track chunk
+	bNotePressed[ch].press();
+	bNotePressed[ch].setKeyNumber(msg.getKeyNumber()); // Key number needed for release()
+	nTime = clkT; // Update midi clock
+}
+
+void MidiFileReader::release(const unsigned char& ch, const unsigned int& t){
+	if(ch >= 16 || (bNotePressed[ch] == false))
+		return;
+	unsigned int clkT = (unsigned int)(t * fClockMultiplier);
+	MidiMessage msg(MidiKey(clkT, ch, bNotePressed[ch].getKeyNumber()), nTime);
+	msg.release();
+	msg.write(track); // Write note to track chunk
+	bNotePressed[ch].release();
+	nTime = clkT; // Update midi clock
+}
+
+void MidiFileReader::setMidiInstrument(const unsigned char& ch, const unsigned char& nPC) {
+	// Write midi program change event 
+	if (ch >= 16)
+		return;
+	track.pushUChar(0x00); // Delta-time
+	track.pushUChar(0xc0 | ch); // Program change (for channel=ch)
+	track.pushUChar(nPC & 0x7f); // Instrument program number [0, 127]
+}
+
+void MidiFileReader::finalize(const unsigned int& t) {
+	double audioLength = timer.stop(); // Stop the audio timer (s)
+	std::cout << "  Length: " << audioLength << " s" << std::endl;
+	std::cout << "  Midi: " << nTime << " clocks (" << nTime / audioLength << " clk/s)" << std::endl;
+	for (unsigned char i = 0; i < 16; i++) { // Release any notes which are currently down
+		if (bNotePressed[i] == true)
+			release(i, t);
+	}
+	midiEndOfTrack(); // Finalize track chunk (REQUIRED by midi format)
+	bFinalized = true;
 }
 
 bool MidiFileReader::read(const std::string& filename/*=""*/){
@@ -559,16 +542,18 @@ bool MidiFileReader::read(const std::string& filename/*=""*/){
 }
 
 bool MidiFileReader::write(const std::string& filename/*=""*/){
-	double audioLength = timer.stop(); // Stop the audio timer (s)
+	if (!bFinalized)
+		finalize(nTime);
 	std::ofstream file((!filename.empty() ? filename : sFilename).c_str(), std::ios::binary);
 	if(!file.good())
 		return false;
-	writeHeader(file);
-	writeTrack(file);
-	std::cout << "  Length: " << audioLength << " s" << std::endl;
-	std::cout << "  Midi: " << nTime << " clocks (" << nTime / audioLength << " clk/s)" << std::endl;
+	header.writeMidiChunk(file); // Write header chunk to file
+	track.writeMidiChunk(file); // Write track chunk to file
 	file.close();
 	bFirstNote = true; // Reset in case we record more audio
+	bFinalized = false;
+	header.clear();
+	track.clear();
 	return true;
 }
 
@@ -589,7 +574,7 @@ bool MidiFileReader::readHeaderChunk(MidiChunk& hdr){
 	hdr.getUShort(nDivision);
 	
 	// Division code
-	if(bitTest(nDivision, 15)){ // SMPTE format (ignore!)
+	if(bitTest((unsigned short)nDivision, 15)){ // SMPTE format (ignore!)
 	}
 	else{ // Metric time
 		nDeltaTicksPerQuarter = nDivision & 0x7fff; // Bits 0,14
@@ -607,89 +592,57 @@ bool MidiFileReader::readTrackChunk(MidiChunk& chunk){
 	return true;
 }
 
-bool MidiFileReader::writeHeader(std::ofstream& f){
-	if(!f.good())
-		return false;
-	//nFormat = 1; // Midi format [0: Single track, 1: Simultaneous tracks, 2: Independent tracks]
-	//nTracks = 4; // Number of tracks (equal to 1 for format 0)
-	nFormat = 0; // Midi format [0: Single track, 1: Simultaneous tracks, 2: Independent tracks]
-	nTracks = 1; // Number of tracks (equal to 1 for format 0)
-	nDivision = 0x18; // 24 ticks per quarter note
-	MidiChunk chunk;
-	chunk.setType("MThd");
-	chunk.pushUShort(nFormat);
-	chunk.pushUShort(nTracks);
-	chunk.pushUShort(nDivision);
-	return chunk.writeMidiChunk(f);
+void MidiFileReader::midiHeader(const unsigned short& div/*=24*/) {
+	header.pushUShort(0); // Midi format [0: Single track, 1: Simultaneous tracks, 2: Independent tracks]
+	header.pushUShort(1); // Number of tracks (equal to 1 for format 0)
+	header.pushUShort(div); // Number of midi clock ticks per quarter note
 }
 
-bool MidiFileReader::writeTrack(std::ofstream& f){
-	MidiChunk chunk;
-	chunk.setType("MTrk"); // Track chunk
-	
+void MidiFileReader::midiTrackName(const std::string& str) {
 	// Write track title
-	if(!sTrackname.empty()){
-		chunk.pushUChar(0x00); // Delta-time
-		chunk.pushUChar(0xff);
-		chunk.pushUChar(0x03);
-		chunk.pushUChar((unsigned char)sTrackname.length());
-		chunk.pushString(sTrackname);
-	}
-	
+	track.pushUChar(0x00); // Delta-time
+	track.pushUChar(0xff);
+	track.pushUChar(0x03);
+	track.pushUChar((unsigned char)str.length());
+	track.pushString(str);
+}
+
+void MidiFileReader::midiTempo(const unsigned short& bpm/*=120*/) {
 	// Write tempo ff 51 03 tt tt tt (microseconds / quarter notes)
 	// Default tempo = 120 bpm (500000=0x7a120)
-	/*chunk.pushUChar(0xff);
-	chunk.pushUChar(0x51);
-	chunk.pushUChar(0x03);
-	chunk.pushMemory(0x07a120, 3);*/
-	
-	// Write time signature ff 58 04 nn dd cc bb
-	// nn = numerator
-	// dd = denominator (expressed as power of 2 e.g. 4 -> dd=2)
-	// cc = midi clocks per metronome tick
-	// bb = number of 1/32 notes per 24 midi clocks (8 standard)
-	chunk.pushUChar(0x00); // Delta-time
-	chunk.pushUChar(0xff);
-	chunk.pushUChar(0x58);
-	chunk.pushUChar(0x04);
-	chunk.pushUChar(0x04); // 4
-	chunk.pushUChar(0x02); // 4
-	chunk.pushUChar(0x18); // 24 midi clocks per metronome tick
-	chunk.pushUChar(0x08); // 8 32nd notes per 24 midi clock ticks (1 quarter note)
-	
-	// Write key signature ff 59 02 sf mi
-	// sf = number of sharps or flats (0 is C key)
-	// mi = [0: major key, 1: minor key] 
-	chunk.pushUChar(0x00); // Delta-time
-	chunk.pushUChar(0xff);
-	chunk.pushUChar(0x59);
-	chunk.pushUChar(0x02);
-	chunk.pushUChar(0x00); // C
-	chunk.pushUChar(0x00); // Major
-	
-	// Set program number (instrument)
-	for(unsigned char ch = 0; ch < 4; ch++){
-		chunk.pushUChar(0x00); // Delta-time
-		chunk.pushUChar(0xc0 | ch); // Program change (for channel=ch)
-		chunk.pushUChar(track.getProgramNumber() & 0x7f); // Instrument program number [0, 127]
-	}
-	
-	// Write notes
-	MidiMessage msg;
-	unsigned int prevTime = track.getStartTime();
-	while(track.getNote(&msg)){
-		msg.setDeltaTime(prevTime);
-		msg.write(chunk);
-		prevTime = msg.getTime();
-	}
-	
-	// Write end of track flag ff 2f 00 (required)
-	chunk.pushUChar(0x00); // Delta-time
-	chunk.pushUChar(0xff);
-	chunk.pushUChar(0x2f);
-	chunk.pushUChar(0x00);
-	
-	// Write the chunk to file
-	return chunk.writeMidiChunk(f);
+	//unsigned int value = 
+	track.pushUChar(0xff);
+	track.pushUChar(0x51);
+	track.pushUChar(0x03);
+	track.pushMemory(0x07a120, 3);
 }
 
+void MidiFileReader::midiTimeSignature(const unsigned char& nn/*=4*/, const unsigned char& dd/*=4*/, const unsigned char& cc/*=24*/, const unsigned char& bb/*=8*/) {
+	// Write time signature ff 58 04 nn dd cc bb
+	track.pushUChar(0x00); // Delta-time
+	track.pushUChar(0xff);
+	track.pushUChar(0x58);
+	track.pushUChar(0x04);
+	track.pushUChar(nn); // Numerator
+	track.pushUChar((unsigned char)std::pow(2, dd)); // Denominator
+	track.pushUChar(cc); // 24 midi clocks per metronome tick
+	track.pushUChar(bb); // 8 32nd notes per 24 midi clock ticks (1 quarter note)
+}
+
+void MidiFileReader::midiKeySignature(const unsigned char& sf/*=0*/, bool minor/*=false*/) {
+	// Write key signature ff 59 02 sf mi
+	track.pushUChar(0x00); // Delta-time
+	track.pushUChar(0xff);
+	track.pushUChar(0x59);
+	track.pushUChar(0x02);
+	track.pushUChar(sf);
+	track.pushUChar(minor ? 1 : 0);
+}
+
+void MidiFileReader::midiEndOfTrack() {
+	// Write end of track flag ff 2f 00 (required)
+	track.pushUChar(0x00); // Delta-time
+	track.pushUChar(0xff);
+	track.pushUChar(0x2f);
+	track.pushUChar(0x00);
+}

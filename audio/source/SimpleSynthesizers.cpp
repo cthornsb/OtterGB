@@ -90,7 +90,7 @@ PianoKeys::Keyboard::Keyboard(){
   * 'm' is the modifier (# or b or none if omitted), and 'o' is the octave (0 to 8, 4 assumed if omitted).
   */
 float PianoKeys::Keyboard::get(const std::string& key){
-	
+	return 0.f;
 }
 
 /** Get the key string whose ideal frequency is closest to the input frequency

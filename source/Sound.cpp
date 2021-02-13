@@ -447,17 +447,20 @@ void SoundProcessor::startMidiFile(const std::string& filename/*="out.mid"*/){
 	if(bRecordMidi) // Midi recording already in progress
 		return;
 	midiFile.reset(new MidiFile::MidiFileReader(filename, sys->getRomFilename())); // New midi file recorder
+	// 16384 audio samples per second
+	// 120 metronome ticks per minute by default
+	// 24 midi clocks per metronome tick
+	//  => 2880 midi clocks per minute
+	// So... 983040 audio samples per minute and 2880 midi clock ticks per minute
+	//  => 341.33 audio samples per midi clock tick
+	midiFile->setClockMultiplier(1 / 341.33f);
 	bRecordMidi = true;
 }
 
 void SoundProcessor::stopMidiFile(){
 	if(!bRecordMidi) // No midi recording in progress
 		return;
-	// Release all notes (if any are held)
-	midiFile->release(1, (unsigned int)(nMidiClockTicks / 341.33f));
-	midiFile->release(2, (unsigned int)(nMidiClockTicks / 341.33f));
-	midiFile->release(3, (unsigned int)(nMidiClockTicks / 341.33f));
-	midiFile->release(4, (unsigned int)(nMidiClockTicks / 341.33f));
+	midiFile->finalize(nMidiClockTicks); 
 	midiFile->write(); // Write midi file to disk
 	bRecordMidi = false;
 }
@@ -471,22 +474,9 @@ bool SoundProcessor::handleTriggerEnable(const int& ch){
 	if(unit->pollDisable())
 		disableChannel(ch);
 	if(rNR52->getBit(ch - 1)){ // Trigger has enabled channel
-		if(bRecordMidi && ch < 4){ // Add a note to the output midi file
+		if (bRecordMidi) { // Add a note to the output midi file
 			// If a note is currently pressed on this channel, the midi handler will automatically release it.
-			// 16384 audio samples per second
-			// 120 metronome ticks per minute by default
-			// 24 midi clocks per metronome tick
-			//  => 2880 midi clocks per minute
-			// So... 983040 audio samples per minute and 2880 midi clock ticks per minute
-			//  => 341.33 audio samples per midi clock tick
-			
-			// 17681 midi clocks per second
-			// 1060860 midi clocks per minute
-			// 120 metronome ticks per minute
-			// 24 midi clocks per metronome ticks
-			// 2880 midi clocks per minute
-			
-			midiFile->addNote(ch, (unsigned int)(nMidiClockTicks / 341.33f), unit->getRealFrequency());
+			midiFile->press((ch < 4 ? ch : 10), nMidiClockTicks, unit->getRealFrequency());
 		}
 		return true;
 	}

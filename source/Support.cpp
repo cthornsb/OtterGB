@@ -9,7 +9,6 @@ const char LOWERCASE_HIGH = 122;
 const char UPPERCASE_LOW  = 65;
 const char UPPERCASE_HIGH = 90;
 
-// Return true if an input string is numerical
 bool isNumeric(const std::string& str) {
 	for (auto i = 0; i < str.length(); i++)
 		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
@@ -54,8 +53,8 @@ bool isNotNumeric(const std::string& str) {
 	return (!isDecimal(str) && !isHexadecimal(str) && !isBinary(str));
 }
 
-// Compute the two's compliment of an unsigned byte
 short twosComp(const unsigned char &n){
+	// Compute the two's compliment of an unsigned byte
 	if((n & 0x80) == 0) // Positive value
 		return (short)n;
 	// Negative value
@@ -216,6 +215,14 @@ bool removeCharacter(std::string& str, const char& c){
 	return false;
 }
 
+bool removeAllCharacters(std::string& str, const char& c) {
+	int counter = 0;
+	while (removeCharacter(str, c)) {
+		counter++;
+	}
+	return (counter != 0);
+}
+
 unsigned char getUserInputUChar(const std::string& str){
 	return (unsigned char)getUserInputUShort(str);
 }
@@ -248,7 +255,23 @@ bool bitTest(const unsigned char &input, const unsigned char &bit){
 	return ((input & (0x1 << bit)) == (0x1 << bit));
 }
 
+bool bitTest(const unsigned short& input, const unsigned char& bit) {
+	return ((input & (0x1 << bit)) == (0x1 << bit));
+}
+
+bool bitTest(const unsigned int& input, const unsigned char& bit) {
+	return ((input & (0x1 << bit)) == (0x1 << bit));
+}
+
 void bitSet(unsigned char &input, const unsigned char &bit){
+	input |= (0x1 << bit);
+}
+
+void bitSet(unsigned short& input, const unsigned char& bit) {
+	input |= (0x1 << bit);
+}
+
+void bitSet(unsigned int& input, const unsigned char& bit) {
 	input |= (0x1 << bit);
 }
 
@@ -256,9 +279,17 @@ void bitReset(unsigned char &input, const unsigned char &bit){
 	input &= ~(0x1 << bit);
 }
 
-unsigned char getBitmask(const unsigned char &lowBit, const unsigned char &highBit){
+void bitReset(unsigned short& input, const unsigned char& bit) {
+	input &= ~(0x1 << bit);
+}
+
+void bitReset(unsigned int& input, const unsigned char& bit) {
+	input &= ~(0x1 << bit);
+}
+
+unsigned char getBitmask(const unsigned char &low, const unsigned char &high){
 	unsigned char mask = 0;
-	for(unsigned char i = lowBit; i <= highBit; i++)
+	for(unsigned char i = low; i <= high; i++)
 		mask |= (1 << i);
 	return mask;
 }

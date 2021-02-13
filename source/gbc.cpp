@@ -8,23 +8,25 @@
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
 	#include "mainwindow.h"
-#else
-void startMainThread(){
-	// Start the main loop
-	gbc->execute();
-}
-
-void startSoundManager(){
-	// Start the sound manager thread
-	audio->execute();
-}
-#endif
+#endif // ifdef USE_QT_DEBUGGER
 
 // Main emulator object
 std::unique_ptr<SystemGBC> gbc; 
 
 // System audio interface
 std::unique_ptr<SoundManager> audio; 
+
+#ifndef USE_QT_DEBUGGER
+void startMainThread() {
+	// Start the main loop
+	gbc->execute();
+}
+
+void startSoundManager() {
+	// Start the sound manager thread
+	audio->execute();
+}
+#endif // ifndef USE_QT_DEBUGGER
 
 int main(int argc, char *argv[]){
 	// Main emulator object
@@ -53,7 +55,7 @@ int main(int argc, char *argv[]){
 #ifndef USE_QT_DEBUGGER
 	// Start threads
 	// Audio manager runs in its own thread so that sound is not linked to emulator framerate
-	std::thread masterThread(SystemGBC());
+	std::thread masterThread(startMainThread);
 	std::thread soundThread(startSoundManager);
 	
 	masterThread.join();

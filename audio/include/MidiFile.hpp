@@ -2,7 +2,6 @@
 #define MIDI_FILE_HPP
 
 #include <fstream>
-#include <deque>
 
 #include "SimpleSynthesizers.hpp"
 #include "SystemTimer.hpp"
@@ -14,7 +13,7 @@ namespace MidiFile{
 		PRESSED,       // 001 Note pressed
 		POLYPRESSURE,  // 010 Aftertouch?
 		CONTROLCHANGE, // 011 Control change
-		PROGRAMCHANGE, // 100 Program change
+		PROGRAMCHANGE, // 100 Program change (midi instrument)
 		CHANPRESSURE,  // 101 Channel pressure
 		PITCHCHANGE,   // 110 Pitch wheel change
 		CHANMESSAGE    // 011 Channel mode message
@@ -25,14 +24,37 @@ namespace MidiFile{
 		/** Default constructor
 		  */
 		MidiKey() :
-			bPressed(true),
+			bPressed(false),
 			nChannel(0),
 			nKeyNumber(0),
 			nVelocity(0x40),
 			nTime(0)
 		{
 		}
-		
+
+		/** Pressed key event
+		  */
+		MidiKey(const unsigned int& t, const unsigned char& ch, const unsigned char& key, const unsigned char& velocity = 0x40) :
+			bPressed(true),
+			nChannel(ch & 0x0f),
+			nKeyNumber(key & 0x7f),
+			nVelocity(velocity & 0x7f),
+			nTime(t)
+		{
+		}
+
+		/** Equality operator
+		  */
+		bool operator == (bool rhs) const {
+			return (bPressed == rhs);
+		}
+
+		/** Equality operator
+		  */
+		bool operator != (bool rhs) const {
+			return (bPressed != rhs);
+		}
+
 		/** Return true if the midi key is pressed down
 		  */
 		bool isPressed() const {
@@ -65,13 +87,13 @@ namespace MidiFile{
 		
 		/** Set to note press event
 		  */
-		void press(){
+		virtual void press(){
 			bPressed = true;
 		}
 		
 		/** Set to note release event
 		  */
-		void release(){
+		virtual void release(){
 			bPressed = false;
 		}
 		
@@ -244,6 +266,8 @@ namespace MidiFile{
 		  */
 		bool copyMemory(void* dest, const unsigned int& len);
 		
+		/** Set the midi chunk type string
+		  */
 		void setType(const std::string& type){
 			sType = type;
 		}
@@ -311,22 +335,40 @@ namespace MidiFile{
 		  */
 		MidiMessage() :
 			MidiKey(),
+			nDeltaTime(0),
 			nStatus(MidiStatusType::NONE)
 		{
 		}
-		
-		/** Chunk constructor
+
+		/** Pressed key event
+		  */
+		MidiMessage(const MidiKey& key, const unsigned int& prevTime) :
+			MidiKey(key),
+			nDeltaTime(nTime - prevTime),
+			nStatus(MidiStatusType::PRESSED)
+		{
+		}
+
+		/** Chunk constructor (read)
 		  */
 		MidiMessage(MidiChunk& chunk) :
-			MidiMessage()
+			MidiKey(),
+			nDeltaTime(0),
+			nStatus(MidiStatusType::NONE)
 		{
 			read(chunk);
 		}
-		
+
 		/** Get the current midi message status
 		  */
 		MidiStatusType getStatus() const {
 			return nStatus;
+		}
+
+		/** Get the delta-time of the midi message
+		  */
+		unsigned int getDeltaTime() const {
+			return nDeltaTime;
 		}
 		
 		/** Set the current midi message status
@@ -341,11 +383,21 @@ namespace MidiFile{
 		void setDeltaTime(const unsigned int& t){
 			nDeltaTime = nTime - t;
 		}
-		
-		/** Copy message parameters from a MidiKey
+
+		/** Set to note press event
 		  */
-		void set(const MidiKey& other);
-		
+		virtual void press() {
+			bPressed = true;
+			nStatus = MidiStatusType::PRESSED;
+		}
+
+		/** Set to note release event
+		  */
+		virtual void release() {
+			bPressed = false;
+			nStatus = MidiStatusType::RELEASED;
+		}
+
 		/** Read a midi message event from an input track chunk
 		  */
 		bool read(MidiChunk& chunk);
@@ -421,7 +473,6 @@ namespace MidiFile{
 		/** Default constructor
 		  */
 		TrackEvent() :
-			bNotePressed{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 			nProgramNumber(0),
 			nStartTime(0xffffffff),
 			nPrevTime(0),
@@ -454,34 +505,6 @@ namespace MidiFile{
 		void setProgramNumber(const unsigned char& prog){
 			nProgramNumber = prog;
 		}
-		
-		/** Add a pressed note event
-		  * @param chan Midi channel number [0, 15]
-		  * @param t Absolute time in midi ticks
-		  * @param note Midi key number of pressed note [0, 127]
-		  */
-		void addNote(const unsigned char& chan, const unsigned int& t, const unsigned char& note);
-
-		/** Add a pressed note event
-		  * @param chan Midi channel number [0, 15]
-		  * @param t Absolute time in midi ticks
-		  * @param note String representing pressed note (e.g. A#4)
-		  */
-		void addNote(const unsigned char& chan, const unsigned int& t, const std::string& note);
-		
-		/** Add a pressed note event
-		  */
-		void addNote(const MidiKey& note);
-
-		/** Release the key pressed on the specified channel
-		  * If no keys are pressed, do nothing
-		  */
-		void release(const unsigned char& chan, const unsigned int& t);
-
-		/** Get the next note event from the list
-		  * @return True if at least one note was in the list, and return false otherwise
-		  */
-		bool getNote(MidiFile::MidiMessage*);
 
 		/** Read a midi track event from an input track chunk
 		  * @return True if at least two bytes remained in the chunk and return false otherwise
@@ -489,8 +512,6 @@ namespace MidiFile{
 		bool read(MidiChunk& chunk);
 
 	private:
-		bool bNotePressed[16]; ///< A note is currently being played
-		
 		unsigned char nProgramNumber; ///< Midi program number (instrument)
 	
 		unsigned int nStartTime; ///< Start of midi time
@@ -498,54 +519,51 @@ namespace MidiFile{
 		unsigned int nPrevTime; ///< Time of most recent note
 		
 		unsigned int nDeltaTime; ///< Midi event delta-time read from midi file
-	
-		std::deque<MidiKey> keylist; ///< List of all key events in the track
 	}; // class TrackEvent
 
 	class MidiFileReader{
 	public:
 		/** Default file constructor
 		  */
-		MidiFileReader() :
-			bFirstNote(true),
-			nTime(0),
-			nFormat(0),
-			nTracks(0),
-			nDivision(0),
-			nDeltaTicksPerQuarter(0),
-			sFilename(),
-			sTrackname(),
-			notemap(),
-			timer(),
-			track()
-		{ 
-		}
+		MidiFileReader();
 
 		/** Midi filename constructor
 		  */
-		MidiFileReader(const std::string& filename, const std::string& title="") :
-			MidiFileReader()
-		{
-			sFilename = filename;
-			sTrackname = title;
-		}
+		MidiFileReader(const std::string& filename, const std::string& title = "");
 
 		/** Destructor
 		  */	
 		~MidiFileReader() { }
 		
+		/** Set the input clock to output midi clock conversion factor (M) such that Tin = Tmidi * M
+		  */
+		void setClockMultiplier(const float& clk) {
+			fClockMultiplier = clk;
+		}
+
 		/** Add a pressed note event
 		  * @param chan Audio channel (1, 2, 3, or 4)
 		  * @param t Absolute time in midi ticks
 		  * @param freq Audio frequency of note (the midi note with the closest matching ideal frequency will be used)
 		  */
-		void addNote(const int& ch, const unsigned int& t, const float& freq);
+		void press(const unsigned char& ch, const unsigned int& t, const float& freq);
 
 		/** Release the key currently pressed on the specified audio channel (1, 2, 3, or 4)
 		  * If no keys are pressed, do nothing
 		  */
-		void release(const int& ch, const unsigned int& t);
+		void release(const unsigned char& ch, const unsigned int& t);
 		
+		/** Set the midi program number (instrument)
+		  * @param ch Midi channel [0, 15]
+		  * @param nPC Midi program number [0, 127]
+		  */
+		void setMidiInstrument(const unsigned char& ch, const unsigned char& nPC);
+
+		/** Finalize the midi track chunk and prepare it for writing to disk
+		  * @param t Absolute final time in midi ticks
+		  */
+		void finalize(const unsigned int& t);
+
 		/** Read an input midi file with the specified filename
 		  * @param filename Path to midi file (uses sFilename if filename not specified)
 		  */
@@ -563,6 +581,8 @@ namespace MidiFile{
 	private:
 		bool bFirstNote; ///< The next midi note event will be the first
 	
+		bool bFinalized; ///< The midi track chunk has been finalized and is ready for writing
+
 		unsigned int nTime; ///< Global midi clock tick counter
 	
 		unsigned short nFormat; ///< Midi file format
@@ -573,6 +593,8 @@ namespace MidiFile{
 		
 		unsigned short nDeltaTicksPerQuarter; ///< Number of delta-time ticks per quarter note
 		
+		float fClockMultiplier; ///< Input clock tick to midi clock conversion factor
+
 		std::string sFilename; ///< Input/output midi filename
 		
 		std::string sTrackname; ///< Midi track title
@@ -580,9 +602,13 @@ namespace MidiFile{
 		MidiKeyboard notemap; ///< Midi note dictionary
 
 		HighResTimer timer; ///< High-resolution timer for output midi file		
+				
+		MidiChunk header; ///< Midi header chunk
 
-		TrackEvent track; ///< Output track events
-		
+		MidiChunk track; ///< Midi track chunk
+
+		MidiKey bNotePressed[16]; ///< A note is currently being played
+
 		/** Read midi file header (MThd=0x4d546864)
 		  */
 		bool readHeaderChunk(MidiChunk& hdr);
@@ -590,14 +616,38 @@ namespace MidiFile{
 		/** Read midi file track chunk (MTrk=0x4d54726b)
 		  */
 		bool readTrackChunk(MidiChunk& chunk);
-		
-		/** Write midi header chunk to output stream
+
+		/** Set midi header
+		  * @param div Number of midi clock ticks per quarter note
 		  */
-		bool writeHeader(std::ofstream& f);
-		
-		/** Write midi track chunk to output stream
+		void midiHeader(const unsigned short& div = 24);
+
+		/** Set the midi track name string
 		  */
-		bool writeTrack(std::ofstream& f);
+		void midiTrackName(const std::string& str);
+
+		/** [broken] Set midi tempo in beats per minute (bpm)
+		  */
+		void midiTempo(const unsigned short& bpm = 120);
+
+		/** Set the midi time signature
+		  * @param nn Time signature numerator
+		  * @param dd Time signature denominator
+		  * @param cc Number of midi clocks per metronome tick
+		  * @param bb Number of 1/32 notes per 24 midi clock ticks
+		  */
+		void midiTimeSignature(const unsigned char& nn = 4, const unsigned char& dd = 4, const unsigned char& cc = 24, const unsigned char& bb = 8);
+
+		/** Set the midi key signature
+		  * @param sf Number of sharps or flats (0 is C key)
+		  * @param minor Is this a minor key
+		  */
+		void midiKeySignature(const unsigned char& sf = 0, bool minor = false);
+
+		/** Finalize the midi track chunk
+		  * This flag is required by the midi format
+		  */
+		void midiEndOfTrack();
 	}; // class MidiFileReader
 }; // namespace MidiFileReader
 
