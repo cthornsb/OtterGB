@@ -386,10 +386,10 @@ bool MidiMetaEvent::read(MidiChunk& chunk){
 		std::cout << " END OF TRACK\n";
 		break;
 	case 0x51: // Tempo
-		// 327680 is default
+		// 500000 is default
 		chunk.copyMemory(static_cast<void*>(&nTempo), 3); // 24-bit (microseconds / quarter-note)
 		nTempo = reverseByteOrder(nTempo, 24); // High byte first
-		std::cout << " Tempo=" << nTempo << " (" << 1.f / (nTempo * 1E-6) << " bps)" << std::endl;
+		std::cout << " Tempo=" << nTempo << " (" << 60.f / (nTempo * 1E-6) << " bps)" << std::endl;
 		break;
 	case 0x54: // SMTPE offset
 		chunk.skipBytes(5);
@@ -461,9 +461,9 @@ MidiFileReader::MidiFileReader() :
 	midiHeader();
 	if (!sTrackname.empty()) // Midi track title
 		midiTrackName(sTrackname);
-	//midiTemp(120); // Doesn't work currently
 	midiTimeSignature(4, 4, 24, 8); // 4/4 
 	midiKeySignature(0, false); // C Major
+	midiTempo(120);
 }
 
 MidiFileReader::MidiFileReader(const std::string& filename, const std::string& title/*=""*/) :
@@ -610,7 +610,7 @@ void MidiFileReader::midiTrackName(const std::string& str) {
 void MidiFileReader::midiTempo(const unsigned short& bpm/*=120*/) {
 	// Write tempo ff 51 03 tt tt tt (microseconds / quarter notes)
 	// Default tempo = 120 bpm (500000=0x7a120)
-	//unsigned int value = 
+	track.pushUChar(0x00); // Delta-time
 	track.pushUChar(0xff);
 	track.pushUChar(0x51);
 	track.pushUChar(0x03);
@@ -624,7 +624,7 @@ void MidiFileReader::midiTimeSignature(const unsigned char& nn/*=4*/, const unsi
 	track.pushUChar(0x58);
 	track.pushUChar(0x04);
 	track.pushUChar(nn); // Numerator
-	track.pushUChar((unsigned char)std::pow(2, dd)); // Denominator
+	track.pushUChar((unsigned char)std::log2(dd)); // Denominator
 	track.pushUChar(cc); // 24 midi clocks per metronome tick
 	track.pushUChar(bb); // 8 32nd notes per 24 midi clock ticks (1 quarter note)
 }
