@@ -37,7 +37,7 @@ public:
 	/** Get pointer to output audio mixer
 	  */
 	SoundMixer* getMixer(){
-		return &mixer;
+		return mixer;
 	}
 
 	/** Return true if the APU is enabled (i.e. if it is powered up) and return false otherwise
@@ -75,12 +75,6 @@ public:
 	  */
 	float getChannelFrequency(const int& ch) const ;
 	
-	/** Set the audio interface pointer
-	  */
-	void setAudioInterface(SoundManager* ptr){
-		audio = ptr;
-	}
-
 	/** Disable audio channel (indexed from 1)
 	  */
 	void disableChannel(const int& ch);
@@ -146,6 +140,8 @@ private:
 
 	SoundManager* audio; ///< Main system audio handler
 
+	SoundMixer* mixer; ///< Pointer to audio output mixer
+
 	SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
 
 	SquareWave ch2; ///< Channel 2 (square)
@@ -154,10 +150,6 @@ private:
 	
 	ShiftRegister ch4; ///< Channel 4 (noise)
 
-	SoundMixer mixer; ///< Audio output mixer
-	
-	SoundBuffer* buffer; ///< Pointer to audio sample buffer (singleton)
-	
 	unsigned char wavePatternRAM[16];
 	
 	unsigned int nSequencerTicks; ///< Frame sequencer tick counter

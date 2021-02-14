@@ -5,7 +5,7 @@
 void SoundBuffer::pushSample(const float& l, const float& r){
 	lock.lock(); // Writing to buffer
 	push(std::make_pair(l, r));
-	if(size() >= 512) // Too simple, needs to be fixed CRT
+	if(size() >= 1024) // Too simple, needs to be fixed CRT
 		pop();
 	lock.unlock();
 }
@@ -28,7 +28,7 @@ bool SoundBuffer::getSample(float* output){
 
 bool SoundBuffer::getSamples(float* output, const size_t& N){
 	lock.lock(); // Reading from buffer
-	//std::cout << " N=" << N << ", size=" << size() << std::endl;
+	//std::cout << " getting N=" << N << " samples with " << size() << " elements in buffer\n";
 	bool retval = false;
 	if(size() >= N){ // Buffer contains at least N samples
 		for(size_t i = 0; i < N; i++){
@@ -80,19 +80,6 @@ bool SoundBuffer::getSamples(float* output, const size_t& N){
 	}
 	lock.unlock();
 	return retval;
-}
-
-int SoundBuffer::callback( 
-	const void *input, 
-	void *output, 
-	unsigned long framesPerBuffer, 
-	const PaStreamCallbackTimeInfo* timeInfo, 
-	PaStreamCallbackFlags statusFlags,
-	void *data )
-{
-	float* out = static_cast<float*>(output);
-	SoundBuffer::getInstance().getSamples(out, framesPerBuffer); // Singleton audio buffer
-	return 0;
 }
 
 float SoundBuffer::left() const {

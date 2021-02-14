@@ -1,6 +1,13 @@
+
+#include <iostream>
 #include <algorithm>
 
 #include "SoundMixer.hpp"
+
+void SoundMixer::getCurrentSample(float& l, float& r) {
+	l = fOutputSamples[0];
+	r = fOutputSamples[1];
+}
 
 void SoundMixer::setOutputLevels(const float& l, const float& r){
 	fOutputVolume[0] = clamp(l, 0.f, 1.f); // left
@@ -24,8 +31,6 @@ bool SoundMixer::update(){
 		fOutputSamples[1] = 0.f;
 		return false;
 	}
-	if(!bModified) // No input samples were modified, output does not need to be updated
-		return false;
 	for(int i = 0; i < 2; i++){ // Over left and right output channels
 		fOutputSamples[i] = 0.f;
 		for(int j = 0; j < 4; j++){ // Over input channels
@@ -46,7 +51,10 @@ float SoundMixer::clamp(const float& input, const float& low, const float& high)
 	return std::max(low, std::min(high, input));
 }
 
-void SoundMixer::rollover() { 
-	reload();
-	update();
+void SoundMixer::rollOver(){
+	reset(); // Reset timer
+	if(bModified) // Update output samples if one or more input samples were modified
+		update();
+	pushSample(fOutputSamples[0], fOutputSamples[1]); // Push current sample onto the fifo buffer (mutex protected)
 }
+

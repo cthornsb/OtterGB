@@ -1,8 +1,9 @@
 #include <iostream>
+#include <thread>
+#include <cmath>
 
 #include "SoundManager.hpp"
-
-AudioMixer* audioptr = 0x0;
+#include "SoundMixer.hpp"
 
 SoundManager::SoundManager() :
 	bQuitting(false),
@@ -10,14 +11,11 @@ SoundManager::SoundManager() :
 	bRunning(false),
 	nChannels(2),
 	dSampleRate(44100),
-	nFramesPerBuffer(256),
-	fTimeStep(1.f / 44100.f),
-	mixer(2, 1, this),
-	dptr(static_cast<void*>(&mixer)),
+	nFramesPerBuffer(512),
+	mixer(),
 	stream(0x0),
 	callback(defaultCallback)
 { 
-	audioptr = &mixer;
 }
 
 SoundManager::SoundManager(const int& voices) :
@@ -26,14 +24,11 @@ SoundManager::SoundManager(const int& voices) :
 	bRunning(false),
 	nChannels(2),
 	dSampleRate(44100),
-	nFramesPerBuffer(256),
-	fTimeStep(1.f / 44100.f),
-	mixer(2, voices, this),
-	dptr(static_cast<void*>(&mixer)),
+	nFramesPerBuffer(512),
+	mixer(),
 	stream(0x0),
 	callback(defaultCallback)
 {
-	audioptr = &mixer;
 }
 
 SoundManager::~SoundManager(){
@@ -62,7 +57,7 @@ bool SoundManager::init(){
 		dSampleRate,
 		nFramesPerBuffer,
 		callback,
-		dptr 
+		static_cast<void*>(&mixer)
 	);
 	
     if( err != paNoError ){
@@ -149,8 +144,8 @@ int SoundManager::defaultCallback(
 	void *data )
 {
 	float* out = static_cast<float*>(output);
-	//AudioMixer* audio = static_cast<AudioMixer*>(data);
-	audioptr->getSamples(out, framesPerBuffer);
+	SoundMixer* audio = static_cast<SoundMixer*>(data);
+	audio->getSamples(out, framesPerBuffer);
 	return 0;
 }
 

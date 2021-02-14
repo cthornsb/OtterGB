@@ -1,18 +1,18 @@
 #ifndef SOUND_MIXER_HPP
 #define SOUND_MIXER_HPP
 
-#include "UnitTimer.hpp"
+#include "SoundBuffer.hpp"
+#include "SystemTimer.hpp"
 
-constexpr unsigned short MIXER_CLOCK_PERIOD = 64; // 16.384 kHz clock
+const unsigned short MIXER_CLOCK_PERIOD = 64;
 
-class AudioUnit;
-
-class SoundMixer : public UnitTimer {
+class SoundMixer : public ComponentTimer, public SoundBuffer {
 public:
 	/** Default constructor
 	  */
 	SoundMixer() :
-		UnitTimer(MIXER_CLOCK_PERIOD),
+		ComponentTimer(64),
+		SoundBuffer(),
 		bModified(false),
 		bStereoOutput(true),
 		fMasterVolume(1.f),
@@ -25,11 +25,13 @@ public:
 	{ 
 	}
 
-	/** Get the current output channel sample
+	/** Destructor
 	  */
-	float operator [] (const unsigned int& ch){
-		return fOutputSamples[ch];
-	}
+	~SoundMixer() { }
+
+	/** Get the current left/right output sample (mutex protected)
+	  */
+	void getCurrentSample(float& l, float& r);
 
 	/** Get a pointer to the input sample buffer
 	  */
@@ -131,7 +133,7 @@ public:
 		fInputSamples[ch] = clamp(vol / 15.f, 0.f, 1.f);
 	}
 	
-	/** 
+	/** Set mixer timer period multiplier to account for non-standard clock speed
 	  */
 	void setSampleRateMultiplier(const float &freq){
 		nPeriod = (unsigned short)(MIXER_CLOCK_PERIOD * freq);
@@ -149,12 +151,6 @@ public:
 		nPeriod = MIXER_CLOCK_PERIOD;
 	}
 	
-	/** Update output audio samples
-	  * This update should occur any time an audio unit clocks over.
-	  * @return True if at least one of the input samples was modified and return false otherwise
-	  */
-	bool update();
-
 private:
 	bool bMuted; ///< Audio output muted by user
 
@@ -176,13 +172,19 @@ private:
 
 	bool bSendInputToOutput[2][4]; ///< Flags for which input signals will be sent to which output signals
 	
+	/** Update output audio samples
+	  * This update should occur any time an audio unit clocks over.
+	  * @return True if at least one of the input samples was modified and return false otherwise
+	  */
+	bool update();
+	
 	/** Clamp an input value to the range [low, high]
 	  */
 	float clamp(const float& input, const float& low=0.f, const float& high=1.f) const ;
 	
-	/** Method called when unit timer clocks over (every nPeriod input clock ticks)
-	  */	
-	virtual void rollover();
+	/** Push the current output sample onto the fifo buffer
+	  */
+	virtual void rollOver();
 };
 
 #endif

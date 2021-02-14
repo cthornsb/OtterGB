@@ -100,7 +100,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	pauseAfterNextClock(false),
 	pauseAfterNextHBlank(false),
 	pauseAfterNextVBlank(false),
-	audioInterface(0x0)
+	audioInterface(&SoundManager::getInstance())
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -739,7 +739,6 @@ void SystemGBC::setOpcodeBreakpoint(const unsigned char &op, bool cb/*=false*/){
 
 void SystemGBC::setAudioInterface(SoundManager* ptr){
 	audioInterface = ptr;
-	sound->setAudioInterface(ptr);
 }
 
 #ifdef USE_QT_DEBUGGER

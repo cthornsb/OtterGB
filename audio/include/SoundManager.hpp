@@ -1,36 +1,33 @@
 #ifndef SOUND_MANAGER_HPP
 #define SOUND_MANAGER_HPP
 
+#include <memory>
+
 #include "portaudio.h"
 
-#include "AudioMixer.hpp"
+#include "SoundMixer.hpp"
 
 typedef int (*portCallback)( const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void* );
 
-extern AudioMixer *audioptr;
-
 class SoundManager{
 public:
-	/** Default constructor
+	/** Copy constructor (deleted)
 	  */
-	SoundManager();
-
-	/** Number of voices constructor
-	  */
-	SoundManager(const int& voices);
-
-	SoundManager(const SoundManager&) = delete;
-	
-	SoundManager& operator = (const SoundManager&) = delete;
+	SoundManager(const SoundMixer&) = delete;
 
 	/** Terminate audio stream
 	  */
 	~SoundManager();
-
-	/** Get reference to one of the output audio channels
+	
+	/** Copy operator (deleted)
 	  */
-	AudioData& operator [] (const size_t& index) { 
-		return mixer[index]; 
+	SoundManager& operator = (const SoundMixer&) = delete;
+
+	/** Get instance of singleton
+	  */
+	static SoundManager& getInstance(){
+		static SoundManager instance;
+		return instance;			
 	}
 
 	/** Get the number of audio channels
@@ -51,7 +48,9 @@ public:
 		return nFramesPerBuffer; 
 	}
 
-	AudioMixer* getMixer() { 
+	/** Get pointer to the output audio buffer
+	  */
+	SoundMixer* getAudioMixer() { 
 		return &mixer; 
 	}
 
@@ -140,19 +139,23 @@ private:
 	
 	int nChannels;
 	
-	double dSampleRate;
+	double dSampleRate; ///< Audio sample rate
 	
 	unsigned long nFramesPerBuffer;
-	
-	float fTimeStep;
-	
-	AudioMixer mixer;
-	
-	void* dptr;
+
+	SoundMixer mixer; ///< Audio output mixer
 	
     PaStream* stream;
     
     portCallback callback;
+    
+	/** Default constructor
+	  */
+	SoundManager();
+
+	/** Number of voices constructor
+	  */
+	SoundManager(const int& voices);
 };
 
 #endif

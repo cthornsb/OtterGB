@@ -610,11 +610,12 @@ void MidiFileReader::midiTrackName(const std::string& str) {
 void MidiFileReader::midiTempo(const unsigned short& bpm/*=120*/) {
 	// Write tempo ff 51 03 tt tt tt (microseconds / quarter notes)
 	// Default tempo = 120 bpm (500000=0x7a120)
+	unsigned int usPerQuarterNote = (60.f / bpm) * 1E6; // Microseconds per beat (quarter note)
 	track.pushUChar(0x00); // Delta-time
 	track.pushUChar(0xff);
 	track.pushUChar(0x51);
 	track.pushUChar(0x03);
-	track.pushMemory(0x07a120, 3);
+	track.pushMemory(usPerQuarterNote, 3);
 }
 
 void MidiFileReader::midiTimeSignature(const unsigned char& nn/*=4*/, const unsigned char& dd/*=4*/, const unsigned char& cc/*=24*/, const unsigned char& bb/*=8*/) {

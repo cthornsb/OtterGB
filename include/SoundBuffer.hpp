@@ -29,13 +29,6 @@ public:
 	  */
 	SoundBuffer& operator = (const SoundBuffer&) = delete;
 
-	/** Get instance of singleton
-	  */
-	static SoundBuffer& getInstance(){
-		static SoundBuffer instance;
-		return instance;			
-	}
-
 	/** Psuedo-overload for push() taking explicit left and right arguments
 	  */ 
 	void pushSample(const float& l, const float& r);
@@ -55,18 +48,7 @@ public:
 	  */
 	bool getSamples(float* output, const size_t& N);
 
-	/** Port callback function
-	  */
-	static int callback( 
-		const void *input, 
-		void *output, 
-		unsigned long framesPerBuffer, 
-		const PaStreamCallbackTimeInfo* timeInfo, 
-		PaStreamCallbackFlags statusFlags,
-		void *data 
-	);
-
-private:
+protected:
 	float fEmptyLeft; ///< In the event that the sound buffer is now empty, the last audio sample for the left output channel
 	
 	float fEmptyRight; ///< In the event that the sound buffer is now empty, the last audio sample for the right output channel

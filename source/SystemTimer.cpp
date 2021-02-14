@@ -26,12 +26,16 @@ void HighResTimer::start(){
 	tLastStart = hrclock::now();
 }
 
-double HighResTimer::stop(){
+double HighResTimer::stop() const {
 	return std::chrono::duration<double>(hrclock::now() - tLastStart).count();
 }
 
 double HighResTimer::uptime() const {
 	return std::chrono::duration<double>(hrclock::now() - tInitialization).count();
+}
+
+void HighResTimer::reset(){
+	tInitialization = hrclock::now();
 }
 
 SystemClock::SystemClock() : 
@@ -236,6 +240,21 @@ void SystemClock::mode2Interrupt(){
 }
 
 /////////////////////////////////////////////////////////////////////
+// class ComponentTimer
+/////////////////////////////////////////////////////////////////////
+
+bool ComponentTimer::clock(){
+	if(!bEnabled || nPeriod == 0)
+		return false;
+	if(++nCyclesSinceLastTick == nPeriod){
+		this->rollOver();
+		nCounter++;
+		return true;
+	}
+	return false;
+}
+
+/////////////////////////////////////////////////////////////////////
 // class SystemTimer
 /////////////////////////////////////////////////////////////////////
 
@@ -264,7 +283,7 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 		case 0xFF06: // TMA (Timer modulo)
 			break;
 		case 0xFF07: // TAC (Timer control)
-			timerEnable = rTAC->getBit(2); // Timer stop [0: Stop, 1: Start]
+			bEnabled = rTAC->getBit(2); // Timer stop [0: Stop, 1: Start]
 			clockSelect = rTAC->getBits(0,1); // Input clock select (see below)
 			/** Input clocks:
 				0:   4096 Hz (256 cycles)
@@ -273,16 +292,16 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 				3:  16384 Hz (64 cycles) **/
 			switch(clockSelect){
 				case 0: // 256 cycles
-					timerPeriod = 256;
+					nPeriod = 256;
 					break;
 				case 1: // 4 cycles
-					timerPeriod = 4;
+					nPeriod = 4;
 					break;
 				case 2: // 16 cycles
-					timerPeriod = 16;
+					nPeriod = 16;
 					break;
 				case 3: // 64 cycles
-					timerPeriod = 64;
+					nPeriod = 64;
 					break;
 				default:
 					break;
@@ -311,17 +330,17 @@ bool SystemTimer::readRegister(const unsigned short &reg, unsigned char &dest){
 }
 
 bool SystemTimer::onClockUpdate(){
-	if(!timerEnable) return false;
+	if(!bEnabled) return false;
 	if((nDividerCycles++) >= 64){ // DIV (divider register) incremented at a rate of 16384 Hz
 		nDividerCycles = 0;
 		(*rDIV)++;
 	}
 	nCyclesSinceLastTick++;
-	while(nCyclesSinceLastTick/timerPeriod){ // Handle a timer tick.
+	while(nCyclesSinceLastTick / nPeriod){ // Handle a timer tick.
 		if(++(*rTIMA) == 0x0) // Timer counter has rolled over
 			rollOver();
 		// Reset the cycle counter.
-		nCyclesSinceLastTick -= timerPeriod;
+		nCyclesSinceLastTick -= nPeriod;
 	}
 	return true;
 }

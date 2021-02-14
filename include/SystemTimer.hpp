@@ -12,23 +12,27 @@ class HighResTimer{
 public:
 	HighResTimer();
 
-	/** Stop the timer and return the duration
+	/** Get the time elapsed since the timer was reset
 	  */
 	double operator () () {
-		return stop();
+		return uptime();
 	}
 	
 	/** Start the timer
 	  */
 	void start();
 	
-	/** Stop the timer, storing timer duration to dWallTime and returning the duration
+	/** Stop the timer and return the time elapsed since start() called
 	  */
-	double stop();
+	double stop() const;
 	
 	/** Get total time since timer initialization
 	  */
 	double uptime() const;
+	
+	/** Reset time accumulator value
+	  */
+	void reset();
 	
 private:
 	hrclock::time_point tInitialization; ///< The time that the timer was initialized
@@ -123,30 +127,84 @@ private:
 
 class ComponentTimer {
 public:
-	ComponentTimer() : nCyclesSinceLastTick(0), timerPeriod(1), timerCounter(0), timerEnable(true) { }
+	/** Default constructor
+	  */
+	ComponentTimer() : 
+		nCyclesSinceLastTick(0), 
+		nPeriod(1), 
+		nCounter(0), 
+		bEnabled(true) 
+	{ 
+	}
 	
-	ComponentTimer(const unsigned short &period) : nCyclesSinceLastTick(0), timerPeriod(period), timerCounter(0), timerEnable(true) { }
-	
-	void enableTimer(){ timerEnable = true; }
-	
-	void disableTimer(){ timerEnable = false; }	
+	/** Period constructor
+	  */
+	ComponentTimer(const unsigned short &period) : 
+		nCyclesSinceLastTick(0), 
+		nPeriod(period), 
+		nCounter(0), 
+		bEnabled(true) 
+	{ 
+	}
 
-	void setTimerPeriod(const unsigned short &period){ timerPeriod = period; }
+	/** Get the current timer period
+	  */
+	unsigned short getTimerPeriod() const { 
+		return nPeriod; 
+	}
 	
-	unsigned short getTimerPeriod() const { return timerPeriod; }
+	/** Get the current timer counter
+	  */
+	unsigned short getTimerCounter() const { 
+		return nCounter; 
+	}
 	
-	unsigned short getTimerCounter() const { return timerCounter; }
+	/** Enable the timer
+	  * Timer will be incremented when clocked.
+	  */
+	void enableTimer(){ 
+		bEnabled = true; 
+	}
+	
+	/** Disable the timer
+	  * Timer will do nothing when clocked.
+	  */
+	void disableTimer(){ 
+		bEnabled = false; 
+	}	
 
-	void reset(){ nCyclesSinceLastTick = 0; }
+	/** Set the timer period
+	  */
+	void setTimerPeriod(const unsigned short &period){ 
+		nPeriod = period; 
+	}
+	
+	/** Clock the timer
+	  * If incrementing the timer causes it to roll over, rollOver() is called and true is returned
+	  */
+	bool clock();
+	
+	/** Reset the number of cycles since the last time the clock rolled over
+	  */
+	void reset(){ 
+		nCyclesSinceLastTick = 0; 
+	}
 
 protected:
 	unsigned short nCyclesSinceLastTick;
-	unsigned short timerPeriod;
-	unsigned short timerCounter;
 	
-	bool timerEnable;
+	unsigned short nPeriod;
+	
+	unsigned short nCounter;
+	
+	bool bEnabled;
 
-	virtual void rollOver(){ }
+	/** Timer rollover event
+	  * Called when clocking the timer causes it to reset
+	  */
+	virtual void rollOver(){ 
+		reset();
+	}
 };
 
 class SystemTimer : public SystemComponent, public ComponentTimer {
@@ -154,10 +212,14 @@ public:
 	SystemTimer();
 
 	// The system timer has no associated RAM, so return false.
-	virtual bool preWriteAction(){ return false; }
+	virtual bool preWriteAction(){ 
+		return false; 
+	}
 	
 	// The system timer has no associated RAM, so return false.
-	virtual bool preReadAction(){ return false; }
+	virtual bool preReadAction(){ 
+		return false; 
+	}
 	
 	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	
@@ -171,7 +233,9 @@ private:
 	unsigned short nDividerCycles;
 
 	unsigned char dividerRegister;
+	
 	unsigned char timerModulo;
+	
 	unsigned char clockSelect;
 
 	virtual void rollOver();

@@ -3,7 +3,6 @@
 #include "SystemGBC.hpp"
 #include "SoundManager.hpp"
 #include "Sound.hpp"
-#include "SoundBuffer.hpp"
 #include "FrequencySweep.hpp"
 #include "MidiFile.hpp"
 
@@ -16,20 +15,17 @@ SoundProcessor::SoundProcessor() :
 	ComponentTimer(2048), // 512 Hz sequencer
 	bMasterSoundEnable(false),
 	bRecordMidi(false),
-	audio(0x0),
+	audio(&SoundManager::getInstance()),
+	mixer(audio->getAudioMixer()),	
 	ch1(new FrequencySweep()),
 	ch2(),
 	ch3(wavePatternRAM),
 	ch4(),
-	mixer(),
-	buffer(&SoundBuffer::getInstance()),
 	wavePatternRAM(),
 	nSequencerTicks(0),
 	nMidiClockTicks(0),
 	midiFile()
 { 
-	mixer.reload();
-	mixer.enable(); // Start mixer clock
 }
 
 bool SoundProcessor::checkRegister(const unsigned short &reg){
@@ -168,19 +164,19 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		/////////////////////////////////////////////////////////////////////
 		case 0xFF24: // NR50 (Channel control / ON-OFF / volume)
 			// Ignore Vin since we do not emulate it
-			mixer.setOutputLevels(rNR50->getBits(4,6) / 7.f, rNR50->getBits(0,2) / 7.f); // 3-bit volumes
+			mixer->setOutputLevels(rNR50->getBits(4,6) / 7.f, rNR50->getBits(0,2) / 7.f); // 3-bit volumes
 			break;
 		case 0xFF25: // NR51 (Select sound output)
 			// Left channel
-			mixer.setInputToOutput(3, 0, rNR51->getBit(7)); // ch4
-			mixer.setInputToOutput(2, 0, rNR51->getBit(6)); // ch3
-			mixer.setInputToOutput(1, 0, rNR51->getBit(5)); // ch2
-			mixer.setInputToOutput(0, 0, rNR51->getBit(4)); // ch1
+			mixer->setInputToOutput(3, 0, rNR51->getBit(7)); // ch4
+			mixer->setInputToOutput(2, 0, rNR51->getBit(6)); // ch3
+			mixer->setInputToOutput(1, 0, rNR51->getBit(5)); // ch2
+			mixer->setInputToOutput(0, 0, rNR51->getBit(4)); // ch1
 			// Right channel
-			mixer.setInputToOutput(3, 1, rNR51->getBit(3)); // ch4
-			mixer.setInputToOutput(2, 1, rNR51->getBit(2)); // ch3
-			mixer.setInputToOutput(1, 1, rNR51->getBit(1)); // ch2
-			mixer.setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
+			mixer->setInputToOutput(3, 1, rNR51->getBit(3)); // ch4
+			mixer->setInputToOutput(2, 1, rNR51->getBit(2)); // ch3
+			mixer->setInputToOutput(1, 1, rNR51->getBit(1)); // ch2
+			mixer->setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
 			break;
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			bMasterSoundEnable = rNR52->getBit(7);
@@ -315,31 +311,30 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 }
 
 bool SoundProcessor::onClockUpdate(){
-	if(!timerEnable) 
+	if(!bEnabled) // If timer not enabled
 		return false;
 
 	if(bMasterSoundEnable){
 		// Clock audio units (4 MHz clock)
 		for(int i = 0; i < 4; i++){
 			if(ch1.clock())
-				mixer.setInputSample(0, ch1.sample());
+				mixer->setInputSample(0, ch1.sample());
 			if(ch2.clock())
-				mixer.setInputSample(1, ch2.sample());
+				mixer->setInputSample(1, ch2.sample());
 			if(ch3.clock())
-				mixer.setInputSample(2, ch3.sample());
+				mixer->setInputSample(2, ch3.sample());
 			if(ch4.clock())
-				mixer.setInputSample(3, ch4.sample());
+				mixer->setInputSample(3, ch4.sample());
 		}
 		// Clock 16 kHz mixer
-		if(mixer.clock()){ // Push new sample onto the sample FIFO buffer
-			buffer->pushSample(mixer[0], mixer[1]);
+		if(mixer->clock()){ // New sample is pushed onto the sample FIFO buffer
 			if(bRecordMidi)
 				nMidiClockTicks++;
 		}
 	}
 	
 	// Update the 512 Hz frame sequencer.
-	if(++nCyclesSinceLastTick >= timerPeriod){
+	if(++nCyclesSinceLastTick >= nPeriod){
 		this->reset();
 		if(bMasterSoundEnable)
 			this->rollOver();
