@@ -19,7 +19,7 @@ class SoundBuffer;
 
 namespace MidiFile{
 	class MidiFileReader;
-};
+}
 
 enum class Channels {
 	CH1, // Square 1

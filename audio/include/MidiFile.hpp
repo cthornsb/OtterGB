@@ -648,6 +648,6 @@ namespace MidiFile{
 		  */
 		void midiEndOfTrack();
 	}; // class MidiFileReader
-}; // namespace MidiFileReader
+} // namespace MidiFileReader
 
 #endif

@@ -88,7 +88,6 @@ bool SystemClock::onClockUpdate(){
 		return false;
 	}
 
-	bool hsync = false;
 	cyclesSinceLastVSync++;
 	cyclesSinceLastHSync++;
 

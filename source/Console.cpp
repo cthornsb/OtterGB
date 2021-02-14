@@ -143,7 +143,6 @@ void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
 void ConsoleGBC::handleInput(){
 	//handle user input commands here
 	LR35902 *cpu = sys->getCPU();
-	std::vector<Register>* registers = sys->getRegisters();
 	Register* reg = 0x0;
 	std::vector<std::string> args;
 	std::string userinput = toLowercase(line);
@@ -201,6 +200,8 @@ void ConsoleGBC::handleInput(){
 	unsigned char d8;
 	unsigned short d16;
 	switch(cmd->getType()){
+		case cmdType::NONE:
+			break;
 		case cmdType::QUIT:
 			sys->closeDebugConsole();
 			break;
@@ -323,6 +324,8 @@ void ConsoleGBC::handleInput(){
 				sys->quickload();
 			}
 			break;
+		default:
+			break;
 	}
 }
 
@@ -331,7 +334,7 @@ void ConsoleGBC::addConsoleCommand(const std::string& name, const unsigned short
 }
 
 void ConsoleGBC::flush(){
-	for(auto i = 0; i < strbuff.length(); i++){
+	for(size_t i = 0; i < strbuff.length(); i++){
 		handle(strbuff[i], false);
 	}
 	strbuff = "";

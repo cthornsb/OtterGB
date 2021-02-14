@@ -10,21 +10,21 @@ const char UPPERCASE_LOW  = 65;
 const char UPPERCASE_HIGH = 90;
 
 bool isNumeric(const std::string& str) {
-	for (auto i = 0; i < str.length(); i++)
+	for (size_t i = 0; i < str.length(); i++)
 		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
 			return false;
 	return true;
 }
 
 bool isInteger(const std::string& str) {
-	for (auto i = 0; i < str.length(); i++)
+	for (size_t i = 0; i < str.length(); i++)
 		if (str[i] < '0' || str[i] > '9')
 			return false;
 	return true;
 }
 
 bool isDecimal(const std::string& str) {
-	for (auto i = 0; i < str.length(); i++)
+	for (size_t i = 0; i < str.length(); i++)
 		if ((str[i] < '0' || str[i] > '9') && str[i] != '.')
 			return false;
 	return true;
@@ -33,7 +33,7 @@ bool isDecimal(const std::string& str) {
 bool isHexadecimal(const std::string& str) {
 	if (str.length() < 2 || str.find('$') == std::string::npos)
 		return false;
-	for (auto i = 0; i < str.length(); i++) {
+	for (size_t i = 0; i < str.length(); i++) {
 		if((str[i] < '0' || str[i] > '9') && (str[i] < 'a' || str[i] > 'f') && (str[i] < 'A' || str[i] > 'F') && str[i] != '$')
 			return false;
 	}
@@ -43,7 +43,7 @@ bool isHexadecimal(const std::string& str) {
 bool isBinary(const std::string& str) {
 	if (str.length() < 2 || str.find('b') == std::string::npos)
 		return false;
-	for (auto i = 0; i < str.length(); i++)
+	for (size_t i = 0; i < str.length(); i++)
 		if (str[i] != '0' && str[i] != '1' && str[i] != 'b')
 			return false;
 	return true;
@@ -87,7 +87,6 @@ std::string extractString(std::string& str, const char& c1, const char& c2, cons
 	if (index1 == std::string::npos) {
 		return "";
 	}
-	index1;
 	size_t index2 = str.find_first_of(c2, index1 + 1);
 	if (index2 == std::string::npos) {
 		return "";

@@ -71,7 +71,6 @@ bool CharacterMap::loadCharacterMap(const std::string &fname){
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
 	if(!ifile.good())
 		return false;
-	unsigned int count = 0;
 	for(unsigned short x = 0; x < nVals; x++){
 		ifile.read((char*)&rgb[x][0], 16); // 16 bytes per bitmap (2 per row)
 	}
@@ -79,7 +78,7 @@ bool CharacterMap::loadCharacterMap(const std::string &fname){
 	for(unsigned short ch = 0; ch < nVals; ch++){ // Character index
 		for(unsigned short j = 0; j < 8; j++){ // Bitmap row
 			for(unsigned short k = 0; k < 8; k++){ // Bitmap col
-				cmap[letters[ch]].set(k, j, getBitmapPixel((7-k), rgb[ch][2*j], rgb[ch][2*j+1]));
+				cmap[(unsigned int)letters[ch]].set(k, j, getBitmapPixel((7-k), rgb[ch][2*j], rgb[ch][2*j+1]));
 			}
 		}
 	}
@@ -90,7 +89,7 @@ void CharacterMap::putCharacter(const char &val, const unsigned short &x, const 
 	unsigned char pixelColor;
 	for(unsigned short dy = 0; dy < 8; dy++){
 		for(unsigned short dx = 0; dx < 8; dx++){
-			pixelColor = cmap[val].get(dx, dy);
+			pixelColor = cmap[(unsigned int)val].get(dx, dy);
 			if(transparency && pixelColor == 0) // Transparent
 				continue;
 			window->setDrawColor(palette[pixelColor]);

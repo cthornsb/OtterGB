@@ -39,7 +39,6 @@ bool SoundBuffer::getSamples(float* output, const size_t& N){
 		retval = true;
 	}
 	else if(size() > 1){ // Not enough samples in the buffer, in-between values will be interpolated
-		size_t delta = N - size(); // Number of missing samples
 		float period = (float)N / (size() - 1); // Number of "in-between" samples per actual sample
 		float counter = 0.f;
 		float current[2] = {

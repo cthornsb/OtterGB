@@ -21,7 +21,7 @@ if(NOT WIN32) # Unix systems (Ubuntu)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
 		endif()
 		# Compile flags
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
 		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 		# Linker flags
 		#set(CMAKE_EXE_LINKER_FLAGS )

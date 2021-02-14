@@ -62,6 +62,6 @@ namespace PianoKeys {
 	private:
 		std::vector<std::pair<std::string, float> > frequencies; ///< Standard keyboard has 88 keys, A0 to C8 (27.5 Hz ~ 4186 Hz)
 	};
-};
+}
 
 #endif

@@ -11,8 +11,8 @@ public:
 		SystemComponent("DMA"), 
 		transferMode(0), 
 		oldDMA(1), 
-		nCyclesRemaining(0), 
 		nBytesRemaining(0), 
+		nCyclesRemaining(0), 
 		index(0), 
 		nBytes(1), 
 		srcStart(0), 
@@ -72,15 +72,23 @@ public:
 
 private:
 	bool transferMode; ///< 0: General DMA, 1: H-Blank DMA
+	
 	bool oldDMA; ///< 0: Old DMA (OAM), 1: New DMA (VRAM)
 	
 	unsigned short nBytesRemaining; ///< Remaining number of bytes to transfer
+	
 	unsigned short nCyclesRemaining; ///< The number of system clock cycles remaining.
+	
 	unsigned short index; ///< Current index in system memory.
+	
 	unsigned short nBytes; ///< The number of bytes transferred per cycle.
+	
 	unsigned short srcStart; ///< Start location of the source block in memory.
+	
 	unsigned short destStart; ///< Start location of the destination block in memory.
+	
 	unsigned short length; ///< Total number of bytes to transfer.
+	
 	unsigned short currentCycle; ///< Current clock cycle number since HDMA transfer began.
 	
 	/** Transfer the next chunk of bytes. Increment the memory index by nBytes.

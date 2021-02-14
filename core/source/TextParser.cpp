@@ -163,7 +163,7 @@ TextParser::TextParser(const std::string& str) :
 unsigned char compareOperatorStrings(const std::string& str1, const std::string& str2) {
 	unsigned char retval = 0;
 	bool mismatch = false;
-	for (auto i = 0; i < str2.length(); i++) {
+	for (size_t i = 0; i < str2.length(); i++) {
 		if (str1[i] != str2[i]) {
 			mismatch = true;
 			break;
@@ -457,7 +457,6 @@ bool TextParser::parse(const std::string& str, NumericalString& result) {
 		return false;
 	}
 	std::string retval = stripAllWhitespace(str);
-	OperatorType* op = 0x0;
 	int count = 0;
 	while (!fatalError) {
 		std::stringstream repstr;

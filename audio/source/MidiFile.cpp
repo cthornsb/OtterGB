@@ -250,7 +250,7 @@ unsigned int MidiChunk::readVariableLength(MidiChunk& chunk){
 }
 	
 bool MidiMessage::read(MidiChunk& chunk){
-	unsigned char byte;
+	unsigned char byte = 0;
 	chunk.getUChar(byte);
 	nChannel = (byte & 0xf);
 	switch((byte & 0x70) >> 4){
@@ -342,8 +342,8 @@ bool MidiSysExclusive::read(MidiChunk& chunk){
 	
 bool MidiMetaEvent::read(MidiChunk& chunk){
 	unsigned int nTempo = 0;
+	unsigned char byte = 0;
 	std::string message;
-	unsigned char byte;
 	chunk.getUChar(byte); // 0xff
 	chunk.getUChar(nType);
 	nLength = MidiChunk::readVariableLength(chunk);

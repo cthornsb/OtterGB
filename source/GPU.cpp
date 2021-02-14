@@ -235,11 +235,11 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 		bmpLow = (0x1000 + 16*twosComp(tileID));
 
 	// Background & window tile attributes
-	unsigned char bgPaletteNumber;
-	bool bgBankNumber;
-	bool bgHorizontalFlip;
-	bool bgVerticalFlip;
-	bool bgPriority;
+	unsigned char bgPaletteNumber = 0;
+	bool bgBankNumber = false;
+	bool bgHorizontalFlip = false;
+	bool bgVerticalFlip = false;
+	bool bgPriority = false;
 	if(bGBCMODE){
 		tileAttr = mem[1][offset + 32*tileY + tileX]; // Retrieve the BG tile attributes
 		bgPaletteNumber  = tileAttr & 0x7;
@@ -326,7 +326,6 @@ void GPU::drawConsole(){
 
 void GPU::drawTileMaps(Window *win){
 	int W = win->getWidth();
-	int H = win->getHeight();
 	win->setCurrent();
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
 	const unsigned short tilesPerRow = W/8;

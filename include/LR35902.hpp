@@ -44,8 +44,8 @@ public:
 	    d8(0),
 		d16h(0),
 		d16l(0), 
-		memoryAddress(0),
 		memoryValue(0),
+		memoryAddress(0),
 		SP(0), 
 		PC(0) { }
 
