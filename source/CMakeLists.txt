@@ -7,31 +7,21 @@ if(NOT WIN32)
 	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
 endif(NOT WIN32)
 
-set(SYSTEM_SOURCES AudioUnit.cpp
-                   Bitmap.cpp
+set(SYSTEM_SOURCES Bitmap.cpp
                    Cartridge.cpp
                    ColorGBC.cpp
                    Console.cpp
                    DmaController.cpp
-                   FrequencySweep.cpp
                    GPU.cpp
                    Joystick.cpp
-                   LengthCounter.cpp
                    LR35902.cpp
                    SerialController.cpp
-                   ShiftRegister.cpp
                    Sound.cpp
-                   SoundBuffer.cpp
-                   SoundMixer.cpp
-                   SquareWave.cpp
                    SystemComponent.cpp
                    SystemGBC.cpp
                    SystemRegisters.cpp
                    SystemTimer.cpp
                    TextParser.cpp
-                   UnitTimer.cpp
-                   VolumeEnvelope.cpp
-                   WaveTable.cpp
                    WorkRam.cpp)
 
 if(NOT ${GB_BOOT_ROM} STREQUAL "")

@@ -2,16 +2,16 @@
 #define SOUND_MIXER_HPP
 
 #include "SoundBuffer.hpp"
-#include "SystemTimer.hpp"
+#include "UnitTimer.hpp"
 
 const unsigned short MIXER_CLOCK_PERIOD = 64;
 
-class SoundMixer : public ComponentTimer, public SoundBuffer {
+class SoundMixer : public UnitTimer, public SoundBuffer {
 public:
 	/** Default constructor
 	  */
 	SoundMixer() :
-		ComponentTimer(64),
+		UnitTimer(64),
 		SoundBuffer(),
 		bModified(false),
 		bStereoOutput(true),
