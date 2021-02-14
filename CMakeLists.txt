@@ -21,10 +21,10 @@ if(NOT WIN32) # Unix systems (Ubuntu)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
 		endif()
 		# Compile flags
-		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 		# Linker flags
-		set(CMAKE_EXE_LINKER_FLAGS -pthread)
+		#set(CMAKE_EXE_LINKER_FLAGS )
 	endif()
 else()
 	message(STATUS "Building for Windows")
@@ -57,7 +57,7 @@ endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 
 #------------------------------------------------------------------------------
 
-#Install options
+#Build options
 option(BUILD_TOOLS "Build and install tools." OFF)
 option(BUILD_DEBUG "Build with emulator debug window support (Requires QT)." OFF)
 if(WIN32)
@@ -132,6 +132,7 @@ add_definitions(-DPROJECT_GBC)
 
 #Add the include directories.
 include_directories(include)
+include_directories(core/include)
 include_directories(audio/include)
 include_directories(graphics/include)
 
@@ -181,7 +182,10 @@ add_subdirectory(graphics/source)
 #Add the sound directory.
 add_subdirectory(audio/source)
 
-#Add the source directory.
+#Add core component directory.
+add_subdirectory(core/source)
+
+#Add system component directory.
 add_subdirectory(source)
 
 if(BUILD_TOOLS)

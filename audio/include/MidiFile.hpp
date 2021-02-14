@@ -3,8 +3,7 @@
 
 #include <fstream>
 
-#include "SimpleSynthesizers.hpp"
-#include "SystemTimer.hpp"
+#include "HighResTimer.hpp"
 
 namespace MidiFile{
 	enum class MidiStatusType{

@@ -1,5 +1,5 @@
 
-#include "SerialController.hpp"
+#include "Serial.hpp"
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 

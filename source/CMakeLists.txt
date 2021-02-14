@@ -1,28 +1,18 @@
-
-set(CORE_SOURCES ConfigFile.cpp
-                 Opcode.cpp
-                 Support.cpp)
-
-if(NOT WIN32)
-	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
-endif(NOT WIN32)
-
-set(SYSTEM_SOURCES Bitmap.cpp
-                   Cartridge.cpp
-                   ColorGBC.cpp
-                   Console.cpp
-                   DmaController.cpp
-                   GPU.cpp
-                   Joystick.cpp
-                   LR35902.cpp
-                   SerialController.cpp
-                   Sound.cpp
-                   SystemComponent.cpp
-                   SystemGBC.cpp
-                   SystemRegisters.cpp
-                   SystemTimer.cpp
-                   TextParser.cpp
-                   WorkRam.cpp)
+#System components
+set(COMPONENT_SOURCES
+	Cartridge.cpp
+	Console.cpp
+	DmaController.cpp
+	GPU.cpp
+	Joystick.cpp
+	LR35902.cpp
+	Serial.cpp
+	Sound.cpp
+	SystemClock.cpp	
+	SystemGBC.cpp
+	SystemTimer.cpp
+	WorkRam.cpp
+)
 
 if(NOT ${GB_BOOT_ROM} STREQUAL "")
 	add_definitions(-DGB_BOOT_ROM="${GB_BOOT_ROM}")
@@ -32,20 +22,16 @@ if(NOT ${GBC_BOOT_ROM} STREQUAL "")
 	add_definitions(-DGBC_BOOT_ROM="${GBC_BOOT_ROM}")
 endif()
 
-# Generate the core library
-add_library(CORE_OBJECTS OBJECT ${CORE_SOURCES})
-add_library(CORE_LIB STATIC $<TARGET_OBJECTS:CORE_OBJECTS>)
-
 # Generate the system component library
-add_library(SYSTEM_OBJECTS OBJECT ${SYSTEM_SOURCES})
-add_library(SYSTEM_LIB STATIC $<TARGET_OBJECTS:SYSTEM_OBJECTS>)
+add_library(COMPONENT_OBJECTS OBJECT ${COMPONENT_SOURCES})
+add_library(COMPONENT_LIB STATIC $<TARGET_OBJECTS:COMPONENT_OBJECTS>)
 
 #Build renderer executable.
 add_executable(gbc gbc.cpp)
 if(NOT BUILD_DEBUG)
-	target_link_libraries(gbc SYSTEM_LIB CORE_LIB GRAPHICS_LIB AUDIO_LIB ${EXTERNAL_GRAPHICS_LIBS} ${EXTERNAL_AUDIO_LIBS})
+	target_link_libraries(gbc COMPONENT_LIB AUDIO_LIB GRAPHICS_LIB CORE_LIB ${EXTERNAL_GRAPHICS_LIBS} ${EXTERNAL_AUDIO_LIBS})
 else()
-	target_link_libraries(gbc SYSTEM_LIB CORE_LIB GRAPHICS_LIB QTDEBUG_LIB AUDIO_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${EXTERNAL_GRAPHICS_LIBS} ${EXTERNAL_AUDIO_LIBS})
+	target_link_libraries(gbc COMPONENT_LIB AUDIO_LIB GRAPHICS_LIB CORE_LIB QTDEBUG_LIB ${QT_GUI_LIB} ${QT_CORE_LIB} ${QT_OPENGL_LIB} ${EXTERNAL_GRAPHICS_LIBS} ${EXTERNAL_AUDIO_LIBS})
 endif()
 install(TARGETS gbc DESTINATION bin)
 #Copy default configuration file (if it doesn't already exist)

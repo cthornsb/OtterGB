@@ -1,75 +1,12 @@
-#ifndef SIMPLE_SYNTHESIZERS_HPP
-#define SIMPLE_SYNTHESIZERS_HPP
-
-#include <vector>
-#include <string>
+#ifndef SYNTHESIZERS_HPP
+#define SYNTHESIZERS_HPP
 
 #include "AudioSampler.hpp"
 
-namespace PianoKeys {
-	enum class Key {
-		NONE,
-		A,
-		B,
-		C,
-		D,
-		E,
-		F,
-		G,
-	};
-	
-	enum class Modifier{
-		NONE,
-		FLAT, // Step down
-		SHARP // Step up
-	};
-
-	float getFrequency(const Key& key, const Modifier& mod=Modifier::NONE, const int& octave=4);
-
-	class Note{
+namespace Synthesizers{
+	class SimpleSynth : public AudioSampler {
 	public:
-		Key key;
-		Modifier mod;
-		int nOctave;
-	
-		Note() :
-			key(Key::NONE),
-			mod(Modifier::NONE),
-			nOctave(4)
-		{
-		}
-	};
-	
-	class Keyboard{
-	public:
-		/** Default constructor
-		  */
-		Keyboard();
-		
-		/** Get the ideal frequency for the key matching the input string
-		  * Input string should have the format "kom" where 'k' is the key (a to g),
-		  * 'o' is the octave (0 to 8, 4 assumed if omitted), and 'm' is the modifier (# or b or none if omitted).
-		  */
-		float get(const std::string& key);
-		
-		/** Get the key string whose ideal frequency is closest to the input frequency
-		  */
-		std::string getName(const float& freq);
-
-		/** Get the key string whose ideal frequency is closest to the input frequency
-		  * @return The absolute difference between the input frequency and the ideal frequency of the returned key
-		  */
-		float getName(const float& freq, std::string& key);
-		
-	private:
-		std::vector<std::pair<std::string, float> > frequencies; ///< Standard keyboard has 88 keys, A0 to C8 (27.5 Hz ~ 4186 Hz)
-	};
-};
-
-namespace SimpleSynthesizers{
-	class Synthesizer : public AudioSampler {
-	public:
-		Synthesizer() : 
+		SimpleSynth() : 
 			AudioSampler(),
 			fAmplitude(1.f),
 			fFrequency(440.f),
@@ -77,7 +14,7 @@ namespace SimpleSynthesizers{
 		{
 		}
 		
-		Synthesizer(SoundManager* parent) : 
+		SimpleSynth(SoundManager* parent) : 
 			AudioSampler(),
 			fAmplitude(1.f),
 			fFrequency(440.f),
@@ -85,7 +22,7 @@ namespace SimpleSynthesizers{
 		{
 		}
 		
-		~Synthesizer() { }
+		~SimpleSynth() { }
 		
 		void setAmplitude(const float& A){ fAmplitude = (A <= 1.f ? A : 1.f); }
 		
@@ -124,10 +61,10 @@ namespace SimpleSynthesizers{
 		virtual float userSample(const float& dt) = 0;
 	};
 	
-	class SineWave : public Synthesizer {
+	class SineWave : public SimpleSynth {
 	public:
 		SineWave() :
-			Synthesizer()
+			SimpleSynth()
 		{
 		}
 
@@ -137,10 +74,10 @@ namespace SimpleSynthesizers{
 		virtual float userSample(const float& dt);
 	};
 
-	class TriangleWave : public Synthesizer {
+	class TriangleWave : public SimpleSynth {
 	public:
 		TriangleWave() :
-			Synthesizer()
+			SimpleSynth()
 		{
 		}
 		
@@ -150,10 +87,10 @@ namespace SimpleSynthesizers{
 		virtual float userSample(const float& dt);
 	};	
 	
-	class SquareWave : public Synthesizer {
+	class SquareWave : public SimpleSynth {
 	public:
 		SquareWave() :
-			Synthesizer(),
+			SimpleSynth(),
 			nHarmonics(10)
 		{
 		}
@@ -166,10 +103,10 @@ namespace SimpleSynthesizers{
 		virtual float userSample(const float& dt);
 	};
 		
-	class SawtoothWave : public Synthesizer {
+	class SawtoothWave : public SimpleSynth {
 	public:
 		SawtoothWave() :
-			Synthesizer(),
+			SimpleSynth(),
 			nHarmonics(10)
 		{
 		}

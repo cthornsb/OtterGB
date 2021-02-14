@@ -4,7 +4,7 @@
 
 #include "Support.hpp"
 #include "MidiFile.hpp"
-#include "SimpleSynthesizers.hpp"
+#include "PianoKeys.hpp"
 
 using namespace MidiFile;
 

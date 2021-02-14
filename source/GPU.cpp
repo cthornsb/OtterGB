@@ -11,7 +11,7 @@
 #include "ColorGBC.hpp"
 #include "Console.hpp"
 #include "GPU.hpp"
-#include "SystemTimer.hpp"
+#include "SystemClock.hpp"
 
 constexpr unsigned short VRAM_LOW  = 0x8000;
 constexpr unsigned short VRAM_HIGH = 0xA000;
