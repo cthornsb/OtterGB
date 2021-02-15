@@ -8,7 +8,7 @@
 #include <QMainWindow>
 
 #include "SystemGBC.hpp"
-#include "SimpleSynthesizers.hpp"
+#include "PianoKeys.hpp"
 
 class QApplication;
 

@@ -905,13 +905,14 @@ void SystemGBC::pause(){
 	sound->pause(); // Stop audio output
 }
 
-void SystemGBC::unpause(){ 
+void SystemGBC::unpause(bool resumeAudio/*=true*/){ 
 	emulationPaused = false; 
 #ifdef USE_QT_DEBUGGER
 	if(debugMode)
 		gui->updatePausedState(false);
 #endif
-	sound->resume(); // Restart audio output
+	if(resumeAudio)
+		sound->resume(); // Restart audio output
 }
 
 bool SystemGBC::reset() {
@@ -1203,22 +1204,22 @@ void SystemGBC::closeDebugConsole(){
 }
 
 void SystemGBC::stepThrough(){
-	unpause();
+	unpause(false); // Do not resume audio
 	pauseAfterNextInstruction = true;
 }
 
 void SystemGBC::advanceClock(){
-	unpause();
+	unpause(false); // Do not resume audio
 	pauseAfterNextClock = true;
 }
 
 void SystemGBC::resumeUntilNextHBlank(){
-	unpause();
+	unpause(false); // Do not resume audio
 	pauseAfterNextHBlank = true;
 }
 
 void SystemGBC::resumeUntilNextVBlank(){
-	unpause();
+	unpause(false); // Do not resume audio
 	pauseAfterNextVBlank = true;
 }
 

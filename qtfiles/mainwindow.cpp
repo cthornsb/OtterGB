@@ -9,7 +9,7 @@
 #include "ColorGBC.hpp"
 #include "Support.hpp"
 #include "colors.hpp"
-#include "SystemTimer.hpp"
+#include "SystemClock.hpp"
 #include "LR35902.hpp"
 #include "GPU.hpp"
 #include "DmaController.hpp"
@@ -29,13 +29,13 @@ std::string getStdString(const QString& str)
 }
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    bQuitting(false),
-    sys(0x0),
-    app(0x0)
+	QMainWindow(parent),
+	ui(new Ui::MainWindow),
+	bQuitting(false),
+	sys(0x0),
+	app(0x0)
 {
-    ui->setupUi(this);
+	ui->setupUi(this);
 }
 
 MainWindow::~MainWindow()
@@ -46,11 +46,11 @@ void MainWindow::update()
 {
 	static bool firstUpdate = true;
 	if(firstUpdate){
-	    // Get pointers to the page in memory.
-	    updateMemoryArray();
-	    if(!bGBCMODE)
-	    	setDmgMode();
-	    Cartridge *cart = components->cart;
+		// Get pointers to the page in memory.
+		updateMemoryArray();
+		if(!bGBCMODE)
+			setDmgMode();
+		Cartridge *cart = components->cart;
 		if(cart->getRamSize() == 0){
 			ui->radioButton_RomSramEnabled->setEnabled(false);
 			ui->lineEdit_RomSramSize->setEnabled(false);
@@ -66,7 +66,7 @@ void MainWindow::update()
 			registers["ALL"].push_back(reg);
 			registers[reg->getSystemComponent()->getName()].push_back(reg);
 		}
-	    firstUpdate = false;
+		firstUpdate = false;
 	}
 	switch(ui->tabWidget->currentIndex()){
 		case 0: // Main tab
@@ -434,14 +434,17 @@ void MainWindow::connectToSystem(SystemGBC *ptr){
 	components = std::unique_ptr<ComponentList>(new ComponentList(ptr));
 	ui->comboBox_Registers->addItem("ALL");
 	ui->comboBox_Registers->addItem("System");
-	for(auto component = components->list.begin(); component != components->list.end(); component++)
+	for(auto component = components->list.begin(); component != components->list.end(); component++){
 		ui->comboBox_Registers->addItem(getQString(component->second->getName()));
-    Opcode *opcodes = components->cpu->getOpcodes();
-    for(unsigned short i = 0; i < 256; i++)
-    	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
-    opcodes = components->cpu->getOpcodesCB();
-    for(unsigned short i = 0; i < 256; i++)
-    	ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
+	}
+	Opcode *opcodes = components->cpu->getOpcodes();
+	for(unsigned short i = 0; i < 256; i++){
+		ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
+	}
+	opcodes = components->cpu->getOpcodesCB();
+	for(unsigned short i = 0; i < 256; i++){
+		ui->comboBox_Breakpoint_Opcode->addItem(getQString(opcodes[i].sName));
+	}
 	// Toggle opcode breakpoint off since it was activated by adding names to the list.
 	ui->checkBox_Breakpoint_Opcode->setChecked(false);
 	sys->clearOpcodeBreakpoint();

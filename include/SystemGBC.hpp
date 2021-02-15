@@ -476,7 +476,7 @@ public:
 	
 	void pause();
 	
-	void unpause();
+	void unpause(bool resumeAudio=true);
 
 	bool reset();
 
