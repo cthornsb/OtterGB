@@ -1,5 +1,3 @@
-#include <iostream> // TEMP
-
 #include "SoundBuffer.hpp"
 
 void SoundBuffer::pushSample(const float& l, const float& r){
@@ -28,7 +26,6 @@ bool SoundBuffer::getSample(float* output){
 
 bool SoundBuffer::getSamples(float* output, const size_t& N){
 	lock.lock(); // Reading from buffer
-	//std::cout << " getting N=" << N << " samples with " << size() << " elements in buffer\n";
 	bool retval = false;
 	if(size() >= N){ // Buffer contains at least N samples
 		for(size_t i = 0; i < N; i++){
@@ -94,8 +91,7 @@ float SoundBuffer::right() const {
 }
 
 void SoundBuffer::popSample(){
-	if(empty()){
-		std::cout << " ERROR! Popping with zero size" << std::endl;
+	if(empty()){ // Trying to pop with size=0
 		return;
 	}
 	if(size() == 1){ // Sample buffer will be empty after pop, backup the remaining sample

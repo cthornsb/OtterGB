@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "colors.hpp"
+#include "ColorGBC.hpp"
 #include "SystemComponent.hpp"
 
 class Register;
@@ -56,7 +57,7 @@ class SpriteHandler : public SystemComponent {
 public:
 	SpriteHandler();
 
-	virtual bool preWriteAction();
+	bool preWriteAction() override ;
 	
 	SpriteAttributes getSpriteAttributes(const unsigned char &index);
 	
@@ -116,11 +117,11 @@ public:
 
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 
 private:
 	bool bgDisplayEnable;

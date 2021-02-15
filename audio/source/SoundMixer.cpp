@@ -1,5 +1,3 @@
-
-#include <iostream>
 #include <algorithm>
 
 #include "SoundMixer.hpp"
@@ -51,8 +49,8 @@ float SoundMixer::clamp(const float& input, const float& low, const float& high)
 	return std::max(low, std::min(high, input));
 }
 
-void SoundMixer::rollOver(){
-	reset(); // Reset timer
+void SoundMixer::rollover(){
+	reload(); // Refill timer period
 	if(bModified) // Update output samples if one or more input samples were modified
 		update();
 	pushSample(fOutputSamples[0], fOutputSamples[1]); // Push current sample onto the fifo buffer (mutex protected)

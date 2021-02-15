@@ -5,7 +5,7 @@ bool ComponentTimer::clock(){
 	if(!bEnabled || nPeriod == 0)
 		return false;
 	if(++nCyclesSinceLastTick == nPeriod){
-		this->rollOver();
+		this->rollover();
 		nCounter++;
 		return true;
 	}

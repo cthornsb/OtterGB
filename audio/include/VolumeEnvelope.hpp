@@ -58,7 +58,7 @@ private:
 	/** Counter rolled over, increase or decrease the output volume and refill the timer
 	  * If the new volume is outside the range [0, 15] the volume is left un-changed and the timer is not refilled.
 	  */
-	virtual void rollover();
+	void rollover() override ;
 };
 
 #endif

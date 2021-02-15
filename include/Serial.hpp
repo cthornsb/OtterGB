@@ -9,7 +9,7 @@ class SerialController : public SystemComponent {
 public:
 	SerialController() : SystemComponent("Serial") { }
 
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 
 private:
 };

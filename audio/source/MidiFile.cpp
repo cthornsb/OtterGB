@@ -242,7 +242,7 @@ unsigned int MidiChunk::readVariableLength(MidiChunk& chunk){
 		if(!chunk.getUChar(byte)) // Not enough data
 			break;
 		retval += ((byte & 0x7f) << (7 * chunkCount++));
-		if(!bitTest(byte, 7)){ // Read bytes until one is encountered with its 7th bit cleared
+		if((byte & 0x80) == 0){ // Read bytes until one is encountered with its 7th bit cleared
 			break;
 		}
 	}
@@ -430,7 +430,7 @@ bool TrackEvent::read(MidiChunk& chunk){
 	else if(byte == 0xf0){ // Sys-exclusive message
 		MidiSysExclusive msg(chunk);
 	}
-	else if(bitTest(byte, 7)){ // Midi message
+	else if((byte & 0x80) != 0){ // Midi message
 		MidiMessage msg(chunk);
 	}
 	else{ // Running status?
@@ -450,7 +450,6 @@ MidiFileReader::MidiFileReader() :
 	sFilename("out.mid"),
 	sTrackname(),
 	notemap(),
-	timer(),
 	header(),
 	track(),
 	bNotePressed()
@@ -480,7 +479,7 @@ void MidiFileReader::press(const unsigned char& ch, const unsigned int& t, const
 	if(bFirstNote){ // First recorded midi note
 		bFirstNote = false;
 		nTime = clkT;
-		timer.start(); // Start the audio timer
+		//timer.start(); // Start the audio timer
 	}
 	else if (bNotePressed[ch] == true) { // Note already pressed on this channel, release it first
 		release(ch, t);
@@ -514,9 +513,9 @@ void MidiFileReader::setMidiInstrument(const unsigned char& ch, const unsigned c
 }
 
 void MidiFileReader::finalize(const unsigned int& t) {
-	double audioLength = timer.stop(); // Stop the audio timer (s)
-	std::cout << "  Length: " << audioLength << " s" << std::endl;
-	std::cout << "  Midi: " << nTime << " clocks (" << nTime / audioLength << " clk/s)" << std::endl;
+	//double audioLength = timer.stop(); // Stop the audio timer (s)
+	//std::cout << "  Length: " << audioLength << " s" << std::endl;
+	//std::cout << "  Midi: " << nTime << " clocks (" << nTime / audioLength << " clk/s)" << std::endl;
 	for (unsigned char i = 0; i < 16; i++) { // Release any notes which are currently down
 		if (bNotePressed[i] == true)
 			release(i, t);
@@ -574,7 +573,7 @@ bool MidiFileReader::readHeaderChunk(MidiChunk& hdr){
 	hdr.getUShort(nDivision);
 	
 	// Division code
-	if(bitTest((unsigned short)nDivision, 15)){ // SMPTE format (ignore!)
+	if((nDivision & 0x8000) != 0){ // SMPTE format (ignore!)
 	}
 	else{ // Metric time
 		nDeltaTicksPerQuarter = nDivision & 0x7fff; // Bits 0,14

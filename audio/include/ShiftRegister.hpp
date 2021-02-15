@@ -49,21 +49,21 @@ public:
 
 	/** Get the actual unit frequency (in Hz)
 	  */
-	virtual float getRealFrequency() const;
+	float getRealFrequency() const override ;
 
 	/** Return a sample from the current state of the audio waveform
 	  */
-	virtual unsigned char sample();
+	unsigned char sample() override ;
 
 	/** Clock the timer
 	  * Called by master sound countroller at a rate of 512 Hz
 	  * @param sequencerTicks The number of 512 Hz ticks since the last rollover
 	  */
-	virtual void clockSequencer(const unsigned int& sequencerTicks);
+	void clockSequencer(const unsigned int& sequencerTicks) override ;
 	
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	virtual void trigger();
+	void trigger() override ;
 
 private:
 	bool bWidthMode; ///< Shift register width mode (0: 15-bit, 1: 7-bit)
@@ -82,25 +82,25 @@ private:
 	
 	/** Enable the length counter and volume envelope
 	  */
-	virtual void userEnable(){
+	void userEnable() override {
 		length.enable();
 		volume.enable();
 	}
 	
 	/** Disable the length counter and volume envelope
 	  */
-	virtual void userDisable(){
+	void userDisable() override {
 		length.disable();
 		volume.disable();
 	}
 
 	/** Upon powering down, reset the volume envelope and shift register values
 	  */
-	virtual void userReset();
+	void userReset() override ;
 	
 	/** Method called when unit timer clocks over (every N system clock ticks)
 	  */	
-	virtual void rollover();
+	void rollover() override ;
 };
 
 #endif

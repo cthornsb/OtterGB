@@ -41,7 +41,7 @@ void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
 
 void ShiftRegister::rollover(){
 	// Xor the two lowest bits
-	if(bitTest(reg, 0) ^ bitTest(reg, 1)){ // 1
+	if(((reg & 0x1) != 0) ^ ((reg & 0x2) != 0)){ // 1
 		reg = reg >> 1; // Right shift all bits
 		reg |= 0x4000; // Set the high bit (14)
 		if(bWidthMode)

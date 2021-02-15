@@ -6,7 +6,7 @@ set(CORE_SOURCES
 	Opcode.cpp
 	Support.cpp
 	SystemComponent.cpp
-	SystemRegisters.cpp
+	Register.cpp
 	TextParser.cpp
 )
 

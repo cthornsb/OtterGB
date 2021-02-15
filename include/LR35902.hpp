@@ -60,7 +60,7 @@ public:
 	/** Perform one CPU (machine) cycle of the current instruction.
 	  * @return True if the current instruction has completed execution (i.e. nCyclesRemaining==0).
 	  */
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override ;
 
 	Opcode *getOpcodes(){ return opcodes.getOpcodes(); }
 	
@@ -138,9 +138,9 @@ public:
 
 	bool findOpcode(const std::string& mnemonic, OpcodeData& data);
 
-	virtual unsigned int writeSavestate(std::ofstream &f);
+	unsigned int writeSavestate(std::ofstream &f) override ;
 
-	virtual unsigned int readSavestate(std::ifstream &f);
+	unsigned int readSavestate(std::ifstream &f) override ;
 
 protected:
 	bool halfCarry;

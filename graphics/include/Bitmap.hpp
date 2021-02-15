@@ -1,6 +1,8 @@
 #ifndef BITMAP_HPP
 #define BITMAP_HPP
 
+#include <string>
+
 #include "colors.hpp"
 
 class Window;

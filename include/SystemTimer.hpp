@@ -9,22 +9,22 @@ public:
 	SystemTimer();
 
 	// The system timer has no associated RAM, so return false.
-	virtual bool preWriteAction(){ 
+	bool preWriteAction() override { 
 		return false; 
 	}
 	
 	// The system timer has no associated RAM, so return false.
-	virtual bool preReadAction(){ 
+	bool preReadAction() override { 
 		return false; 
 	}
 	
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 	
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override ;
 	
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 	
 private:
 	unsigned short nDividerCycles;
@@ -35,7 +35,7 @@ private:
 	
 	unsigned char clockSelect;
 
-	virtual void rollOver();
+	void rollover() override ;
 };
 
 #endif

@@ -17,18 +17,22 @@ public:
 	void clearInput();
 	
 	// The joystick controller has no associated RAM, so return false to avoid trying to access it.
-	virtual bool preWriteAction(){ return false; }
+	bool preWriteAction() override { 
+		return false; 
+	}
 	
 	// The joystick controller has no associated RAM, so return false to avoid trying to access it.
-	virtual bool preReadAction(){ return false; }
+	bool preReadAction() override { 
+		return false; 
+	}
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override ;
 
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 
 private:
 	bool selectButtonKeys;

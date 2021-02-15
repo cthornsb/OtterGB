@@ -71,7 +71,7 @@ public:
 	/** Reset all counter values and flags
 	  * Period and frequency are not reset because they are used to compute audio length.
 	  */
-	virtual void reset();
+	void reset() override ;
 	
 private:
 	bool bRefilled; ///< Flag indicating that length counter was refilled with maximum length on most recent trigger
@@ -79,7 +79,7 @@ private:
 	/** Length counter was depleted
 	  * Do not automatically reload the length counter
 	  */
-	virtual void rollover() { }
+	void rollover() override { }
 };
 
 #endif

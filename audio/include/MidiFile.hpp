@@ -2,8 +2,7 @@
 #define MIDI_FILE_HPP
 
 #include <fstream>
-
-#include "HighResTimer.hpp"
+#include <vector>
 
 namespace MidiFile{
 	enum class MidiStatusType{
@@ -385,14 +384,14 @@ namespace MidiFile{
 
 		/** Set to note press event
 		  */
-		virtual void press() {
+		void press() override {
 			bPressed = true;
 			nStatus = MidiStatusType::PRESSED;
 		}
 
 		/** Set to note release event
 		  */
-		virtual void release() {
+		void release() override {
 			bPressed = false;
 			nStatus = MidiStatusType::RELEASED;
 		}
@@ -600,8 +599,6 @@ namespace MidiFile{
 		
 		MidiKeyboard notemap; ///< Midi note dictionary
 
-		HighResTimer timer; ///< High-resolution timer for output midi file		
-				
 		MidiChunk header; ///< Midi header chunk
 
 		MidiChunk track; ///< Midi track chunk

@@ -47,10 +47,9 @@ void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
 			// Frequency sweep rolled over
 			if(!frequency->overflowed() && !frequency->overflowed2()){ 
 				// Get new timer period and update the channel period and frequency registers
-				unsigned short freq = frequency->getNewFrequency();
-				this->setFrequency(freq); // P = (2048 - f)
-				rNR13->setValue((unsigned char)(freq & 0x00FF));
-				rNR14->setBits(0, 2, (unsigned char)((freq & 0x0700) >> 8));				
+				this->setFrequency(frequency->getNewFrequency()); // P = (2048 - f)
+				//rNR13->setValue((unsigned char)(freq & 0x00FF));
+				//rNR14->setBits(0, 2, (unsigned char)((freq & 0x0700) >> 8));				
 			}
 			else{ // Frequency overflowed, disable channel
 				bDisableThisChannel = true;

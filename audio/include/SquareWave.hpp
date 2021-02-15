@@ -47,17 +47,17 @@ public:
 	
 	/** Return a sample from the current state of the audio waveform
 	  */
-	virtual unsigned char sample();
+	unsigned char sample() override ;
 
 	/** Clock the timer
 	  * Called by master sound countroller at a rate of 512 Hz
 	  * @param sequencerTicks The number of 512 Hz ticks since the last rollover
 	  */
-	virtual void clockSequencer(const unsigned int& sequencerTicks);
+	void clockSequencer(const unsigned int& sequencerTicks) override ;
 	
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	virtual void trigger();
+	void trigger() override ;
 
 private:
 	bool bSweepEnabled; ///< Flag indicating frequency sweep is enabled on this channel
@@ -72,24 +72,24 @@ private:
 	
 	/** Enable the length counter, volume envelope, and frequency sweep (if in use)
 	  */
-	virtual void userEnable();
+	void userEnable() override ;
 	
 	/** Disable the length counter, volume envelope, and frequency sweep (if in use)
 	  */
-	virtual void userDisable();
+	void userDisable() override ;
 	
 	/** Upon powering down, reset the volume envelope and sweep divider (if enabled)
 	  */
-	virtual void userReset();
+	void userReset() override ;
 	
 	/** Check if sweep frequency calculation overflowed and disable the channel and DAC if it did,
 	  * otherwise do nothing.
 	  */
-	virtual void channelWillBeEnabled();
+	void channelWillBeEnabled() override ;
 	
 	/** Method called when unit timer clocks over (every 8 system clock ticks)
 	  */	
-	virtual void rollover();
+	void rollover() override ;
 };
 
 #endif

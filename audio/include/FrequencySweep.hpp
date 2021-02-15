@@ -54,7 +54,7 @@ public:
 	/** Set the sweep period (in 128 Hz frame sequencer clocks)
 	  * If the sweep is changed from zero to non-zero with an empty timer, the timer is immediately reloaded with the new period.
 	  */
-	virtual void setPeriod(const unsigned short& period);
+	void setPeriod(const unsigned short& period) override ;
 	
 	/** Set the sweep bit shift such that the new frequency (f') is given by
 	  * f' = f +/- (f >> shift)
@@ -86,7 +86,7 @@ public:
 	
 	/** Reload the unit timer with its period (or with 8 in the event that the period is zero)
 	  */
-	virtual void reload();
+	void reload() override ;
 
 private:
 	bool bOverflow;
@@ -114,7 +114,7 @@ private:
 	  *   new frequency is written to the shadow frequency and to the external unit timer.
 	  * If the new frequency DID overflow, the overflow flag is set and the sweep timer is disabled.
 	  */
-	virtual void rollover();
+	void rollover() override ;
 };
 
 #endif

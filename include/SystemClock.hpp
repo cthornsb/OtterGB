@@ -35,7 +35,7 @@ public:
 	/** Perform one clock tick.
 	  * @return True if the system has entered VBlank, and false otherwise.
 	  */
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override ;
 	
 	/** Sleep until the start of the next VSync cycle (i.e. wait until the
 	  * start of the next frame). Useful for maintaining desired framerate

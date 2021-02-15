@@ -14,7 +14,7 @@ WorkRam::WorkRam() : SystemComponent("WRAM", 4096, 8) {
 	bs = 1; // Lowest WRAM swap bank is bank 1
 }
 
-unsigned char *WorkRam::getPtr(const unsigned int &loc){
+unsigned char *WorkRam::getPtr(const unsigned short &loc){
 	if(loc < WRAM_ZERO_LOW || loc >= WRAM_ECHO_HIGH)
 		return 0x0;
 

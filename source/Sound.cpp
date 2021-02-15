@@ -337,7 +337,7 @@ bool SoundProcessor::onClockUpdate(){
 	if(++nCyclesSinceLastTick >= nPeriod){
 		this->reset();
 		if(bMasterSoundEnable)
-			this->rollOver();
+			this->rollover();
 		return true;
 	}
 	
@@ -478,7 +478,7 @@ bool SoundProcessor::handleTriggerEnable(const int& ch){
 	return false;
 }
 
-void SoundProcessor::rollOver(){
+void SoundProcessor::rollover(){
 	// Update the 512 Hz frame sequencer.
 	ch1.clockSequencer(nSequencerTicks);
 	if(ch1.pollDisable())

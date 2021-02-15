@@ -23,6 +23,8 @@ public:
 		fInputSamples{0.f, 0.f, 0.f, 0.f},
 		bSendInputToOutput{{0, 0, 0, 0}, {0, 0, 0, 0}}
 	{ 
+		bEnabled = true; // Enable timer
+		nCounter = nPeriod; // Refill counter so timer starts immediately
 	}
 
 	/** Destructor
@@ -184,7 +186,7 @@ private:
 	
 	/** Push the current output sample onto the fifo buffer
 	  */
-	virtual void rollOver();
+	void rollover() override ;
 };
 
 #endif

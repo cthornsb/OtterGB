@@ -82,14 +82,14 @@ bool SystemTimer::onClockUpdate(){
 	nCyclesSinceLastTick++;
 	while(nCyclesSinceLastTick / nPeriod){ // Handle a timer tick.
 		if(++(*rTIMA) == 0x0) // Timer counter has rolled over
-			rollOver();
+			rollover();
 		// Reset the cycle counter.
 		nCyclesSinceLastTick -= nPeriod;
 	}
 	return true;
 }
 
-void SystemTimer::rollOver(){
+void SystemTimer::rollover(){
 	rTIMA->setValue(rTMA->getValue());
 	sys->handleTimerInterrupt();
 }

@@ -10,6 +10,7 @@ set(COMPONENT_SOURCES
 	Sound.cpp
 	SystemClock.cpp	
 	SystemGBC.cpp
+	SystemRegisters.cpp
 	SystemTimer.cpp
 	WorkRam.cpp
 )

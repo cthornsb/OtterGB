@@ -9,17 +9,17 @@ class WorkRam : public SystemComponent {
 public:
 	WorkRam();
 
-	virtual unsigned char *getPtr(const unsigned int &loc);
+	unsigned char *getPtr(const unsigned short &loc) override ;
 
-	virtual bool preWriteAction();
+	bool preWriteAction() override ;
 	
-	virtual bool preReadAction();
+	bool preReadAction() override ;
 
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 
-	virtual bool readRegister(const unsigned short &reg, unsigned char &dest);
+	bool readRegister(const unsigned short &reg, unsigned char &dest) override ;
 
 private:
 };

@@ -55,17 +55,17 @@ public:
 	
 	/** Return a sample from the current state of the audio waveform
 	  */
-	virtual unsigned char sample();
+	unsigned char sample() override ;
 
 	/** Clock the timer
 	  * Called by master sound countroller at a rate of 512 Hz
 	  * @param sequencerTicks The number of 512 Hz ticks since the last rollover
 	  */
-	virtual void clockSequencer(const unsigned int& sequencerTicks);
+	void clockSequencer(const unsigned int& sequencerTicks) override ;
 
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	virtual void trigger();
+	void trigger() override ;
 
 private:
 	unsigned char* data; ///< Pointer to audio sample data
@@ -78,19 +78,19 @@ private:
 	
 	/** Method called when unit timer clocks over (every 16 system clock ticks)
 	  */	
-	virtual void rollover();
+	void rollover() override ;
 	
 	/** Enable length counter
 	  */
-	virtual void userEnable();
+	void userEnable() override ;
 	
 	/** Disable length counter
 	  */
-	virtual void userDisable();
+	void userDisable() override ;
 	
 	/** Upon powering down, reset the WAVE index and sample buffer
 	  */
-	virtual void userReset();
+	void userReset() override ;
 };
 
 #endif

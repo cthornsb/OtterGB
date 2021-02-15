@@ -114,24 +114,28 @@ public:
 	}
 
 	// The sound controller has no associated RAM, so return false to avoid trying to access it.
-	virtual bool preWriteAction(){ return false; }
+	bool preWriteAction() override { 
+		return false; 
+	}
 
 	// The sound controller has no associated RAM, so return false to avoid trying to access it.	
-	virtual bool preReadAction(){ return false; }
+	bool preReadAction() override { 
+		return false; 
+	}
 
 	/** Check that the specified APU register may be written to.
 	  * @param reg Register address.
 	  * @return True if the APU is powered or the address is the APU control register or in wave RAM.
 	  */
-	virtual bool checkRegister(const unsigned short &reg);
+	bool checkRegister(const unsigned short &reg) override;
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override;
 	
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+	bool readRegister(const unsigned short &reg, unsigned char &val) override;
 
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override;
 	
-	virtual void defineRegisters();
+	void defineRegisters() override;
 
 private:
 	bool bMasterSoundEnable; ///< Master sound enabled flag
@@ -168,7 +172,7 @@ private:
 
 	const AudioUnit* getConstAudioUnit(const int& ch) const ;
 
-	virtual void rollOver();
+	void rollover() override;
 };
 
 #endif

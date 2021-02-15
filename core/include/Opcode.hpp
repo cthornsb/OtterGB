@@ -2,6 +2,7 @@
 #define OPCODE_HPP
 
 #include <string>
+#include <vector>
 
 extern const unsigned char FLAG_Z_BIT;
 extern const unsigned char FLAG_S_BIT;

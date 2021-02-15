@@ -25,25 +25,45 @@ public:
 	/** Get the current DMA transfer mode.
 	  * @return 0 for OAM transfer, 1 for General VRAM transfer, 2 for HBlank VRAM transfer.
 	  */
-	unsigned char getTransferMode() const { return (oldDMA ? 0 : (!transferMode ? 1 : 2)); }
+	unsigned char getTransferMode() const {
+		return (oldDMA ? 0 : (!transferMode ? 1 : 2));
+	}
 	
-	unsigned short getNumBytesRemaining() const { return nBytesRemaining; }
+	unsigned short getNumBytesRemaining() const {
+		return nBytesRemaining;
+	}
 
-	unsigned short getNumCyclesRemaining() const { return nCyclesRemaining; }
+	unsigned short getNumCyclesRemaining() const {
+		return nCyclesRemaining;
+	}
 
-	unsigned short getNumBytesPerCycle() const { return nBytes; }
+	unsigned short getNumBytesPerCycle() const {
+		return nBytes;
+	}
 	
-	unsigned short getCurrentMemoryIndex() const { return index; }
+	unsigned short getCurrentMemoryIndex() const {
+		return index;
+	}
 
-	unsigned short getTotalLength() const { return length; }
+	unsigned short getTotalLength() const {
+		return length;
+	}
 
-	unsigned short getSourceStartAddress() const { return srcStart; }
+	unsigned short getSourceStartAddress() const {
+		return srcStart;
+	}
 	
-	unsigned short getSourceEndAddress() const { return srcStart+length; }
+	unsigned short getSourceEndAddress() const {
+		return srcStart+length;
+	}
 
-	unsigned short getDestinationStartAddress() const { return destStart; }
+	unsigned short getDestinationStartAddress() const {
+		return destStart;
+	}
 	
-	unsigned short getDestinationEndAddress() const { return destStart+length; }
+	unsigned short getDestinationEndAddress() const {
+		return destStart+length;
+	}
 
 	void startTransferOAM();
 	
@@ -55,18 +75,22 @@ public:
 	void terminateTransfer();
 
 	// The system timer has no associated RAM, so return false.
-	virtual bool preWriteAction(){ return false; }
+	bool preWriteAction() override { 
+		return false; 
+	}
 	
 	// The system timer has no associated RAM, so return false.
-	virtual bool preReadAction(){ return false; }
+	bool preReadAction() override { 
+		return false; 
+	}
 	
-	virtual bool onClockUpdate();
+	bool onClockUpdate() override ;
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 
-	virtual bool readRegister(const unsigned short &reg, unsigned char &dest);
+	bool readRegister(const unsigned short &reg, unsigned char &dest) override ;
 
-	virtual void defineRegisters();
+	void defineRegisters() override ;
 	
 	void onHBlank();
 

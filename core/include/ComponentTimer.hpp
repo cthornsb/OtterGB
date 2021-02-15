@@ -56,7 +56,7 @@ public:
 	}
 	
 	/** Clock the timer
-	  * If incrementing the timer causes it to roll over, rollOver() is called and true is returned
+	  * If incrementing the timer causes it to roll over, rollover() is called and true is returned
 	  */
 	bool clock();
 	
@@ -78,7 +78,7 @@ protected:
 	/** Timer rollover event
 	  * Called when clocking the timer causes it to reset
 	  */
-	virtual void rollOver(){ 
+	virtual void rollover(){ 
 		reset();
 	}
 };

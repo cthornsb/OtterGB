@@ -12,13 +12,15 @@ public:
 	Cartridge();
 
 	// ROM is read-only, so return false to prevent writing to it.
-	virtual bool preWriteAction(){ return false; }
+	bool preWriteAction() override { 
+		return false; 
+	}
 	
-	virtual bool preReadAction();
+	bool preReadAction() override ;
 
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val);
+	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val);
+	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
 	bool hasRam(){ return !ram.empty(); }
 
