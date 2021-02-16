@@ -36,6 +36,10 @@ private:
 	unsigned char clockSelect;
 
 	void rollover() override ;
+	
+	/** Add elements to a list of values which will be written to / read from an emulator savestate
+	  */
+	void userAddSavestateValues() override;
 };
 
 #endif

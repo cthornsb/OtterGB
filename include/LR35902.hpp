@@ -30,7 +30,7 @@ public:
 	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
 
 	LR35902() : 
-		SystemComponent("CPU"), 
+		SystemComponent("CPU", 0x20555043), // "CPU "
 		halfCarry(false), 
 		fullCarry(false), 
 	    A(0), 
@@ -137,10 +137,6 @@ public:
 	addrGetFunc getMemoryAddressFunction(const std::string &target);
 
 	bool findOpcode(const std::string& mnemonic, OpcodeData& data);
-
-	unsigned int writeSavestate(std::ofstream &f) override ;
-
-	unsigned int readSavestate(std::ifstream &f) override ;
 
 protected:
 	bool halfCarry;
@@ -1026,6 +1022,8 @@ protected:
 	void SET_5_aHL(){ set_d8(&memoryValue, 5); }
 	void SET_6_aHL(){ set_d8(&memoryValue, 6); }
 	void SET_7_aHL(){ set_d8(&memoryValue, 7); }
+
+	void userAddSavestateValues() override;
 };
 
 #endif

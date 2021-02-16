@@ -135,6 +135,22 @@ std::string getBinary(const unsigned short &input, const int &startBit/*=0*/){
 	return stream.str();
 }
 
+std::string getAscii(const unsigned short& input){
+	std::string retval;
+	retval += (char)((input & 0x00ff));
+	retval += (char)((input & 0xff00) >> 8);
+	return retval;
+}
+
+std::string getAscii(const unsigned int& input){
+	std::string retval;
+	retval += (char)((input & 0x000000ff));
+	retval += (char)((input & 0x0000ff00) >> 8);
+	retval += (char)((input & 0x00ff0000) >> 16);
+	retval += (char)((input & 0xff000000) >> 24);
+	return retval;
+}
+
 std::string ucharToStr(const unsigned char &input){
 	std::stringstream stream;
 	stream << (int)input;

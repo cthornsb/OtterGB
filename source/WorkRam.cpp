@@ -10,7 +10,7 @@ constexpr unsigned short WRAM_SWAP_LOW  = 0xD000;
 constexpr unsigned short WRAM_ECHO_LOW  = 0xE000;
 constexpr unsigned short WRAM_ECHO_HIGH = 0xFE00;
 
-WorkRam::WorkRam() : SystemComponent("WRAM", 4096, 8) { 
+WorkRam::WorkRam() : SystemComponent("WRAM", 0x4d415257, 4096, 8) { // "WRAM"
 	bs = 1; // Lowest WRAM swap bank is bank 1
 }
 

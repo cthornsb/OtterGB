@@ -165,3 +165,20 @@ void DmaController::defineRegisters(){
 	sys->addSystemRegister(this, 0x54, rHDMA4, "HDMA4", "00003333"); // Destination low
 	sys->addSystemRegister(this, 0x55, rHDMA5, "HDMA5", "33333333"); // Length/mode/start
 }
+
+void DmaController::userAddSavestateValues(){
+	// Bools
+	addSavestateValue(&transferMode, sizeof(bool));
+	addSavestateValue(&oldDMA,       sizeof(bool));
+	// Shorts
+	unsigned int sizeUShort = sizeof(unsigned short);
+	addSavestateValue(&nBytesRemaining, sizeUShort);
+	addSavestateValue(&nCyclesRemaining, sizeUShort);
+	addSavestateValue(&index, sizeUShort);
+	addSavestateValue(&nBytes, sizeUShort);
+	addSavestateValue(&srcStart, sizeUShort);
+	addSavestateValue(&destStart, sizeUShort);
+	addSavestateValue(&length, sizeUShort);
+	addSavestateValue(&currentCycle, sizeUShort);
+}
+

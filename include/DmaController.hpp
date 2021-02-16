@@ -8,7 +8,7 @@ class Register;
 class DmaController : public SystemComponent {
 public:
 	DmaController() : 
-		SystemComponent("DMA"), 
+		SystemComponent("DMA", 0x20414d44), // "DMA " 
 		transferMode(0), 
 		oldDMA(1), 
 		nBytesRemaining(0), 
@@ -118,6 +118,10 @@ private:
 	/** Transfer the next chunk of bytes. Increment the memory index by nBytes.
 	  */
 	void transferByte();
+	
+	/** Add elements to a list of values which will be written to / read from an emulator savestate
+	  */
+	void userAddSavestateValues() override;
 };
 
 #endif

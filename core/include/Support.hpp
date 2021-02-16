@@ -64,6 +64,14 @@ std::string getBinary(const unsigned char &input, const int &startBit=0);
   */
 std::string getBinary(const unsigned short &input, const int &startBit=0);
 
+/** Convert input integer to ascii string
+  */
+std::string getAscii(const unsigned short& input);
+
+/** Convert input integer to ascii string
+  */
+std::string getAscii(const unsigned int& input);
+
 /** Convert input integer to a decimal string
   */
 std::string ucharToStr(const unsigned char &input);

@@ -87,6 +87,10 @@ private:
 	void mode1Interrupt();
 
 	void mode2Interrupt();
+
+	/** Add elements to a list of values which will be written to / read from an emulator savestate
+	  */
+	void userAddSavestateValues() override;
 };
 
 #endif

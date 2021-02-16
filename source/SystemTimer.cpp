@@ -3,7 +3,7 @@
 #include "SystemGBC.hpp"
 
 SystemTimer::SystemTimer() : 
-	SystemComponent("Timer"), 
+	SystemComponent("Timer", 0x524d4954), // "TIMR"
 	ComponentTimer(), 
 	nDividerCycles(0),
 	dividerRegister(0),
@@ -99,5 +99,20 @@ void SystemTimer::defineRegisters(){
 	sys->addSystemRegister(this, 0x05, rTIMA, "TIMA", "33333333");
 	sys->addSystemRegister(this, 0x06, rTMA , "TMA" , "33333333");
 	sys->addSystemRegister(this, 0x07, rTAC , "TAC" , "33300000");
+}
+
+void SystemTimer::userAddSavestateValues(){
+	unsigned int sizeUShort = sizeof(unsigned short);
+	unsigned int sizeUChar = sizeof(unsigned char);
+	/// ComponentTimer fields
+	addSavestateValue(&nCyclesSinceLastTick, sizeUShort);
+	addSavestateValue(&nPeriod,  sizeUShort);
+	addSavestateValue(&nCounter, sizeUShort);
+	addSavestateValue(&bEnabled, sizeof(bool));
+	// SystemTimer fields
+	addSavestateValue(&nDividerCycles,  sizeUShort);
+	addSavestateValue(&dividerRegister, sizeUChar);
+	addSavestateValue(&timerModulo,     sizeUChar);
+	addSavestateValue(&clockSelect,     sizeUChar);
 }
 

@@ -7,7 +7,10 @@ class Register;
 
 class SerialController : public SystemComponent {
 public:
-	SerialController() : SystemComponent("Serial") { }
+	SerialController() : 
+		SystemComponent("Serial", 0x4c524553) // "SERL"
+	{ 
+	}
 
 	void defineRegisters() override ;
 

@@ -11,7 +11,7 @@
 /////////////////////////////////////////////////////////////////////
 
 SoundProcessor::SoundProcessor() : 
-	SystemComponent("APU"), 
+	SystemComponent("APU", 0x20555041), // "APU "
 	ComponentTimer(2048), // 512 Hz sequencer
 	bMasterSoundEnable(false),
 	bRecordMidi(false),
@@ -568,5 +568,25 @@ void SoundProcessor::defineRegisters(){
 	// Wave RAM
 	for(unsigned char i = 0x0; i <= 0xF; i++)
 		sys->addSystemRegister(this, i+0x30, rWAVE[i], "WAVE", "33333333");
+}
+
+void SoundProcessor::userAddSavestateValues(){
+	unsigned int sizeUShort = sizeof(unsigned short);
+	unsigned int sizeBool = sizeof(bool);
+	// ComponentTimer fields
+	addSavestateValue(&nCyclesSinceLastTick, sizeUShort);
+	addSavestateValue(&nPeriod,  sizeUShort);
+	addSavestateValue(&nCounter, sizeUShort);
+	addSavestateValue(&bEnabled, sizeBool);
+	// SoundProcessor fields
+	addSavestateValue(&bMasterSoundEnable, sizeBool);
+	addSavestateValue(&bRecordMidi       , sizeBool);
+	addSavestateValue(&wavePatternRAM[0] , sizeof(unsigned char) * 16);
+	addSavestateValue(&nSequencerTicks   , sizeof(unsigned int));
+	
+	/*SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
+	SquareWave ch2; ///< Channel 2 (square)
+	WaveTable ch3; ///< Channel 3 (wave)
+	ShiftRegister ch4; ///< Channel 4 (noise)*/
 }
 

@@ -1,6 +1,7 @@
 #ifndef SOUND_HPP
 #define SOUND_HPP
 
+#include <fstream>
 #include <memory>
 
 #include "SystemComponent.hpp"
@@ -173,6 +174,10 @@ private:
 	const AudioUnit* getConstAudioUnit(const int& ch) const ;
 
 	void rollover() override;
+
+	/** Add elements to a list of values which will be written to / read from an emulator savestate
+	  */
+	void userAddSavestateValues() override;
 };
 
 #endif

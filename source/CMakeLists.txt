@@ -8,6 +8,7 @@ set(COMPONENT_SOURCES
 	LR35902.cpp
 	Serial.cpp
 	Sound.cpp
+	SpriteAttributes.cpp
 	SystemClock.cpp	
 	SystemGBC.cpp
 	SystemRegisters.cpp

@@ -45,7 +45,7 @@ void getKeyFromString(ConfigFile* config, unsigned char& key) {
 /////////////////////////////////////////////////////////////////////
 
 JoystickController::JoystickController() :
-	SystemComponent("Joypad"),
+	SystemComponent("Joypad", 0x50594f4a), // "JOYP"
 	selectButtonKeys(false),
 	selectDirectionKeys(false),
 	P13(false),

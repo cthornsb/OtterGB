@@ -16,7 +16,7 @@ constexpr unsigned int VERTICAL_SYNC_CYCLES   = 17556; // CPU cycles per VSYNC (
 constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 114;   // CPU cycles per HSYNC (per 154 scanlines)
 
 SystemClock::SystemClock() : 
-	SystemComponent("Clock"), 
+	SystemComponent("Clock", 0x204b4c43), // "CLK "
 	vsync(false), 
 	cyclesSinceLastVSync(0), 
 	cyclesSinceLastHSync(0),
@@ -214,3 +214,27 @@ void SystemClock::mode2Interrupt(){
 		sys->handleLcdInterrupt();
 	}
 }
+
+void SystemClock::userAddSavestateValues(){
+	unsigned int sizeULong = sizeof(unsigned int);
+	unsigned int sizeDouble = sizeof(double);
+	// Ints
+	addSavestateValue(&cyclesSinceLastVSync, sizeULong);
+	addSavestateValue(&cyclesSinceLastHSync, sizeULong);
+	addSavestateValue(&currentClockSpeed,    sizeULong);
+	addSavestateValue(&cyclesPerVSync,       sizeULong);
+	addSavestateValue(&cyclesPerHSync,       sizeULong);
+	addSavestateValue(&cycleCounter,         sizeULong);
+	addSavestateValue(modeStart,             sizeULong * 4);
+	// Bytes
+	addSavestateValue(&lcdDriverMode, sizeof(unsigned char));
+	addSavestateValue(&vsync,         sizeof(bool));
+	// Doubles
+	addSavestateValue(&framerate, sizeDouble);
+	addSavestateValue(&framePeriod, sizeDouble);
+	addSavestateValue(&cyclesPerSecond, sizeDouble);
+	//hrclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
+	//hrclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
+	//hrclock::time_point cycleTimer;
+}
+

@@ -7,82 +7,185 @@
 
 class Cartridge : public SystemComponent {
 public:
-	enum class CartMBC {UNKNOWN, ROMONLY, MBC1, MBC2, MMM01, MBC3, MBC4, MBC5};
+	enum class CartMBC {
+		UNKNOWN, 
+		ROMONLY, 
+		MBC1, 
+		MBC2, 
+		MMM01, 
+		MBC3, 
+		MBC4, 
+		MBC5
+	};
 
+	/** Default constructor
+	  */
 	Cartridge();
 
-	// ROM is read-only, so return false to prevent writing to it.
+	/** ROM is read-only, so return false to prevent writing to it.
+	  */
 	bool preWriteAction() override { 
 		return false; 
 	}
 	
+	/**
+	  */
 	bool preReadAction() override ;
 
+	/** 
+	  */
 	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
+	/**
+	  */
 	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
-	bool hasRam(){ return !ram.empty(); }
+	/** Return true if the cartridge has an internal RAM bank
+	  */
+	bool hasRam(){ 
+		return !ram.empty(); 
+	}
 
-	SystemComponent *getRam(){ return &ram; }
+	/** Get pointer to internal RAM bank
+	  */
+	SystemComponent *getRam(){ 
+		return &ram; 
+	}
 
-	char *getRawTitleString(){ return titleString; }
+	/** Get cartridge title c-string
+	  */
+	char *getRawTitleString(){ 
+		return titleString; 
+	}
 
-	std::string getTitleString() const { return std::string(titleString); }
+	/** Get cartridge title string
+	  */
+	std::string getTitleString() const { 
+		return std::string(titleString); 
+	}
+	
+	/** Get cartridge language string
+	  */
+	std::string getLanguage() const { 
+		return (language == 0x0 ? "Japanese" : "English"); 
+	}
 
-	std::string getLanguage() const { return (language == 0x0 ? "Japanese" : "English"); }
-
+	/** Get catridge ROM MBC type string
+	  */
 	std::string getCartridgeType() const;
 	
-	unsigned short getRomSize() const { return size/1024; }
+	/** Get size of catridge ROM (in kB)
+	  */
+	unsigned short getRomSize() const { 
+		return size/1024; 
+	}
 	
-	unsigned short getRamSize() const { return ram.getSize()/1024; }
+	/** Get size of internal cartridge RAM (in kB)
+	  */
+	unsigned short getRamSize() const { 
+		return ram.getSize()/1024; 
+	}
 	
-	unsigned char getCartridgeTypeID() const { return cartridgeType; }
+	/** Get the cartridge type ID
+	  */
+	unsigned char getCartridgeTypeID() const { 
+		return cartridgeType; 
+	}
 
-	unsigned short getProgramEntryPoint() const { return programStart; }	
+	/** Get 16-bit program start address
+	  */
+	unsigned short getProgramEntryPoint() const { 
+		return programStart; 
+	}	
 	
-	bool getExternalRamEnabled() const { return extRamEnabled; }
+	/** Return true if cartridge RAM is enabled
+	  */
+	bool getExternalRamEnabled() const { 
+		return extRamEnabled; 
+	}
 	
-	bool getSaveSupport() const { return (!ram.empty() && batterySupport); }
+	/** Return true if cartridge supports battery-backup saves (SRAM)
+	  */
+	bool getSaveSupport() const { 
+		return (!ram.empty() && batterySupport); 
+	}
 	
-	bool getTimerSupport() const { return timerSupport; }
+	/** Return true if cartridge has internal timer support
+	  */
+	bool getTimerSupport() const { 
+		return timerSupport; 
+	}
 	
-	bool getRumbleSupport() const { return rumbleSupport; }
+	/** Return true if cartridge has rumble feature support
+	  */
+	bool getRumbleSupport() const { 
+		return rumbleSupport; 
+	}
 	
+	/** Read input ROM file and load entire ROM into memory
+	  * @param fname Path to input ROM file
+	  * @param verbose If set to true, ROM header will be printed to stdout
+	  * @return True if file is read successfully and return false otherwise
+	  */
 	bool readRom(const std::string &fname, bool verbose=false);
 
+	/** Print cartridge ROM header information
+	  */
 	void print();
 
 private:
-	bool ramSelect;
-	bool extRamEnabled;
-	bool extRamSupport;
-	bool batterySupport;
-	bool timerSupport;
-	bool rumbleSupport;
+	bool ramSelect; ///< Cartridge ROM/RAM select (0: ROM, 1: RAM)
 
-	unsigned char leader;
-	unsigned short programStart;
-	unsigned char nintendoString[48];
-	char titleString[12];
-	char manufacturer[5];
-	unsigned char gbcFlag;
-	char licensee[3];
-	unsigned char sgbFlag;
-	unsigned char cartridgeType;
-	unsigned char romSize;
-	unsigned char ramSize;
-	unsigned char language;
-	unsigned char oldLicensee;
-	unsigned char versionNumber;
-	unsigned char headerChecksum;
-	unsigned short globalChecksum;
+	bool extRamEnabled; ///< Cartridge internal RAM enabled
 
-	SystemComponent ram;
+	bool extRamSupport; ///< Cartridge contains internal RAM bank(s)
+
+	bool batterySupport; ///< Cartridge supports battery-backup saves
+
+	bool timerSupport; ///< Cartridge supports internal timer
+
+	bool rumbleSupport; ///< Catridge supports rumble feature
+
+	unsigned char leader; ///< Header block leader opcode (usually a JP)
+
+	unsigned short programStart; ///< Program entry point address
+
+	unsigned char nintendoString[48]; ///< Nintendo bitmap
+
+	char titleString[12]; ///< Cartridge tile string
+
+	char manufacturer[5]; ///< 4 character manufacturer code
+
+	unsigned char gbcFlag; ///< Gameboy Color flag
+
+	char licensee[3]; ///< 2 character licensee code
+
+	unsigned char sgbFlag; ///< Super gameboy flag
+
+	unsigned char cartridgeType; ///< Catridge type ID
+
+	unsigned char romSize; ///< Cartridge ROM size ID
+
+	unsigned char ramSize; ///< Cartridge internal RAM size ID
+
+	unsigned char language; ///< Cartridge language
+
+	unsigned char oldLicensee; ///< ?
+
+	unsigned char versionNumber; ///< Cartridge version number
+
+	unsigned char headerChecksum; ///< Checksum of header
+
+	unsigned short globalChecksum; ///< Checksum of ROM
+
+	SystemComponent ram; ///< Internal RAM bank(s)
 	
-	CartMBC mbcType;
+	CartMBC mbcType; ///< Input ROM catridge type
 	
+	/** Read input ROM header
+	  * Initialize ROM memory (and RAM if enabled) and set cartridge feature flags
+	  * @return The number of header bytes read from input stream
+	  */
 	unsigned int readHeader(std::ifstream &f);
 };
 

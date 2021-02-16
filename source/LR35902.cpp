@@ -577,34 +577,6 @@ void LR35902::callInterruptVector(const unsigned char &offset){
 	rst_n(offset);
 }
 
-unsigned int LR35902::writeSavestate(std::ofstream &f){
-	f.write((char*)&A, 1);
-	f.write((char*)&B, 1);
-	f.write((char*)&C, 1);
-	f.write((char*)&D, 1);
-	f.write((char*)&E, 1);
-	f.write((char*)&H, 1);
-	f.write((char*)&L, 1);
-	f.write((char*)&F, 1);
-	f.write((char*)&SP, 2);
-	f.write((char*)&PC, 2);
-	return 12;
-}
-
-unsigned int LR35902::readSavestate(std::ifstream &f){
-	f.read((char*)&A, 1);
-	f.read((char*)&B, 1);
-	f.read((char*)&C, 1);
-	f.read((char*)&D, 1);
-	f.read((char*)&E, 1);
-	f.read((char*)&H, 1);
-	f.read((char*)&L, 1);
-	f.read((char*)&F, 1);
-	f.read((char*)&SP, 2);
-	f.read((char*)&PC, 2);
-	return 12;
-}
-
 /////////////////////////////////////////////////////////////////////
 // OPCODES
 /////////////////////////////////////////////////////////////////////
@@ -1401,3 +1373,17 @@ void LR35902::reset(){
 	SP = 0xFFFE;   // 0xFFFE
 	PC = 0x0100;   // 0x0100
 }
+
+void LR35902::userAddSavestateValues(){
+	addSavestateValue(&A, sizeof(unsigned char));
+	addSavestateValue(&B, sizeof(unsigned char));
+	addSavestateValue(&C, sizeof(unsigned char));
+	addSavestateValue(&D, sizeof(unsigned char));
+	addSavestateValue(&E, sizeof(unsigned char));
+	addSavestateValue(&F, sizeof(unsigned char));
+	addSavestateValue(&H, sizeof(unsigned char));
+	addSavestateValue(&L, sizeof(unsigned char));
+	addSavestateValue(&SP, sizeof(unsigned short));
+	addSavestateValue(&PC, sizeof(unsigned short));
+}
+

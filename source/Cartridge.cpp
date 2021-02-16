@@ -14,7 +14,7 @@ constexpr unsigned short ROM_HIGH     = 0x8000;
 /////////////////////////////////////////////////////////////////////
 
 Cartridge::Cartridge() : 
-	SystemComponent("Cartridge"), 
+	SystemComponent("Cartridge", 0x54524143), // "CART" 
 	ramSelect(false), 
 	extRamEnabled(false),
 	extRamSupport(false),
@@ -37,7 +37,7 @@ Cartridge::Cartridge() :
 	versionNumber(0),
 	headerChecksum(0),
 	globalChecksum(0),
-	ram("SRAM"),
+	ram("SRAM", 0x4d415253),
 	mbcType(CartMBC::UNKNOWN)
 { 
 }
@@ -341,3 +341,4 @@ void Cartridge::print(){
 	std::cout << " Timer?   " << (timerSupport ? "Yes" : "No") << std::endl;
 	std::cout << " Program entry at " << getHex(programStart) << std::endl;
 }
+

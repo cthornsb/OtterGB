@@ -20,6 +20,7 @@
 #include "Joystick.hpp"
 #include "LR35902.hpp"
 #include "WorkRam.hpp"
+#include "HighRam.hpp"
 #include "DmaController.hpp"
 #include "Serial.hpp"
 #include "SoundManager.hpp"
@@ -28,6 +29,8 @@
 #ifdef USE_QT_DEBUGGER
 	#include "mainwindow.h"
 #endif
+
+constexpr unsigned char SAVESTATE_VERSION = 0x1;
 
 constexpr unsigned short VRAM_SWAP_START = 0x8000;
 constexpr unsigned short CART_RAM_START  = 0xA000;
@@ -190,11 +193,14 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	oam.reset(new SpriteHandler);
 	joy.reset(new JoystickController);
 	wram.reset(new WorkRam);
-	hram.reset(new SystemComponent);
+	hram.reset(new HighRam);
 	sclk.reset(new SystemClock);
 	timer.reset(new SystemTimer);
 	cpu.reset(new LR35902);
-
+	
+	// Disable dumping cartridge ROM to quicksave
+	cart->disableSaveRAM();
+	
 	// Add all components to the subsystem list
 	subsystems = std::unique_ptr<ComponentList>(new ComponentList(this));
 
@@ -289,9 +295,6 @@ void SystemGBC::initialize(){
 	if(initSuccessful) // Already initialized
 		return;
 
-	hram->initialize(127);
-	hram->setName("HRAM");
-
 	// Define system registers
 	addSystemRegister(0x0F, rIF,   "IF",   "33333000");
 	addSystemRegister(0x4D, rKEY1, "KEY1", "30000001");
@@ -313,7 +316,6 @@ void SystemGBC::initialize(){
 	// Define sub-system registers and connect to the system bus.
 	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++){
 		comp->second->connectSystemBus(this);
-		comp->second->defineRegisters();
 	}
 
 	// Set memory offsets for all components	
@@ -1053,39 +1055,42 @@ bool SystemGBC::quicksave(const std::string& fname/*=""*/){
 	}
 
 	unsigned int nBytesWritten = 0;
-
-	// Write the cartridge title
-	ofile.write(cart->getRawTitleString(), 12);
-	nBytesWritten += 12;
-
-	nBytesWritten += gpu->writeSavestate(ofile); // Write VRAM  (16 kB)
-	nBytesWritten += cart->getRam()->writeSavestate(ofile); // Write cartridge RAM (if present)
-	nBytesWritten += wram->writeSavestate(ofile); // Write Work RAM (8 kB)
-	nBytesWritten += oam->writeSavestate(ofile); // Write Object Attribute Memory (OAM, 160 B)
 	
-	// Write system registers (128 B)
-	unsigned char byte;
+	unsigned char nVersion = SAVESTATE_VERSION;
+	unsigned char nFlags = 0;
+	bool cartRam = cart->hasRam();
+	if(bGBCMODE) // CGB mode flag
+		bitSet(nFlags, 0);
+	if(cpuStopped) // STOP flag
+		bitSet(nFlags, 1);
+	if(cpuHalted) // HALT flag
+		bitSet(nFlags, 2);
+	if(cartRam) // Internal cartridge RAM flag
+		bitSet(nFlags, 3);
+
+	// Write the cartridge title and system flags
+	ofile.write((char*)&nFlags, 1); // System flags
+	ofile.write((char*)&nVersion, 1); // Savestate version number
+	ofile.write(cart->getRawTitleString(), 12);
+	ofile.write((char*)rIE->getConstPtr(), 1); // Interrupt enable
+	ofile.write((char*)rIME->getConstPtr(), 1); // Master interrupt enable
+	nBytesWritten += 16;
+
+	// Write cartridge RAM (if enabled)
+	if(cartRam)
+		nBytesWritten += cart->getRam()->writeSavestate(ofile);
+
+	// Write state of all system components
+	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
+		nBytesWritten += comp->second->writeSavestate(ofile);
+	}
+	
+	// Write system registers
 	for(std::vector<Register>::const_iterator reg = registers.cbegin(); reg != registers.cend(); reg++){
-		byte = reg->getValue();
-		ofile.write((char*)&byte, 1);
+		ofile.write((char*)reg->getConstPtr(), 1);
 		nBytesWritten++;
 	}
 		
-	// Write High RAM (127 B)
-	nBytesWritten += hram->writeSavestate(ofile);
-	ofile.write((char*)&bGBCMODE, 1); // Gameboy Color mode flag
-	ofile.write((char*)rIE, 1); // Interrupt enable
-	ofile.write((char*)rIME, 1); // Master interrupt enable
-	ofile.write((char*)&cpuStopped, 1); // STOP flag
-	ofile.write((char*)&cpuHalted, 1); // HALT flag
-	nBytesWritten += 5;
-	
-	nBytesWritten += cpu->writeSavestate(ofile); // CPU registers
-	nBytesWritten += timer->writeSavestate(ofile); // System timer status
-	nBytesWritten += sclk->writeSavestate(ofile); // System clock status
-	nBytesWritten += sound->writeSavestate(ofile); // Sound processor
-	nBytesWritten += joy->writeSavestate(ofile); // Joypad controller
-
 	ofile.close();
 	std::cout << "DONE! Wrote " << nBytesWritten << " B\n";
 	
@@ -1103,51 +1108,54 @@ bool SystemGBC::quickload(const std::string& fname/*=""*/){
 		std::cout << "FAILED!\n";
 		return false;
 	}
-
+	
 	unsigned int nBytesRead = 0;
 
-	// Write the cartridge title
 	char readTitle[12];
+	unsigned char nVersion;
+	unsigned char nFlags;
+
+	// Read the cartridge title and system flags
+	ifile.read((char*)&nFlags, 1); // System flags
+	ifile.read((char*)&nVersion, 1); // Savestate version number
 	ifile.read(readTitle, 12);
-	nBytesRead += 12;
+	ifile.read((char*)rIE->getConstPtr(), 1); // Interrupt enable
+	ifile.read((char*)rIME->getConstPtr(), 1); // Master interrupt enable
+	nBytesRead += 16;
+	
+	// Check incoming savestate version
+	if(nVersion != SAVESTATE_VERSION){
+		std::cout << " [System] Warning! Unexpected savestate version number (" << getHex(nVersion) << " != " << getHex(SAVESTATE_VERSION) << ")" << std::endl;
+	}
+	
+	bGBCMODE = bitTest(nFlags, 0); // CGB mode flag
+	cpuStopped = bitTest(nFlags, 1); // STOP flag
+	cpuHalted = bitTest(nFlags, 2); // HALT flag
+	bool cartRam = bitTest(nFlags, 3); // Savestate contains internal cartridge RAM
 	
 	// Check the title against the title of the loaded ROM
 	if(strcmp(readTitle, cart->getRawTitleString()) != 0){
-		std::cout << " Warning! ROM title of quicksave does not match loaded ROM!\n";
-		//return false;
+		std::cout << " [System] Warning! ROM title of quicksave does not match loaded ROM!\n";
 	}
 
-	nBytesRead += gpu->readSavestate(ifile); // Write VRAM  (16 kB)
-	nBytesRead += cart->getRam()->readSavestate(ifile); // Write cartridge RAM (if present)
-	nBytesRead += wram->readSavestate(ifile); // Write Work RAM (8 kB)
-	nBytesRead += oam->readSavestate(ifile); // Write Object Attribute Memory (OAM, 160 B)
-	
-	// Write system registers (128 B)
-	unsigned char byte;
+	// Copy cartridge RAM (if enabled)
+	if(cartRam)
+		nBytesRead += cart->getRam()->readSavestate(ifile);
+
+	// Copy state of all system components
+	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
+		nBytesRead += comp->second->readSavestate(ifile);
+	}
+
+	// Copy system registers
 	for(std::vector<Register>::iterator reg = registers.begin(); reg != registers.end(); reg++){
-		ifile.read((char*)&byte, 1);
-		reg->setValue(byte);
+		ifile.read((char*)reg->getPtr(), 1);
 		nBytesRead++;
 	}
 		
-	// Write High RAM (127 B)
-	nBytesRead += hram->readSavestate(ifile);
-	ifile.read((char*)&bGBCMODE, 1); // Gameboy Color mode flag
-	ifile.read((char*)rIE, 1); // Interrupt enable
-	ifile.read((char*)rIME, 1); // Master interrupt enable
-	ifile.read((char*)&cpuStopped, 1); // STOP flag
-	ifile.read((char*)&cpuHalted, 1); // HALT flag
-	nBytesRead += 5;
-	
-	nBytesRead += cpu->readSavestate(ifile); // CPU registers
-	nBytesRead += timer->readSavestate(ifile); // System timer status
-	nBytesRead += sclk->readSavestate(ifile); // System clock status
-	nBytesRead += sound->readSavestate(ifile); // Sound processor
-	nBytesRead += joy->readSavestate(ifile); // Joypad controller
-
 	ifile.close();
 	std::cout << "DONE! Read " << nBytesRead << " B\n";
-	
+
 	return true;
 }
 
