@@ -35,7 +35,7 @@ void SquareWave::setWaveDuty(const unsigned char& duty){
 }
 
 unsigned char SquareWave::sample(){
-	return (((nWaveform & 0x1) == 0x1 ? 0xf : 0x0) * volume());
+	return (((nWaveform & 0x1) == 0x1 ? 0xf : 0x0) & volume());
 }
 
 void SquareWave::clockSequencer(const unsigned int& sequencerTicks){

@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Support.hpp"
 #include <cmath>
 
@@ -18,7 +17,7 @@ float ShiftRegister::getRealFrequency() const {
 }
 
 unsigned char ShiftRegister::sample(){
-	return (((reg & 0x1) == 0x1 ? 0x0 : 0xf) * volume()); // Inverted
+	return (((reg & 0x1) == 0x1 ? 0x0 : 0xf) & volume()); // Inverted
 }
 
 void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
@@ -57,7 +56,6 @@ void ShiftRegister::rollover(){
 }
 
 void ShiftRegister::trigger(){
-	//std::cout << " TRIG\n";
 	if(!nCounter)
 		this->reload(); // Reload the main timer with its phase
 	reg = 0x7fff; // Set all 15 bits to 1

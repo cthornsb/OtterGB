@@ -70,7 +70,7 @@ public:
 	  */
 	bool powerOn(const Register* nrx4, const unsigned int& nSequencerTicks);
 
-	/** Return a sample from the current state of the audio waveform
+	/** Return a 4-bit sample from the current state of the audio waveform
 	  */
 	virtual unsigned char sample(){
 		return 0;
