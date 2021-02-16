@@ -14,6 +14,7 @@ public:
 	SquareWave() :
 		AudioUnit(),
 		bSweepEnabled(false),
+		bFrequencyUpdated(false),
 		nWaveform(0),
 		volume(),
 		frequency()
@@ -35,6 +36,10 @@ public:
 	  */
 	FrequencySweep* getFrequencySweep() { 
 		return (bSweepEnabled ? frequency.get() : 0x0); 
+	}
+
+	bool frequencyUpdated() const {
+		return bFrequencyUpdated;
 	}
 
 	/** Set square wave duty cycle
@@ -61,6 +66,8 @@ public:
 
 private:
 	bool bSweepEnabled; ///< Flag indicating frequency sweep is enabled on this channel
+
+	bool bFrequencyUpdated; ///< Flag indicating that the channel frequency was updated by the frequency sweep
 
 	unsigned char nDuty; ///< Square waveform duty cycle
 

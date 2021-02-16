@@ -42,14 +42,14 @@ void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
 	// (Sweep ->) Timer -> Duty -> Length Counter -> Envelope -> Mixer
 	//if(!bEnabled) // DAC powered down
 	//	return; // Do not return because modulators can still be clocked while DAC powered off
+	bFrequencyUpdated = false;
 	if(bSweepEnabled && sequencerTicks % 4 == 2){ // Clock the frequency sweep (128 Hz)
 		if(frequency->clock()){
 			// Frequency sweep rolled over
 			if(!frequency->overflowed() && !frequency->overflowed2()){ 
 				// Get new timer period and update the channel period and frequency registers
 				this->setFrequency(frequency->getNewFrequency()); // P = (2048 - f)
-				//rNR13->setValue((unsigned char)(freq & 0x00FF));
-				//rNR14->setBits(0, 2, (unsigned char)((freq & 0x0700) >> 8));				
+				bFrequencyUpdated = true;		
 			}
 			else{ // Frequency overflowed, disable channel
 				bDisableThisChannel = true;

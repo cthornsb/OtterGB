@@ -483,6 +483,11 @@ void SoundProcessor::rollover(){
 	ch1.clockSequencer(nSequencerTicks);
 	if(ch1.pollDisable())
 		disableChannel(1);
+	else if(ch1.frequencyUpdated()){ // Frequency was updated by frequency sweep, update frequency register
+		unsigned short freq = ch1.getFrequency();
+		rNR13->setValue((unsigned char)(freq & 0x00FF));
+		rNR14->setBits(0, 2, (unsigned char)((freq & 0x0700) >> 8));		
+	}
 	ch2.clockSequencer(nSequencerTicks);
 	if(ch2.pollDisable())
 		disableChannel(2);
@@ -580,9 +585,9 @@ void SoundProcessor::userAddSavestateValues(){
 	addSavestateValue(&bEnabled, sizeBool);
 	// SoundProcessor fields
 	addSavestateValue(&bMasterSoundEnable, sizeBool);
-	addSavestateValue(&bRecordMidi       , sizeBool);
-	addSavestateValue(&wavePatternRAM[0] , sizeof(unsigned char) * 16);
-	addSavestateValue(&nSequencerTicks   , sizeof(unsigned int));
+	addSavestateValue(&bRecordMidi,        sizeBool);
+	addSavestateValue(wavePatternRAM,   sizeof(unsigned char) * 16);
+	addSavestateValue(&nSequencerTicks, sizeof(unsigned int));
 	
 	/*SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
 	SquareWave ch2; ///< Channel 2 (square)
