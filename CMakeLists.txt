@@ -58,8 +58,9 @@ endif(CMAKE_BUILD_TYPE MATCHES "Debug")
 #------------------------------------------------------------------------------
 
 #Build options
-option(BUILD_TOOLS "Build and install tools." OFF)
-option(BUILD_DEBUG "Build with emulator debug window support (Requires QT)." OFF)
+option(BUILD_TOOLS     "Build and install emulator tools." OFF)
+option(ENABLE_AUDIO    "Build with support for audio output (Requires PortAudio)." ON)
+option(ENABLE_DEBUGGER "Build with support for gui debugger (Requires QT4)." OFF)
 if(WIN32)
 	option(INSTALL_DLLS "Install required DLLs when installing executable." ON)
 endif(WIN32)
@@ -72,23 +73,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 #Compiler definitions
-if(BUILD_DEBUG)
+if(ENABLE_DEBUGGER)
 	add_definitions(-DUSE_QT_DEBUGGER)
-endif()
+endif(ENABLE_DEBUGGER)
 
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
 #Set the graphics library
 if(NOT GRAPHICS_LIBRARY)
 	set(GRAPHICS_LIBRARY OpenGL CACHE STRING "Graphics library, options are: SDL OpenGL" FORCE)
-endif()
+endif(NOT GRAPHICS_LIBRARY)
 
 if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 	if(NOT WIN32)
 		# To install OpenGL and freeglut:
 		#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
 		set(EXTERNAL_GRAPHICS_LIBS -lglut -lGLU -lGL)
-		set(EXTERNAL_AUDIO_LIBS -lportaudio)
 	else()
 		#Find OpenGL install on Windows (eventually make a CMake module for this)
 		#Precompiled freeglut libs from https://www.transmissionzero.co.uk/software/freeglut-devel/
@@ -109,16 +109,6 @@ if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 		#Alternatively it may be copied to the Windows system directory.
 		#This is necessary so that the freeglut headers point to the correct library
 		add_definitions(-DNDEBUG)
-
-		#Audio (Port Audio)
-		if(NOT PORT_AUDIO_DIRECTORY)
-			set(PORT_AUDIO_DIRECTORY "" CACHE STRING "Port Audio install directory" FORCE)
-		endif(NOT PORT_AUDIO_DIRECTORY)
-		set(PORT_AUDIO_INCLUDE ${PORT_AUDIO_DIRECTORY}/include)
-		set(PORT_AUDIO_LIBRARY ${PORT_AUDIO_DIRECTORY}/lib/x64/portaudio_x64.lib)
-		set(INSTALL_DLL_LIST ${INSTALL_DLL_LIST} ${PORT_AUDIO_DIRECTORY}/bin/x64/portaudio_x64.dll)
-		include_directories(${PORT_AUDIO_INCLUDE})
-		set(EXTERNAL_AUDIO_LIBS ${PORT_AUDIO_LIBRARY})
 	endif()
 	
 elseif(GRAPHICS_LIBRARY MATCHES "SDL")
@@ -136,7 +126,25 @@ include_directories(core/include)
 include_directories(audio/include)
 include_directories(graphics/include)
 
-if(BUILD_DEBUG)
+#Audio output (Port Audio)
+if(ENABLE_AUDIO)
+	if(NOT WIN32)
+		set(EXTERNAL_AUDIO_LIBS -lportaudio)
+	else()
+		if(NOT PORT_AUDIO_DIRECTORY)
+			set(PORT_AUDIO_DIRECTORY "" CACHE STRING "Port Audio install directory" FORCE)
+		endif(NOT PORT_AUDIO_DIRECTORY)
+		set(PORT_AUDIO_INCLUDE ${PORT_AUDIO_DIRECTORY}/include)
+		set(PORT_AUDIO_LIBRARY ${PORT_AUDIO_DIRECTORY}/lib/x64/portaudio_x64.lib)
+		set(INSTALL_DLL_LIST ${INSTALL_DLL_LIST} ${PORT_AUDIO_DIRECTORY}/bin/x64/portaudio_x64.dll)
+		include_directories(${PORT_AUDIO_INCLUDE})
+		set(EXTERNAL_AUDIO_LIBS ${PORT_AUDIO_LIBRARY})
+	endif(NOT WIN32)
+	add_definitions(-DAUDIO_ENABLED)
+endif(ENABLE_AUDIO)
+
+#Gui debugger (Qt4)
+if(ENABLE_DEBUGGER)
 	if(NOT WIN32)
 		#Find qt install.
 		#(Ubuntu) sudo apt-get install libqt4-dev

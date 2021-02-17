@@ -12,9 +12,13 @@ SoundManager::SoundManager() :
 	nChannels(2),
 	dSampleRate(44100),
 	nFramesPerBuffer(512),
+#ifdef AUDIO_ENABLED
 	mixer(),
 	stream(0x0),
 	callback(defaultCallback)
+#else
+	mixer()
+#endif // ifdef AUDIO_ENABLED
 { 
 }
 
@@ -25,9 +29,13 @@ SoundManager::SoundManager(const int& voices) :
 	nChannels(2),
 	dSampleRate(44100),
 	nFramesPerBuffer(512),
+#ifdef AUDIO_ENABLED
 	mixer(),
 	stream(0x0),
 	callback(defaultCallback)
+#else
+	mixer()
+#endif // ifdef AUDIO_ENABLED
 {
 }
 
@@ -37,6 +45,7 @@ SoundManager::~SoundManager(){
 }
 
 bool SoundManager::init(){
+#ifdef AUDIO_ENABLED
 	if(bInitialized) // Already initialized
 		return true;
 
@@ -68,9 +77,13 @@ bool SoundManager::init(){
 
 	bInitialized = true;
 	return bInitialized;
+#else
+	return false;
+#endif // ifdef AUDIO_ENABLED
 }
 
 bool SoundManager::terminate(){
+#ifdef AUDIO_ENABLED
 	if(bInitialized){
 		if(bRunning){
 			stop();
@@ -84,9 +97,13 @@ bool SoundManager::terminate(){
 		}
 	}
 	return true;
+#else
+	return false;
+#endif // ifdef AUDIO_ENABLED
 }
 
 bool SoundManager::start(){
+#ifdef AUDIO_ENABLED
 	if(!bInitialized)
 		return false;
 	if(bRunning) // Already started
@@ -102,13 +119,19 @@ bool SoundManager::start(){
 	
 	bRunning = true;
 	return true;
+#else
+	return false;
+#endif // ifdef AUDIO_ENABLED
 }
 
 void SoundManager::sleep(const long& length){
+#ifdef AUDIO_ENABLED
 	Pa_Sleep(length);
+#endif // ifdef AUDIO_ENABLED
 }
 
 bool SoundManager::stop(){
+#ifdef AUDIO_ENABLED
 	if(!bInitialized)
 		return false;
 	if(!bRunning) // Already stopped
@@ -122,10 +145,14 @@ bool SoundManager::stop(){
 	}
 	
 	bRunning = false;
+	return true;
+#else
 	return false;
+#endif // ifdef AUDIO_ENABLED
 }
 
 void SoundManager::execute(){
+#ifdef AUDIO_ENABLED
 	if(!bInitialized)
 		return;
 	while(!bQuitting){
@@ -133,8 +160,10 @@ void SoundManager::execute(){
 	}
 	// Terminate stream
 	terminate();
+#endif // ifdef AUDIO_ENABLED
 }
 
+#ifdef AUDIO_ENABLED
 int SoundManager::defaultCallback( 
 	const void *input, 
 	void *output, 
@@ -148,4 +177,5 @@ int SoundManager::defaultCallback(
 	audio->getSamples(out, framesPerBuffer);
 	return 0;
 }
+#endif // ifdef AUDIO_ENABLED
 
