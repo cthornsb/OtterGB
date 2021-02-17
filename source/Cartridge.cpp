@@ -61,7 +61,7 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		case CartMBC::ROMONLY: // ROM only
 			break;
 		case CartMBC::MBC1: // MBC1 (1-3)
-			if(reg <= 0x2000){ // RAM enable (write only)
+			if(reg < 0x2000){ // RAM enable (write only)
 				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
 				// Note: Type 0x01 does not have cartridge RAM
 				extRamEnabled = ((val & 0x0F) == 0x0A);
