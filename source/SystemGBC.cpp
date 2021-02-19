@@ -41,6 +41,11 @@ constexpr unsigned short HIGH_RAM_START  = 0xFF80;
 constexpr unsigned short REGISTER_LOW    = 0xFF00;
 constexpr unsigned short REGISTER_HIGH   = 0xFF80;
 
+const std::string sysMessage    = " [System] ";
+const std::string sysWarning    = " [System] Warning: ";
+const std::string sysError      = " [System] Error! ";
+const std::string sysFatalError = " [System] FATAL ERROR! ";
+
 #ifdef GB_BOOT_ROM
 	const std::string gameboyBootRomPath(GB_BOOT_ROM);
 #else
@@ -137,9 +142,9 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		return;
 	}
 	if(handler.getOption(0)->active){ 
-		std::cout << " Reading from configuration file (" << handler.getOption(0)->argument << ")\n";
+		std::cout << sysMessage << "Reading from configuration file (" << handler.getOption(0)->argument << ")" << std::endl;
 		if(!cfgFile.read(handler.getOption(0)->argument)){ // Read configuration file
-			std::cout << " FATAL ERROR! Failed to load input configuration file.\n";
+			std::cout << sysFatalError << "Failed to load input configuration file." << std::endl;
 			fatalError = true;
 			return;
 		}
@@ -149,9 +154,9 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	if(handler.getOption(1)->active) // Set input filename
 		romPath = handler.getOption(1)->argument;
 #else // ifndef _WIN32	
-	std::cout << " Reading from configuration file (default.cfg)\n";
+	std::cout << sysMessage << "Reading from configuration file (default.cfg)" << std::endl;
 	if(!cfgFile.read("default.cfg")){ // Read configuration file
-		std::cout << " FATAL ERROR! Failed to load input configuration file.\n";
+		std::cout << sysFatalError << "Failed to load input configuration file." << std::endl;
 		fatalError = true;
 		return;
 	}
@@ -167,7 +172,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 
 	// Check for ROM path
 	if(romPath.empty()){
-		std::cout << " FATAL ERROR! Input gb/gbc ROM file not specified!\n";
+		std::cout << sysFatalError << "Input gb/gbc ROM file not specified!" << std::endl;
 		fatalError = true;
 		return;
 	}
@@ -416,7 +421,7 @@ bool SystemGBC::execute(){
 		}
 		else{
 			if(cpuStopped){ // STOP
-				std::cout << " Stopped! " << getHex(rIE->getValue()) << " " << getHex(rIF->getValue()) << std::endl;
+				std::cout << sysMessage << "Stopped! " << getHex(rIE->getValue()) << " " << getHex(rIF->getValue()) << std::endl;
 				//if((*rIF) == 0x10)
 					resumeCPU();
 			}
@@ -529,7 +534,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 	// Check for memory access watch
 	if (loc >= memoryAccessWrite[0] && loc <= memoryAccessWrite[1]) {
 		OpcodeData* op = cpu->getLastOpcode();
-		std::cout << " (W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
+		std::cout << sysMessage << "(W) PC=" << getHex(op->nPC) << " " << getHex(src) << "->[" << getHex(loc) << "] ";
 		if (op->op->nBytes == 2)
 			std::cout << "d8=" << getHex(op->getd8());
 		else if (op->op->nBytes == 3)
@@ -590,7 +595,7 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	// Check for memory access watch
 	if(loc >= memoryAccessRead[0] && loc <= memoryAccessRead[1]){
 		OpcodeData *op = cpu->getLastOpcode();
-		std::cout << " (R) PC=" << getHex(op->nPC) << " [" << getHex(loc) << "]=" << getHex(dest) << "\n";
+		std::cout << sysMessage << "(R) PC=" << getHex(op->nPC) << " [" << getHex(loc) << "]=" << getHex(dest) << "" << std::endl;
 	}
 #endif // ifdef USE_QT_DEBUGGER
 	return true; // Successfully read from memory location (loc)
@@ -703,11 +708,11 @@ void SystemGBC::setMemoryWriteRegion(const unsigned short &locL, const unsigned 
 	memoryAccessWrite[0] = locL;
 	if(locH > locL){
 		memoryAccessWrite[1] = locH;
-		std::cout << " Watching writes to memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
+		std::cout << sysMessage << "Watching writes to memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
 	}
 	else{
 		memoryAccessWrite[1] = locL;
-		std::cout << " Watching writes to memory location " << getHex(locL) << std::endl;
+		std::cout << sysMessage << "Watching writes to memory location " << getHex(locL) << std::endl;
 	}
 }
 
@@ -715,11 +720,11 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 	memoryAccessRead[0] = locL;
 	if(locH > locL){
 		memoryAccessRead[1] = locH;
-		std::cout << " Watching reads from memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
+		std::cout << sysMessage << "Watching reads from memory in range " << getHex(locL) << " to " << getHex(locH) << std::endl;
 	}
 	else{
 		memoryAccessRead[1] = locL;
-		std::cout << " Watching reads from memory location " << getHex(locL) << std::endl;
+		std::cout << sysMessage << "Watching reads from memory location " << getHex(locL) << std::endl;
 	}
 }
 
@@ -793,10 +798,10 @@ void SystemGBC::clearRegister(const unsigned char &reg){
 }
 
 bool SystemGBC::dumpMemory(const std::string &fname){
-	std::cout << " Writing system memory to file \"" << fname << "\"... ";
+	std::cout << sysMessage << "Writing system memory to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good()){
-		std::cout << "FAILED!\n";
+		std::cout << "FAILED!" << std::endl;
 		return false;
 	}
 		
@@ -809,7 +814,7 @@ bool SystemGBC::dumpMemory(const std::string &fname){
 			if(i >= REGISTER_LOW && i < REGISTER_HIGH) // System registers
 				byte = registers[i-REGISTER_LOW].getValue();
 			else{
-				std::cout << " WARNING! Failed to read memory location " << getHex((unsigned short)i) << "!\n";
+				std::cout << sysWarning << "Failed to read memory location " << getHex((unsigned short)i) << "!" << std::endl;
 				byte = 0x00; // Write an empty byte
 			}
 		}
@@ -817,56 +822,56 @@ bool SystemGBC::dumpMemory(const std::string &fname){
 	}
 	ofile.close();
 
-	std::cout << "DONE\n";
+	std::cout << "DONE" << std::endl;
 
 	return true;
 }
 
 bool SystemGBC::dumpVRAM(const std::string &fname){
-	std::cout << " Writing VRAM to file \"" << fname << "\"... ";
+	std::cout << sysMessage << "Writing VRAM to file \"" << fname << "\"... ";
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good() || !gpu->writeMemoryToFile(ofile)){
-		std::cout << "FAILED!\n";
+		std::cout << "FAILED!" << std::endl;
 		return false;
 	}
 	ofile.close();
-	std::cout << " DONE\n";
+	std::cout << "DONE" << std::endl;
 	return true;
 }
 
 bool SystemGBC::saveSRAM(const std::string &fname){
 	if(!cart->getSaveSupport()){
 		if(verboseMode)
-			std::cout << " SystemGBC: [saveSRAM] Cartridge has no save data.\n";
+			std::cout << sysMessage << "Cartridge has no save data." << std::endl;
 		return false;
 	}
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
 	if(!ofile.good() || !cart->getRam()->writeMemoryToFile(ofile)){
 		if(verboseMode)
-			std::cout << " SystemGBC: [saveSRAM] Writing cartridge RAM to file \"" << fname << "\"... FAILED!";
+			std::cout << sysMessage << "Writing cartridge RAM to file \"" << fname << "\"... FAILED!" << std::endl;
 		return false;
 	}
 	ofile.close();
 	if(verboseMode)
-		std::cout << " SystemGBC: [saveSRAM] Writing cartridge RAM to file \"" << fname << "\"... DONE!";
+		std::cout << sysMessage << "Writing cartridge RAM to file \"" << fname << "\"... DONE!" << std::endl;
 	return true;
 }
 
 bool SystemGBC::loadSRAM(const std::string &fname){
 	if(!cart->getSaveSupport()){
 		if(verboseMode)
-			std::cout << " SystemGBC: [loadSRAM] Cartridge has no save data.\n";
+			std::cout << sysMessage << "Cartridge has no save data." << std::endl;
 		return false;
 	}
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
 	if(!ifile.good() || !cart->getRam()->readMemoryFromFile(ifile)){
 		if(verboseMode)
-			std::cout << " SystemGBC: [loadSRAM] Reading cartridge RAM from file \"" << fname << "\"... FAILED!\n";
+			std::cout << sysMessage << "Reading cartridge RAM from file \"" << fname << "\"... FAILED!" << std::endl;
 		return false;
 	}
 	ifile.close();
 	if(verboseMode)
-		std::cout << " SystemGBC: [loadSRAM] Reading cartridge RAM from file \"" << fname << "\"... DONE!\n";
+		std::cout << sysMessage << "Reading cartridge RAM from file \"" << fname << "\"... DONE!" << std::endl;
 	return true;
 }
 
@@ -929,7 +934,7 @@ bool SystemGBC::reset() {
 
 	// Check that the ROM is loaded and the window is open
 	if (!retval || !gpu->getWindowStatus()){
-		std::cout << " ERROR! Failed to read input ROM file (" << romPath << ").\n";
+		std::cout << sysError << "Failed to read input ROM file (" << romPath << ")." << std::endl;
 		return false;
 	}
 
@@ -952,7 +957,7 @@ bool SystemGBC::reset() {
 		if(!gameboyColorBootRomPath.empty()){
 			bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
 			if(!bootstrap.good())
-				std::cout << " Warning! Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\".\n";
+				std::cout << sysWarning << "Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\"." << std::endl;
 			else
 				loadBootROM = true;
 		}
@@ -961,7 +966,7 @@ bool SystemGBC::reset() {
 		if(!gameboyBootRomPath.empty()){
 			bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
 			if(!bootstrap.good())
-				std::cout << " Warning! Failed to load GB boot ROM \"" << gameboyBootRomPath << "\".\n";
+				std::cout << sysWarning << "Failed to load GB boot ROM \"" << gameboyBootRomPath << "\"." << std::endl;
 			else
 				loadBootROM = true;
 		}
@@ -974,7 +979,7 @@ bool SystemGBC::reset() {
 		bootROM.reserve(bootLength);
 		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
 		bootstrap.close();
-		std::cout << " Successfully loaded " << bootLength << " B boot ROM.\n";
+		std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;
 		cpu->setProgramCounter(0);
 		bootSequence = true;
 	}
@@ -1038,19 +1043,19 @@ bool SystemGBC::reset() {
 }
 
 bool SystemGBC::screenshot(){
-	std::cout << " Not implemented\n";
+	std::cout << sysMessage << "Not implemented" << std::endl;
 	return false;
 }
 
 bool SystemGBC::quicksave(const std::string& fname/*=""*/){
-	std::cout << " Quicksaving... ";
+	std::cout << sysMessage << "Quicksaving... ";
 	std::ofstream ofile;
 	if(fname.empty())
 		ofile.open((romFilename+".sav").c_str(), std::ios::binary);
 	else
 		ofile.open(fname.c_str(), std::ios::binary);
 	if(!ofile.good()){
-		std::cout << "FAILED!\n";
+		std::cout << "FAILED!" << std::endl;
 		return false;
 	}
 
@@ -1092,20 +1097,20 @@ bool SystemGBC::quicksave(const std::string& fname/*=""*/){
 	}
 		
 	ofile.close();
-	std::cout << "DONE! Wrote " << nBytesWritten << " B\n";
+	std::cout << "DONE! Wrote " << nBytesWritten << " B" << std::endl;
 	
 	return true;
 }
 
 bool SystemGBC::quickload(const std::string& fname/*=""*/){
-	std::cout << " Loading quicksave... ";
+	std::cout << sysMessage << "Loading quicksave... ";
 	std::ifstream ifile;
 	if(fname.empty())
 		ifile.open((romFilename+".sav").c_str(), std::ios::binary);
 	else
 		ifile.open(fname.c_str(), std::ios::binary);
 	if(!ifile.good()){
-		std::cout << "FAILED!\n";
+		std::cout << "FAILED!" << std::endl;
 		return false;
 	}
 	
@@ -1125,7 +1130,7 @@ bool SystemGBC::quickload(const std::string& fname/*=""*/){
 	
 	// Check incoming savestate version
 	if(nVersion != SAVESTATE_VERSION){
-		std::cout << " [System] Warning! Unexpected savestate version number (" << getHex(nVersion) << " != " << getHex(SAVESTATE_VERSION) << ")" << std::endl;
+		std::cout << sysWarning << "Unexpected savestate version number (" << getHex(nVersion) << " != " << getHex(SAVESTATE_VERSION) << ")" << std::endl;
 	}
 	
 	bGBCMODE = bitTest(nFlags, 0); // CGB mode flag
@@ -1135,7 +1140,7 @@ bool SystemGBC::quickload(const std::string& fname/*=""*/){
 	
 	// Check the title against the title of the loaded ROM
 	if(strcmp(readTitle, cart->getRawTitleString()) != 0){
-		std::cout << " [System] Warning! ROM title of quicksave does not match loaded ROM!\n";
+		std::cout << sysWarning << "ROM title of quicksave does not match loaded ROM!" << std::endl;
 	}
 
 	// Copy cartridge RAM (if enabled)
@@ -1154,7 +1159,7 @@ bool SystemGBC::quickload(const std::string& fname/*=""*/){
 	}
 		
 	ifile.close();
-	std::cout << "DONE! Read " << nBytesRead << " B\n";
+	std::cout << "DONE! Read " << nBytesRead << " B" << std::endl;
 
 	return true;
 }
@@ -1168,35 +1173,35 @@ bool SystemGBC::readExternalRam(){
 }
 
 void SystemGBC::help(){
-	std::cout << "HELP: Press escape to exit program.\n\n";
+	std::cout << "HELP: Press escape to exit program." << std::endl << std::endl;
 
-	std::cout << " Button Map-\n";
-	std::cout << "  Start = Enter\n";
-	std::cout << " Select = Tab\n";
-	std::cout << "      B = j\n";
-	std::cout << "      A = k\n";
-	std::cout << "     Up = w (up)\n";
-	std::cout << "   Down = s (down)\n";
-	std::cout << "   Left = a (left)\n";
-	std::cout << "  Right = d (right)\n\n";
+	std::cout << " Button Map-" << std::endl;
+	std::cout << "  Start = Enter" << std::endl;
+	std::cout << " Select = Tab" << std::endl;
+	std::cout << "      B = j" << std::endl;
+	std::cout << "      A = k" << std::endl;
+	std::cout << "     Up = w (up)" << std::endl;
+	std::cout << "   Down = s (down)" << std::endl;
+	std::cout << "   Left = a (left)" << std::endl;
+	std::cout << "  Right = d (right)" << std::endl << std::endl;
 
-	std::cout << " System Keys-\n";
-	std::cout << "  F1 : Display this help screen\n";
-	std::cout << "  F2 : Pause emulation\n";
-	std::cout << "  F3 : Resume emulation\n";
-	std::cout << "  F4 : Reset emulator\n";
-	std::cout << "  F5 : Quicksave state\n";
-	std::cout << "  F6 : Decrease frame-skip (slower)\n";
-	std::cout << "  F7 : Increase frame-skip (faster)\n";
-	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"\n";
-	std::cout << "  F9 : Quickload state\n";
-	std::cout << "  F10: Start/stop midi recording\n";
-	std::cout << "  F12: Take screenshot\n";
-	std::cout << "   ` : Open interpreter console\n";
-	std::cout << "   - : Decrease volume\n";
-	std::cout << "   + : Increase volume\n";
-	std::cout << "   f : Show/hide FPS counter on screen\n";
-	std::cout << "   m : Mute output audio\n";
+	std::cout << " System Keys-" << std::endl;
+	std::cout << "  F1 : Display this help screen" << std::endl;
+	std::cout << "  F2 : Pause emulation" << std::endl;
+	std::cout << "  F3 : Resume emulation" << std::endl;
+	std::cout << "  F4 : Reset emulator" << std::endl;
+	std::cout << "  F5 : Quicksave state" << std::endl;
+	std::cout << "  F6 : Decrease frame-skip (slower)" << std::endl;
+	std::cout << "  F7 : Increase frame-skip (faster)" << std::endl;
+	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"" << std::endl;
+	std::cout << "  F9 : Quickload state" << std::endl;
+	std::cout << "  F10: Start/stop midi recording" << std::endl;
+	std::cout << "  F12: Take screenshot" << std::endl;
+	std::cout << "   ` : Open interpreter console" << std::endl;
+	std::cout << "   - : Decrease volume" << std::endl;
+	std::cout << "   + : Increase volume" << std::endl;
+	std::cout << "   f : Show/hide FPS counter on screen" << std::endl;
+	std::cout << "   m : Mute output audio" << std::endl;
 }
 
 void SystemGBC::openDebugConsole(){
@@ -1310,11 +1315,11 @@ void SystemGBC::checkSystemKeys(){
 		quickload();
 	else if (keys->poll(0xFA)){ // F10 Start / stop midi recording
 		if(sound->midiFileEnabled()){
-			std::cout << " Finalizing MIDI recording.\n";
+			std::cout << sysMessage << "Finalizing MIDI recording." << std::endl;
 			sound->stopMidiFile();
 		}
 		else{
-			std::cout << " Starting MIDI recording.\n";
+			std::cout << sysMessage << "Starting MIDI recording." << std::endl;
 			sound->startMidiFile("out.mid");
 		}
 	}
