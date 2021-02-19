@@ -98,6 +98,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	initSuccessful(false),
 	fatalError(false),
 	consoleIsOpen(false),
+	bLockedVRAM(false),
+	bLockedOAM(false),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -509,6 +511,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
+		if(bLockedVRAM) // PPU is using VRAM, access restricted
+			return false;
 		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
@@ -519,6 +523,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		wram->write(loc, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		if(bLockedOAM) // PPU is using OAM, access restricted
+			return false;
 		oam->write(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
@@ -567,6 +573,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		cart->readFast(loc-0x4000, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
+		if(bLockedVRAM) // PPU is using VRAM, access restricted
+			return false;
 		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
@@ -577,6 +585,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		wram->read(loc, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
+		if(bLockedOAM) // PPU is using OAM, access restricted
+			return false;
 		oam->read(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
@@ -1234,6 +1244,11 @@ void SystemGBC::resumeUntilNextHBlank(){
 void SystemGBC::resumeUntilNextVBlank(){
 	unpause(false); // Do not resume audio
 	pauseAfterNextVBlank = true;
+}
+
+void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
+	bLockedVRAM = lockVRAM;
+	bLockedOAM = lockOAM;
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){

@@ -286,7 +286,7 @@ public:
 		return sound.get();
 	}
 	
-	/** Get pointer to the object attribute memory (OAM) handler
+	/** Get pointer to the object attribute memory (OAM) controller
 	  */
 	SpriteHandler* getOAM(){
 		return oam.get();
@@ -298,13 +298,13 @@ public:
 		return sclk.get();
 	}
 
-	/** Get pointer to the cartridge (ROM) handler
+	/** Get pointer to the cartridge (ROM) controller
 	  */	
 	Cartridge* getCartridge(){
 		return cart.get();
 	}
 	
-	/** Get pointer to the work ram (WRAM) handler
+	/** Get pointer to the work ram (WRAM) controller
 	  */
 	WorkRam* getWRAM(){
 		return wram.get();
@@ -328,19 +328,19 @@ public:
 	  */
 	Register* getRegisterByName(const std::string& name);
 
-	/** Return true if the cpu is currently in a halted state (HALT)
+	/** Return true if the CPU is currently in a halted state (HALT)
 	  */	
 	bool cpuIsHalted() const {
 		return cpuHalted;
 	}
 	
-	/** Return true if the cpu is currently in a stopped state (STOP 0)
+	/** Return true if the CPU is currently in a stopped state (STOP 0)
 	  */
 	bool cpuIsStopped() const {
 		return cpuStopped;
 	}
 	
-	/** Toggle CPU debug flag (disabled by default)
+	/** Toggle debug flag for all system components (disabled by default)
 	  */
 	void setDebugMode(bool state=true);
 
@@ -350,12 +350,12 @@ public:
 		displayFramerate = state;
 	}
 
-	/** Toggle verbosity flag (disabled by default)
+	/** Toggle verbosity flag for all system components (disabled by default)
 	  */
 	void setVerboseMode(bool state=true);
 	
 	/** Force CGB features for original DMG games (disabled by default)
-	  * Equivalent to playing a DMG game on a CGB.
+	  * Equivalent to playing a DMG game on a CGB. Has no effect for CGB games.
 	  */
 	void setForceColorMode(bool state=true){
 		forceColor = state;
@@ -382,22 +382,22 @@ public:
 		romPath = path;
 	}
 
-	/** Set program counter break-point
+	/** Set program counter breakpoint
 	  * Execution will pause when the specified point in the program is reached.
 	  */
 	void setBreakpoint(const unsigned short &pc);
 	
-	/** Set system memory write break-point
+	/** Set system memory write access breakpoint
 	  * Execution will pause when the specified address is accessed for writing.
 	  */
 	void setMemWriteBreakpoint(const unsigned short &addr);
 	
-	/** Set system memory read break-point
+	/** Set system memory read access breakpoint
 	  * Execution will pause when the specified address is accessed for reading.
 	  */
 	void setMemReadBreakpoint(const unsigned short &addr);
 	
-	/** Set opcode break-point
+	/** Set LR35902 opcode breakpoint
 	  * Execution will pause when the specified opcode is reached.
 	  * @param op Opcode to break on
 	  * @param cb Flag specifying op is a CB-prefix opcode (defaults to false)
@@ -418,54 +418,116 @@ public:
 	  */
 	void setFramerateMultiplier(const float& freq);
 
+	/** Clear the current program counter breakpoint
+	  */
 	void clearBreakpoint();
 	
+	/** Clear the current memory write access breakpoint
+	  */
 	void clearMemWriteBreakpoint();
 	
+	/** Clear the current memory read access breakpoint
+	  */
 	void clearMemReadBreakpoint();
 	
+	/** Clear the current LR35902 opcode breakpoint
+	  */
 	void clearOpcodeBreakpoint();
 
+	/** Add a system register
+	  * @param comp Associated system component
+	  * @param reg Register index (as addr = 0xff00 + reg)
+	  * @param ptr Pointer reference where new register pointer will be returned
+	  * @param name Human readable name of register
+	  * @param bits Read / write bit access string (see Register class)
+	  */
 	void addSystemRegister(SystemComponent* comp, const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 
+	/** Add a system register (without an associated system component)
+	  * @param reg Register index (as addr = 0xff00 + reg)
+	  * @param ptr Pointer reference where new register pointer will be returned
+	  * @param name Human readable name of register
+	  * @param bits Read / write bit access string (see Register class)
+	  */
 	void addSystemRegister(const unsigned char &reg, Register* &ptr, const std::string &name, const std::string &bits);
 	
+	/** Add a dummy register to the list of system registers
+	  * Dummy registers are used to make a system component sensitive to a register address, even though the register does not physically exist.
+	  * @param comp Associated system component
+	  * @param reg Register index (as addr = 0xff00 + reg)
+	  */
 	void addDummyRegister(SystemComponent* comp, const unsigned char &reg);
 
+	/** Zero the specified system register
+	  * @param reg Register index (as addr = 0xff00 + reg)
+	  */
 	void clearRegister(const unsigned char &reg);
 	
+	/** Dump current contents of memory to output file (64 kB)
+	  */
 	bool dumpMemory(const std::string &fname);
 	
+	/** Dump current contents of VRAM to output file (16 kB)
+	  */
 	bool dumpVRAM(const std::string &fname);
 	
+	/** Write cartridge save RAM to a file
+	  * @return True if cartridge supports save RAM and it is written successfully
+	  */	
 	bool saveSRAM(const std::string &fname);
 	
+	/** Copy cartridge save RAM from a file
+	  * @return True if cartridge supports save RAM and it is copied successfully
+	  */
 	bool loadSRAM(const std::string &fname);
 	
+	/** Handle system horizontal blank (HBlank) period
+	  * Draw current LCD scanline and call DMA controller to handle any active HBlank transfers.
+	  */
 	void handleHBlankPeriod();
 	
+	/** Request vertical blanking (VBlank) period interrupt (INT 40)
+	  */
 	void handleVBlankInterrupt();
 	
+	/** Request LCD STAT interrupt (INT 48)
+	  */
 	void handleLcdInterrupt();
 	
+	/** Request system timer interrupt (INT 50)
+	  */
 	void handleTimerInterrupt();
 	
+	/** Request serial controller interrupt (INT 58)
+	  */
 	void handleSerialInterrupt();
 	
+	/** Request joypad controller interrupt (INT 60)
+	  */
 	void handleJoypadInterrupt();
 
+	/** Enable all interrupts
+	  */
 	void enableInterrupts();
 	
+	/** Disable all interrupts
+	  */
 	void disableInterrupts();
 
+	/** Put CPU into HALTED state
+	  */
 	void haltCPU(){
 		cpuHalted = true;
 	}
 	
+	/** Put CPU into STOPPED state
+	  */
 	void stopCPU(){
 		cpuStopped = true;
 	}
 	
+	/** Resume CPU from HALTED or STOPPED state
+	  */
 	void resumeCPU();
 	
 #ifdef USE_QT_DEBUGGER
@@ -473,123 +535,218 @@ public:
 	  */
 	void updateDebugger();
 #endif
-	
+
+	/** Pause emulation
+	  * Audio output interface is also disabled.
+	  */	
 	void pause();
 	
+	/** Resume emulation
+	  * @param resumeAudio If set, audio output interface is also resumed, otherwise it remains disabled
+	  */
 	void unpause(bool resumeAudio=true);
 
+	/** Reset emulator to beginning of input ROM program
+	  */
 	bool reset();
 
+	/** Save the current frame buffer as an image
+	  * Not implemented.
+	  */
 	bool screenshot();
 
+	/** Write a savestate file
+	  * If filename not specified, the current input ROM filename plus extension ".sav" is used.
+	  * @param fname Savestate filename
+	  * @return True if savestate is written successfully
+	  */
 	bool quicksave(const std::string& fname="");
 	
+	/** Load a savestate file
+	  * If filename not specified, the current input ROM filename plus extension ".sav" is used.
+	  * @param fname Savestate filename
+	  * @return True if savestate is loaded successfully
+	  */
 	bool quickload(const std::string& fname="");
-	
+
+	/** Write cartridge save RAM to a file
+	  * The current input ROM filename plus extension ".sram" is used.
+	  * @return True if cartridge supports save RAM and it is written successfully
+	  */	
 	bool writeExternalRam();
 
+	/** Copy cartridge save RAM from a file
+	  * The current input ROM filename plus extension ".sram" is used.
+	  * @return True if cartridge supports save RAM and it is copied successfully
+	  */
 	bool readExternalRam();
 	
+	/** Print help message to stdout
+	  */
 	void help();
 	
+	/** Open LR35902 interpretr console
+	  */
 	void openDebugConsole();
 	
+	/** Close LR35902 interpreter console
+	  */
 	void closeDebugConsole();
 	
+	/** Stop execution and close all windows
+	  */
 	void quit(){
 		userQuitting = true;
 	}
 
-	/** Resume emulation until the next instruction is executed.
+	/** Resume emulation until just after the next CPU instruction finishes execution
+	  * Does not resume audio output.
 	  */	
 	void stepThrough();
 	
-	/** Resume emulation until the next clock cycle.
+	/** Resume emulation until just after the next system clock tick
+	  * Does not resume audio output.
 	  */	
 	void advanceClock();
 	
-	/** Resume emulation until the next HBlank period.
+	/** Resume emulation until just after the next scanline is drawn
+	  * Does not resume audio output.
 	  */
 	void resumeUntilNextHBlank();
 	
-	/** Resume emulation until the next VBlank period.
+	/** Resume emulation until just after the next frame is drawn
+	  * Does not resume audio output.
 	  */
 	void resumeUntilNextVBlank();
+	
+	/** Lock read / write access to VRAM and / or OAM
+	  */
+	void lockMemory(bool lockVRAM, bool lockOAM);
 	
 private:
 	SystemComponent dummyComponent; ///< Dummy system component used to organize system registers
 
-	unsigned short nFrames;
-	unsigned short frameSkip;
+	unsigned short nFrames; ///< Drawn frames counter 
+	
+	unsigned short frameSkip; ///< The value N for drawing every 1 out of N frames (or the number of frames to skip between rendered frames plus 1)
 
 	bool verboseMode; ///< Verbosity flag
+	
 	bool debugMode; ///< Debug flag
 
-	bool cpuStopped; ///< 
-	bool cpuHalted; ///<
-	bool emulationPaused; ///<
-	bool bootSequence; ///< The gameboy boot ROM is still running
-	bool forceColor; 
-	bool displayFramerate;
-	bool userQuitting;
-	bool autoLoadExtRam; ///< If set, external cartridge RAM (SRAM) will not be loaded at boot
+	bool cpuStopped; ///< Set if CPU is in a stopped state (STOP 0)
+	
+	bool cpuHalted; ///< Set if CPU is in a halted state (HALT)
+	
+	bool emulationPaused; ///< Set if emulator is paused
+	
+	bool bootSequence; ///< Set if the boot ROM is still executing
+	
+	bool forceColor; ///< Set if CGB features will be forced for DMG games (has no effect for CGB games)
+	
+	bool displayFramerate; ///< Set if framerate will be displayed on screen
+	
+	bool userQuitting; ///< Set if user has issued the command to quit
+	
+	bool autoLoadExtRam; ///< Set if external cartridge RAM (SRAM) will not be loaded at boot
+	
 	bool initSuccessful; ///< Set if all components were initialized successfully
-	bool fatalError;
-	bool consoleIsOpen;
+	
+	bool fatalError; ///< Set if a fatal error was encountered
+	
+	bool consoleIsOpen; ///< Set if interpreter console is currently open
+	
+	bool bLockedVRAM; ///< Set if VRAM is locked while being read by PPU 
+	
+	bool bLockedOAM; ///< Set if OAM is locked while being read by PPU
 
 	unsigned char dmaSourceH; ///< DMA source MSB
+	
 	unsigned char dmaSourceL; ///< DMA source LSB
+	
 	unsigned char dmaDestinationH; ///< DMA destination MSB
+	
 	unsigned char dmaDestinationL; ///< DMA destination LSB
 
 	std::string romPath; ///< Full path to input ROM file
+	
 	std::string romFilename; ///< Input ROM filename (with no path or extension)
+	
 	std::string romExtension; ///< Input ROM file extension
 
-	bool pauseAfterNextInstruction;
-	bool pauseAfterNextClock;
-	bool pauseAfterNextHBlank;
-	bool pauseAfterNextVBlank;
+	bool pauseAfterNextInstruction; ///< Set if emulator will pause execution after next CPU instruction completes execution
+	
+	bool pauseAfterNextClock; ///< Set if emulator will pause execution after next system clock tick
+	
+	bool pauseAfterNextHBlank; ///< Set if emulator will pause execution after the next scanline is drawn
+	
+	bool pauseAfterNextVBlank; ///< Set if emulator will pause execution after the next frame is rendered
 
 	SoundManager* audioInterface; ///< Pointer to sound output interface
 
-	std::unique_ptr<SerialController> serial;
-	std::unique_ptr<DmaController> dma;
-	std::unique_ptr<Cartridge> cart;
-	std::unique_ptr<GPU> gpu;
-	std::unique_ptr<SoundProcessor> sound;
-	std::unique_ptr<SpriteHandler> oam;
-	std::unique_ptr<JoystickController> joy;
-	std::unique_ptr<WorkRam> wram; // 8 4kB banks of RAM
-	std::unique_ptr<SystemComponent> hram; // 127 bytes of high RAM
-	std::unique_ptr<SystemClock> sclk;
-	std::unique_ptr<SystemTimer> timer;
-	std::unique_ptr<LR35902> cpu;
+	std::unique_ptr<SerialController> serial; ///< Pointer to serial I/O controller
+	
+	std::unique_ptr<DmaController> dma; ///< Pointer to Direct Memory Access (DMA) controller
+	
+	std::unique_ptr<Cartridge> cart; ///< Pointer to cartridge ROM
+	
+	std::unique_ptr<GPU> gpu; ///< Pointer to Pixel Processing Unit (PPU)
+	
+	std::unique_ptr<SoundProcessor> sound; ///< Pointer to Audio Processing Unit (APU)
+	
+	std::unique_ptr<SpriteHandler> oam; ///< Pointer to Object Attribute Memory (OAM) controller 
+	
+	std::unique_ptr<JoystickController> joy; ///< Pointer to joypad controller
+	
+	std::unique_ptr<WorkRam> wram; ///< Pointer to Work RAM (WRAM) controller
+	
+	std::unique_ptr<SystemComponent> hram; ///< Pointer to High RAM (HRAM) controller
+	
+	std::unique_ptr<SystemClock> sclk; ///< Pointer to system clock
+	
+	std::unique_ptr<SystemTimer> timer; ///< Pointer to system timer
+	
+	std::unique_ptr<LR35902> cpu; ///< Pointer to LR35902 emulator
 	
 #ifdef USE_QT_DEBUGGER
 	MainWindow* gui; ///< Pointer to Qt gui debugger (if available)
 #endif
 
-	Breakpoint breakpointProgramCounter;
-	Breakpoint breakpointMemoryWrite;
-	Breakpoint breakpointMemoryRead;
-	Breakpoint breakpointOpcode;
+	Breakpoint breakpointProgramCounter; ///< Program counter breakpoint
+	Breakpoint breakpointMemoryWrite; ///< Memory address write access breakpoint
+	Breakpoint breakpointMemoryRead; ///< Memory address read access breakpoint
+	Breakpoint breakpointOpcode; ///< LR35902 opcode read breakpoint
 
-	unsigned short memoryAccessWrite[2]; ///< User-set memory 
-	unsigned short memoryAccessRead[2]; ///< 
+	unsigned short memoryAccessWrite[2]; ///< Memory address write access region
+	
+	unsigned short memoryAccessRead[2]; ///< Memory address read access region
 
 	std::vector<Register> registers; ///< System control registers
 	
-	unsigned short bootLength; ///< Size of the boot ROM
+	unsigned short bootLength; ///< Size of the boot ROM (bytes)
 	
-	std::vector<unsigned char> bootROM; ///< Variable length gameboy/gameboy color boot ROM
+	std::vector<unsigned char> bootROM; ///< Variable length DMG / CGB boot ROM
 
-	std::unique_ptr<ComponentList> subsystems;
+	std::unique_ptr<ComponentList> subsystems; ///< List of all system component pointers 
 
+	/** Write to a system register 
+	  * Note: The true register value will be AND-ed together with its writable bit bitmask
+	  * @param reg 16-bit register address (ff00 to ff80)
+	  * @param val Value to attempt to write to register
+	  * @return True if register is written to successfully, otherwise return false
+	  */
 	bool writeRegister(const unsigned short &reg, const unsigned char &val);
 	
+	/** Read from a system register 
+	  * Note: The true register value will be AND-ed together with its readable bit bitmask
+	  * @param reg 16-bit register address (ff00 to ff80)
+	  * @param val Value reference to read register value into
+	  * @return True if register is read from successfully, otherwise return false
+	  */
 	bool readRegister(const unsigned short &reg, unsigned char &val);
 	
+	/** Check for pressed / held keyboard keys
+	  */
 	void checkSystemKeys();
 };
 
