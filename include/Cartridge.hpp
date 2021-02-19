@@ -2,8 +2,11 @@
 #define CARTRIDGE_HPP
 
 #include <fstream>
+#include <string>
+#include <vector>
 
 #include "SystemComponent.hpp"
+#include "Register.hpp"
 
 class Cartridge : public SystemComponent {
 public:
@@ -22,21 +25,24 @@ public:
 	  */
 	Cartridge();
 
-	/** ROM is read-only, so return false to prevent writing to it.
+	/** ROM is read-only, so return false to prevent writing to it
 	  */
 	bool preWriteAction() override { 
 		return false; 
 	}
 	
-	/**
+	/** Preare to read from ROM memory
+	  * @return True if address being written to resides in ROM bank 0 or ROM swap bank and false otherwise
 	  */
 	bool preReadAction() override ;
 
-	/** 
+	/** Write cartridge MBC register
+	  * @return True if MBC register is written successfully and return false otherwise
 	  */
 	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
-	/**
+	/** Read cartridge MBC register
+	  * @return True if MBC register is read successfully and return false otherwise
 	  */
 	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
@@ -129,6 +135,10 @@ public:
 	  */
 	bool readRom(const std::string &fname, bool verbose=false);
 
+	/** Unload ROM from memory
+	  */
+	void unload();
+
 	/** Print cartridge ROM header information
 	  */
 	void print();
@@ -150,7 +160,7 @@ private:
 
 	unsigned short programStart; ///< Program entry point address
 
-	unsigned char nintendoString[48]; ///< Nintendo bitmap
+	unsigned char bootBitmapString[48]; ///< Boot bitmap
 
 	char titleString[12]; ///< Cartridge tile string
 
@@ -170,7 +180,7 @@ private:
 
 	unsigned char language; ///< Cartridge language
 
-	unsigned char oldLicensee; ///< ?
+	unsigned char oldLicensee; ///< Licensee ID number
 
 	unsigned char versionNumber; ///< Cartridge version number
 
@@ -182,11 +192,22 @@ private:
 	
 	CartMBC mbcType; ///< Input ROM catridge type
 	
+	std::vector<Register> mbcRegisters; ///< Map of MBC registers (if used by the ROM)
+	
 	/** Read input ROM header
 	  * Initialize ROM memory (and RAM if enabled) and set cartridge feature flags
 	  * @return The number of header bytes read from input stream
 	  */
 	unsigned int readHeader(std::ifstream &f);
+	
+	/** Create internal MBC registers and add them to the register vector
+	  */
+	void createRegisters();
+	
+	/** Attempt to write to an MBC register
+	  * If the value is written successfully, a pointer to the MBC register which was written to is returned.
+	  */
+	Register* writeToMBC(const unsigned short &reg, const unsigned char &val);
 };
 
 #endif

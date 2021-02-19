@@ -23,7 +23,7 @@ Cartridge::Cartridge() :
 	rumbleSupport(false),
 	leader(0),
 	programStart(0),
-	nintendoString(""),
+	bootBitmapString(""),
 	titleString(""),
 	manufacturer(""),
 	gbcFlag(0),
@@ -57,79 +57,60 @@ bool Cartridge::preReadAction(){
 }
 
 bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &val){
-	switch(mbcType){
-		case CartMBC::ROMONLY: // ROM only
-			break;
-		case CartMBC::MBC1: // MBC1 (1-3)
-			if(reg < 0x2000){ // RAM enable (write only)
-				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-				// Note: Type 0x01 does not have cartridge RAM
-				extRamEnabled = ((val & 0x0F) == 0x0A);
-			}
-			else if(reg < 0x4000){ // ROM bank number register (write only)
-				// 5-bit register [0x01, 0x1F] (write only)
-				// Specify lower 5 bits of ROM bank number
-				bs &= 0xE0; // Clear bits 0-4
-				bs |= (val & 0x1F); // Set bits 0-4
-				// Note: MBC1 translates a 0x0 here as bank 1
-			}
-			else if(reg < 0x6000){
-				// 2-bit register [0,3] (write only)
-				if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
-					bs &= 0x9F; // Clear bits 5-6
-					bs |= ((val & 0x3) << 5); // Set bits 5-6
-				}
-				else // Specify RAM bank number (if in RAM select mode).
-					ram.setBank(val & 0x3);
-			}
-			else if(reg < 0x8000){ // ROM/RAM mode select
-				// 1-bit register which sets RAM/ROM mode select to 0x0 (ROM, default) or 0x1 (RAM)  
-				// Note: Type 0x01 does not have cartridge RAM
-				ramSelect = (val & 0x1) == 0x1;
-			}
-			break;
-		case CartMBC::MBC2: // MBC2 (5-6)
-			if(reg < 0x2000){ // RAM enable (write only)
-				if((val & 0x100) == 0) // Bit 0 of upper address byte must be 0 to enable RAM
-					extRamEnabled = true;
-			}
-			else if(reg < 0x4000){ // ROM bank number (write only)
-				if((val & 0x100) != 0) // Bit 0 of upper address byte must be 1 to select ROM bank
-					bs = (val & 0x0F);
-			}
-			break;
-		case CartMBC::MMM01: // MMM01
-			break;
-		case CartMBC::MBC3: // MBC3
-			break;
-		case CartMBC::MBC4: // MBC4
-			break;
-		case CartMBC::MBC5: // MBC5
-			if(reg < 0x2000){ // RAM enable (write only)
-				// Any value written to this area with 0x0A in its lower 4 bits will enable cartridge RAM
-				extRamEnabled = ((val & 0x0F) == 0x0A);
-			}
-			else if(reg < 0x3000){ // Lower 8 bits of ROM bank number register (write only)
-				// 9-bit register [0x01, 0x1FF] (write only)
-				// Specify lower 8 bits of ROM bank number
-				bs &= 0xFF00; // Clear bits 0-7
-				bs |= (val & 0x00FF); // Set bits 0-7
-			}
-			else if(reg < 0x4000){ // 9th bit of ROM bank number (write only)
-				// 1-bit register [0,3] (write only)
-				// Specify upper 1 bit of ROM bank number
-				bs &= 0xFEFF; // Clear bit 9;
-				bs |= ((val & 0x0001) << 8); // Set bit 9
-			}
-			else if(reg < 0x6000){ // RAM bank number
-				// Select the RAM bank [0,F]
-				ram.setBank(val & 0x0F);
-			}
-			break;
-		default:
-			break;	
+	if(!writeToMBC(reg, val)){ // Invalid MBC register
+		return false;
 	}
-	return false;
+	if(mbcType == CartMBC::ROMONLY){ // ROM only
+		// No MBC registers
+		return false;
+	}
+	else if(mbcType == CartMBC::MBC1){ // MBC1 (1-3)
+		// RAM enabled
+		extRamEnabled = (mbcRegisters[0].getBits(0, 3) == 0x0a);
+
+		// Low 5 bits of ROM bank (MBC1 reads bank 0 as bank 1)
+		unsigned char bankLow = mbcRegisters[1].getBits(0, 4);
+		if(bankLow == 0)
+			bankLow = 1;
+
+		// ROM / RAM select
+		ramSelect = mbcRegisters[3].getBit(0); // (0: ROM select, 1: RAM select)
+		
+		unsigned char bankHigh = mbcRegisters[2].getBits(0, 1);
+		if(cartridgeType == 0x1 || !ramSelect){ // Specify bits 5 & 6 of the ROM bank number (if in ROM select mode).
+			bs = bankLow + (bankHigh << 5); // Set bits 5,6
+		}
+		else{ // Specify RAM bank number (if in RAM select mode).
+			bs = bankLow;
+			ram.setBank(bankHigh);
+		}
+	}
+	else if(mbcType == CartMBC::MBC2){ // MBC2 (5-6)
+		unsigned char upperAddrByte = (unsigned char)((reg & 0xff00) >> 8);
+		if(!bitTest(upperAddrByte, 0)){ // RAM enable / disable
+			extRamEnabled = mbcRegisters[0].getBit(0); // ??? gbdev MBC2 documentation is unclear here
+		}
+		else{ // ROM bank number
+			mbcRegisters[1].getBits(0, 3);
+		}
+	}
+	else if(mbcType == CartMBC::MMM01){ // MMM01
+	}
+	else if(mbcType == CartMBC::MBC3){ // MBC3
+	}
+	else if(mbcType == CartMBC::MBC4){ // MBC4
+	}
+	else if(mbcType == CartMBC::MBC5){ // MBC5
+		// RAM enabled
+		extRamEnabled = (mbcRegisters[0].getBits(0, 3) == 0x0a);
+		
+		// ROM bank (MBC5 reads bank 0 as bank 0, unlike MBC1)
+		bs = mbcRegisters[1].getValue() + (mbcRegisters[2].getBit(0) ? 0x0100 : 0x0);
+		
+		// RAM bank
+		ram.setBank(mbcRegisters[3].getBits(0, 3));
+	}
+	return true;
 }
 
 bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
@@ -213,11 +194,14 @@ bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	return true;
 }
 
+void Cartridge::unload(){
+}
+
 unsigned int Cartridge::readHeader(std::ifstream &f){
 	f.seekg(0x0101);
 	f.read((char*)&leader, 1); // JP (usually)
 	f.read((char*)&programStart, 2); // Program entry point
-	f.read((char*)nintendoString, 48); // Nintendo bitmap
+	f.read((char*)bootBitmapString, 48); // Boot bitmap
 	f.read((char*)titleString, 11); titleString[11] = '\0'; // Cartridge title
 	f.read((char*)manufacturer, 4); manufacturer[4] = '\0'; // Manufacturer string
 	f.read((char*)&gbcFlag, 1); // Gameboy Color flag
@@ -265,6 +249,9 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		timerSupport = bitTest(cartFlags[cartridgeType], 3);
 		rumbleSupport = bitTest(cartFlags[cartridgeType], 4);
 	}
+	
+	// Generate MBC registers
+	createRegisters();
 	
 	// Initialize ROM storage
 	mem.clear();
@@ -327,6 +314,95 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	bs = 1;
 
 	return 79;
+}
+
+void Cartridge::createRegisters(){
+	mbcRegisters.clear(); // Just in case
+	switch(mbcType){
+	case CartMBC::ROMONLY: // ROM only
+		// No MBC registers
+		break;
+	case CartMBC::MBC1: // MBC1 (1-3)
+		mbcRegisters.push_back(Register("MBC1_ENABLE", "22220000")); // RAM enable
+		mbcRegisters.push_back(Register("MBC1_BANKLO", "22222000")); // Low 5 bits of ROM bank
+		mbcRegisters.push_back(Register("MBC1_BANKHI", "22000000")); // High 2 bits of ROM bank (or RAM bank number)
+		mbcRegisters.push_back(Register("MBC1_SELECT", "20000000")); // ROM / RAM mode select
+		break;
+	case CartMBC::MBC2: // MBC2 (5-6)
+		mbcRegisters.push_back(Register("MBC2_ENABLE", "20000000")); // RAM enable ???
+		mbcRegisters.push_back(Register("MBC2_BANKLO", "22220000")); // Low 5 bits of ROM bank
+		break;
+	case CartMBC::MMM01: // MMM01
+		break;
+	case CartMBC::MBC3: // MBC3
+		break;
+	case CartMBC::MBC4: // MBC4
+		break;
+	case CartMBC::MBC5: // MBC5
+		mbcRegisters.push_back(Register("MBC5_ENABLE",  "22220000")); // RAM enable
+		mbcRegisters.push_back(Register("MBC5_BANKLO",  "22222222")); // Low 8 bits of ROM bank
+		mbcRegisters.push_back(Register("MBC5_BANKHI",  "20000000")); // High bit of ROM bank
+		mbcRegisters.push_back(Register("MBC5_BANKRAM", "22220000")); // RAM bank
+		break;
+	default:
+		break;	
+	}
+}
+
+Register* Cartridge::writeToMBC(const unsigned short &reg, const unsigned char &val){
+	Register* retval = 0x0;
+	switch(mbcType){
+	case CartMBC::ROMONLY: // ROM only
+		// No MBC registers
+		break;
+	case CartMBC::MBC1: // MBC1 (1-3)
+		if(reg < 0x2000){ // RAM enable
+			retval = &mbcRegisters[0];
+		}
+		else if(reg < 0x4000){ // ROM bank number low 5 bits
+			retval = &mbcRegisters[1];
+		}
+		else if(reg < 0x6000){ // ROM bank number high 2 bits (or RAM bank number)
+			retval = &mbcRegisters[2];
+		}
+		else if(reg < 0x8000){ // ROM / RAM bank mode select
+			retval = &mbcRegisters[3];
+		}
+		break;
+	case CartMBC::MBC2: // MBC2 (5-6)
+		if(reg < 0x2000){ // RAM enable
+			retval = &mbcRegisters[0];
+		}
+		else if(reg < 0x4000){ // ROM bank number
+			retval = &mbcRegisters[1];
+		}
+		break;
+	case CartMBC::MMM01: // MMM01
+		break;
+	case CartMBC::MBC3: // MBC3
+		break;
+	case CartMBC::MBC4: // MBC4
+		break;
+	case CartMBC::MBC5: // MBC5
+		if(reg < 0x2000){ // RAM enable
+			retval = &mbcRegisters[0];
+		}
+		else if(reg < 0x3000){ // ROM bank number low 8 bits
+			retval = &mbcRegisters[1];
+		}
+		else if(reg < 0x4000){ // ROM bank number high bit
+			retval = &mbcRegisters[2];
+		}
+		else if(reg < 0x6000){ // RAM bank number
+			retval = &mbcRegisters[3];
+		}
+		break;
+	default:
+		break;	
+	}
+	if(retval) // Write to the MBC register
+		retval->write(val);
+	return retval;	
 }
 
 void Cartridge::print(){
