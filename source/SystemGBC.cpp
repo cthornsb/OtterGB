@@ -459,8 +459,9 @@ bool SystemGBC::execute(){
 
 void SystemGBC::handleHBlankPeriod(){
 	if(!emulationPaused){
-		if(nFrames % frameSkip == 0)
-			gpu->drawNextScanline(oam.get());
+		if(nFrames % frameSkip == 0){
+			sclk->setPixelClockPause( gpu->drawNextScanline(oam.get()) );
+		}
 		dma->onHBlank();
 	}
 #ifdef USE_QT_DEBUGGER
