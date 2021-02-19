@@ -1,4 +1,3 @@
-
 #include <algorithm>
 
 #include "SystemRegisters.hpp"
@@ -18,22 +17,30 @@ constexpr int MAX_SPRITES_PER_LINE = 10;
 constexpr int SCREEN_WIDTH_PIXELS  = 160;
 constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
-GPU::GPU() : SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW) { // "PPU " (2 8kB banks of VRAM)
+GPU::GPU() : 
+	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
+	winDisplayEnable(false),
+	nSpritesDrawn(0),
+	bgPaletteIndex(0),
+	objPaletteIndex(0),
+	dmgPaletteColor{ {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3} }, // Default DMG palettes
+	bgPaletteData(),
+	objPaletteData(),
+	cgbPaletteColor(),
+	window(),
+	console(),
+	currentLineSprite(),
+	currentLineWindow(),
+	currentLineBackground(),
+	userLayerEnable{ true, true, true },
+	sprites()
+{
 }
 
 GPU::~GPU(){
 }
 
 void GPU::initialize(){
-	// Set default GB palettes
-	for(unsigned short i = 0; i < 3; i++){
-		ngbcPaletteColor[i][0] = 0x0;
-		ngbcPaletteColor[i][1] = 0x1;
-		ngbcPaletteColor[i][2] = 0x2;
-		ngbcPaletteColor[i][3] = 0x3;
-		userLayerEnable[i] = true;
-	}
-	
 	// Create a new window
 	window = std::unique_ptr<Window>(new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS, 2));
 #ifdef USE_OPENGL 
@@ -56,13 +63,13 @@ void GPU::initialize(){
 	if(bGBCMODE){ // Gameboy Color palettes (all white at startup)
 		for(int i = 0; i < 16; i++)
 			for(int j = 0; j < 4; j++)
-				gbcPaletteColors[i][j] = Colors::WHITE;
+				cgbPaletteColor[i][j] = Colors::WHITE;
 	}
 	else{ // Gameboy palettes
-		gbcPaletteColors[0][0] = Colors::GB_GREEN;
-		gbcPaletteColors[0][1] = Colors::GB_LTGREEN;
-		gbcPaletteColors[0][2] = Colors::GB_DKGREEN;
-		gbcPaletteColors[0][3] = Colors::GB_DKSTGREEN;
+		cgbPaletteColor[0][0] = Colors::GB_GREEN;
+		cgbPaletteColor[0][1] = Colors::GB_LTGREEN;
+		cgbPaletteColor[0][2] = Colors::GB_DKGREEN;
+		cgbPaletteColor[0][3] = Colors::GB_DKSTGREEN;
 	}
 }
 
@@ -110,7 +117,7 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 	tileID = mem[0][offset + 32*tileY + tileX]; // Retrieve the background tile ID from VRAM
 	
 	 // Retrieve a line of the bitmap at the requested pixel
-	if(bgWinTileDataSelect) // 0x8000-0x8FFF
+	if(rLCDC->bit4()) // 0x8000-0x8FFF
 		bmpLow = 16*tileID;
 	else // 0x8800-0x97FF
 		bmpLow = (0x1000 + 16*twosComp(tileID));
@@ -160,7 +167,7 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	unsigned char yp = oam.yPos-16+rSCY->getValue(); // Top left
 
 	// Check that the current scanline goes through the sprite
-	if(y < yp || y >= yp+(!objSizeSelect ? 8 : 16))
+	if(y < yp || y >= yp+(!rLCDC->bit2() ? 8 : 16))
 		return false;
 
 	unsigned char pixelY = y - yp; // Vertical pixel in the tile
@@ -169,18 +176,22 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	
 	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
-	if(!objSizeSelect) // 8x8 pixel sprites
+	if(!rLCDC->bit2()){ // 8x8 pixel sprites
+		if(oam.yFlip) // Vertical flip
+			pixelY = 7 - pixelY;
 		bmpLow = 16*oam.tileNum;
-	else if(pixelY <= 7) // Top half of 8x16 pixel sprites
-		bmpLow = 16*(oam.tileNum & 0xFE);
-	else{ // Bottom half of 8x16 pixel sprites
-		bmpLow = 16*(oam.tileNum | 0x01); 
-		pixelY -= 8;
 	}
-
-	if(oam.yFlip) // Vertical flip
-		pixelY = 7 - pixelY;
-
+	else{ // 8x16 pixel sprites	
+		if(oam.yFlip) // Vertical flip
+			pixelY = 15 - pixelY;
+		if(pixelY <= 7) // Top half of 8x16 pixel sprites
+			bmpLow = 16*(oam.tileNum & 0xFE);
+		else{ // Bottom half of 8x16 pixel sprites
+			bmpLow = 16*(oam.tileNum | 0x01); 
+			pixelY -= 8;
+		}
+	}
+	
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(!currentLineSprite[xp].getColor()){
@@ -270,31 +281,38 @@ void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 	}
 }
 
-void GPU::drawNextScanline(SpriteHandler *oam){
+unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	window->setCurrent();
+
+	// The pixel clock delay is dependent upon the number of sprites drawn on a given
+	//  scanline, the background scroll register SCX, and the state of the window layer.
+	unsigned short nPauseTicks = 0;
 
 	// Here (ry) is the real vertical coordinate on the background
 	// and (rLY) is the current scanline.
 	unsigned char ry = rLY->getValue() + rSCY->getValue();
 	
-	if(!rLCDC->getBit(7)){ // Screen disabled (draw a "white" line)
+	if(!rLCDC->bit7()){ // Screen disabled (draw a "white" line)
 		if(bGBCMODE)
 			window->setDrawColor(Colors::WHITE);
 		else
-			window->setDrawColor(gbcPaletteColors[0][0]);
+			window->setDrawColor(cgbPaletteColor[0][0]);
 		window->drawLine(0, rLY->getValue(), 159, rLY->getValue());
-		return;
+		return 0;
 	}
 
 	unsigned char rx = rSCX->getValue(); // This will automatically handle screen wrapping
 	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
 		currentLineSprite[rx++].reset();
 
+	// A non-zero scroll (SCX) will delay the clock SCX % 8 ticks.		
+	nPauseTicks += rx % 8;
+
 	// Handle the background layer
 	rx = rSCX->getValue();
-	if((bGBCMODE || bgDisplayEnable) && userLayerEnable[0]){ // Background enabled
+	if((bGBCMODE || rLCDC->bit0()) && userLayerEnable[0]){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
-			rx += drawTile(rx, ry, 0, (bgTileMapSelect ? 0x1C00 : 0x1800), currentLineBackground);
+			rx += drawTile(rx, ry, 0, (rLCDC->bit3() ? 0x1C00 : 0x1800), currentLineBackground);
 	}
 	else{ // Background disabled (white)
 		for(unsigned short x = 0; x < 160; x++) // Draw a "white" line
@@ -308,16 +326,21 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 			rx = rWX->getValue()-7;
 			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
 			for(unsigned short x = 0; x <= nTiles; x++){
-				rx += drawTile(rx, rWLY->getValue(), rWX->getValue() - 7, (winTileMapSelect ? 0x1C00 : 0x1800), currentLineWindow);
+				rx += drawTile(rx, rWLY->getValue(), rWX->getValue() - 7, (rLCDC->bit6() ? 0x1C00 : 0x1800), currentLineWindow);
 			}
 			windowVisible = true;
 		}
 		(*rWLY)++; // Increment the scanline in the window region
 	}
+	
+	// The window layer being visible delays for 6 ticks.
+	if(windowVisible)
+		nPauseTicks += 6;
 
 	// Handle the OBJ (sprite) layer
-	if(objDisplayEnable && userLayerEnable[2]){
-		int spritesDrawn = 0;
+	rx = rSCX->getValue();
+	if(rLCDC->bit1() && userLayerEnable[2]){
+		nSpritesDrawn = 0;
 		if(oam->modified()){
 			// Gather sprite attributes from OAM
 			while(oam->updateNextSprite(sprites)){
@@ -326,9 +349,15 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 			std::sort(sprites.begin(), sprites.end(), (bGBCMODE ? SpriteAttributes::compareCGB : SpriteAttributes::compareDMG));
 		}
 		if(!sprites.empty()){
-			for(auto sp = sprites.begin(); sp != sprites.end(); sp++){
-				if(drawSprite(ry, *sp) && ++spritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
-					break;
+			// Search for sprites which overlap this scanline
+			// Get the number of sprites on this scanline
+			// Each sprite pauses the clock for N = 11 - min(5, (x + SCX) mod 8)
+			for(auto sp = sprites.cbegin(); sp != sprites.cend(); sp++){
+				if(drawSprite(ry, *sp)){ // Draw the line of the sprite
+					nPauseTicks += 11 - std::min(5, (sp->xPos + rx) % 8);
+					if(++nSpritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
+						break;
+				}
 			}
 		}
 	}
@@ -349,7 +378,7 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
 		// 
 		if(bGBCMODE){
-			if(bgDisplayEnable){ // BG/WIN priority
+			if(rLCDC->bit0()){ // BG/WIN priority
 				if(currentLineBackground[rx].getPriority()){ // BG priority (tile attributes)
 					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
 						layerSelect = 1;
@@ -412,19 +441,22 @@ void GPU::drawNextScanline(SpriteHandler *oam){
 				break;
 		}
 		if(bGBCMODE)
-			currentPixelRGB = &gbcPaletteColors[currentPixel->getPalette()][currentPixel->getColor()];
+			currentPixelRGB = &cgbPaletteColor[currentPixel->getPalette()][currentPixel->getColor()];
 		else
-			currentPixelRGB = &gbcPaletteColors[0][ngbcPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
+			currentPixelRGB = &cgbPaletteColor[0][dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
 		window->setDrawColor(currentPixelRGB);
 		window->drawPixel(x, rLY->getValue());
 		rx++;
 	}
+	
+	// Return the number of pixel clock ticks to delay HBlank interval
+	return nPauseTicks;
 }
 
 void GPU::render(){	
 	// Update the screen
 	window->setCurrent();
-	if(lcdDisplayEnable && window->status()){ // Check for events
+	if(rLCDC->bit7() && window->status()){ // Check for events
 		window->render();
 	}
 }
@@ -439,7 +471,7 @@ bool GPU::getWindowStatus(){
 }
 
 unsigned char GPU::getDmgPaletteColorHex(const unsigned short &index) const {
-	return ngbcPaletteColor[index/4][index%4];
+	return dmgPaletteColor[index/4][index%4];
 }
 
 unsigned short GPU::getBgPaletteColorHex(const unsigned short &index) const { 
@@ -461,17 +493,9 @@ void GPU::print(const std::string &str, const unsigned char &x, const unsigned c
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(reg){
 		case 0xFF40: // LCDC (LCD Control Register)
-			bgDisplayEnable     = rLCDC->getBit(0); // (0:off, 1:on)
-			objDisplayEnable    = rLCDC->getBit(1); // (0:off, 1:on)
-			objSizeSelect       = rLCDC->getBit(2); // (0:off, 1:on)
-			bgTileMapSelect     = rLCDC->getBit(3); // (0:[9800,9BFF], 1-[9C00,9FFF])
-			bgWinTileDataSelect = rLCDC->getBit(4); // (0:[9800,97FF], 1-[8000,8FFF])
-			winDisplayEnable    = rLCDC->getBit(5); // (0:off, 1:on)
-			winTileMapSelect    = rLCDC->getBit(6); // (0:[9800,9BFF], 1-[9C00,9FFF])
-			lcdDisplayEnable    = rLCDC->getBit(7); // (0:off, 1:on);
-			if(!lcdDisplayEnable) // LY is reset if LCD goes from on to off
+			if(!rLCDC->bit7()) // LY is reset if LCD goes from on to off
 				sys->getClock()->resetScanline();
-			if(winDisplayEnable) // Allow the window layer
+			if(rLCDC->bit5()) // Allow the window layer
 				checkWindowVisible();
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
@@ -497,24 +521,24 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			// 01 : Light gray
 			// 10 : Dark Gray
 			// 11 : Black
-			ngbcPaletteColor[0][0] = rBGP->getBits(0,1);
-			ngbcPaletteColor[0][1] = rBGP->getBits(2,3);
-			ngbcPaletteColor[0][2] = rBGP->getBits(4,5);
-			ngbcPaletteColor[0][3] = rBGP->getBits(6,7); 
+			dmgPaletteColor[0][0] = rBGP->getBits(0,1);
+			dmgPaletteColor[0][1] = rBGP->getBits(2,3);
+			dmgPaletteColor[0][2] = rBGP->getBits(4,5);
+			dmgPaletteColor[0][3] = rBGP->getBits(6,7); 
 			break;
 		case 0xFF48: // OBP0 (Object palette 0 data, non-gbc mode only)
 			// See BGP above
-			ngbcPaletteColor[1][0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcPaletteColor[1][1] = rOBP0->getBits(2,3); 
-			ngbcPaletteColor[1][2] = rOBP0->getBits(4,5); 
-			ngbcPaletteColor[1][3] = rOBP0->getBits(6,7); 
+			dmgPaletteColor[1][0] = 0x0; // Lower 2 bits not used, transparent for sprites
+			dmgPaletteColor[1][1] = rOBP0->getBits(2,3); 
+			dmgPaletteColor[1][2] = rOBP0->getBits(4,5); 
+			dmgPaletteColor[1][3] = rOBP0->getBits(6,7); 
 			break;
 		case 0xFF49: // OBP1 (Object palette 1 data, non-gbc mode only)
 			// See BGP above
-			ngbcPaletteColor[2][0] = 0x0; // Lower 2 bits not used, transparent for sprites
-			ngbcPaletteColor[2][1] = rOBP1->getBits(2,3);
-			ngbcPaletteColor[2][2] = rOBP1->getBits(4,5);
-			ngbcPaletteColor[2][3] = rOBP1->getBits(6,7);
+			dmgPaletteColor[2][0] = 0x0; // Lower 2 bits not used, transparent for sprites
+			dmgPaletteColor[2][1] = rOBP1->getBits(2,3);
+			dmgPaletteColor[2][2] = rOBP1->getBits(4,5);
+			dmgPaletteColor[2][3] = rOBP1->getBits(6,7);
 			break;
 		case 0xFF4A: // WY (Window Y Position)
 			checkWindowVisible();
@@ -523,30 +547,28 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 			checkWindowVisible();
 			break;
 		case 0xFF4F: // VBK (VRAM bank select, gbc mode)
-			bs = rVBK->getBit(0) ? 1 : 0;
+			bs = rVBK->bit0() ? 1 : 0;
 			break;
 		case 0xFF68: // BGPI (Background palette index, gbc mode)
-			bgPaletteIndex        = rBGPI->getBits(0,5); // Index in the BG palette byte array
-			bgPaletteIndexAutoInc = rBGPI->getBit(7); // Auto increment the BG palette byte index
+			bgPaletteIndex = rBGPI->getBits(0,5); // Index in the BG palette byte array
 			break;
 		case 0xFF69: // BGPD (Background palette data, gbc mode)
 			if(bgPaletteIndex > 0x3F)
 				bgPaletteIndex = 0;
 			bgPaletteData[bgPaletteIndex] = rBGPD->getValue();
 			updateBackgroundPalette(); // Updated palette data, refresh the real RGB colors
-			if(bgPaletteIndexAutoInc)
+			if(rBGPI->bit7()) // Auto increment the BG palette byte index
 				bgPaletteIndex++;
 			break;
 		case 0xFF6A: // OBPI (Sprite palette index, gbc mode)
-			objPaletteIndex        = rOBPI->getBits(0,5); // Index in the OBJ (sprite) palette byte array
-			objPaletteIndexAutoInc = rOBPI->getBit(7); // Auto increment the OBJ (sprite) palette byte index
+			objPaletteIndex = rOBPI->getBits(0,5); // Index in the OBJ (sprite) palette byte array
 			break;
 		case 0xFF6B: // OBPD (Sprite palette index, gbc mode)
 			if(objPaletteIndex > 0x3F)
 				objPaletteIndex = 0;
 			objPaletteData[objPaletteIndex] = rOBPD->getValue();
 			updateObjectPalette(); // Updated palette data, refresh the real RGB colors
-			if(objPaletteIndexAutoInc)
+			if(rOBPI->bit7()) // Auto increment the OBJ (sprite) palette byte index
 				objPaletteIndex++;
 			break;
 		default:
@@ -621,7 +643,7 @@ void GPU::updateBackgroundPalette(){
 		lowByte = bgPaletteData[bgPaletteIndex];
 		highByte = bgPaletteData[bgPaletteIndex+1];
 	}
-	gbcPaletteColors[bgPaletteIndex/8][(bgPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
+	cgbPaletteColor[bgPaletteIndex/8][(bgPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
 }
 
 /** Update true RGB sprite palette by converting GBC format colors.
@@ -637,7 +659,7 @@ void GPU::updateObjectPalette(){
 		lowByte = objPaletteData[objPaletteIndex];
 		highByte = objPaletteData[objPaletteIndex+1];	
 	}
-	gbcPaletteColors[objPaletteIndex/8+8][(objPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
+	cgbPaletteColor[objPaletteIndex/8+8][(objPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
 }
 
 void GPU::defineRegisters(){
@@ -663,29 +685,19 @@ void GPU::defineRegisters(){
 bool GPU::checkWindowVisible(){	
 	// The window is visible if WX=[0,167) and WY=[0,144)
 	// WX=7, WY=0 locates the window at the upper left of the screen
-	return (winDisplayEnable = rLCDC->getBit(5) && (rWX->getValue() < 167) && (rWY->getValue() < 144));
+	return (winDisplayEnable = rLCDC->bit5() && (rWX->getValue() < 167) && (rWY->getValue() < 144));
 }
 
 void GPU::userAddSavestateValues(){
-	unsigned int size = sizeof(bool);
-	unsigned int byte = sizeof(unsigned char);
 	// Bools
-	addSavestateValue(&bgDisplayEnable,        size);
-	addSavestateValue(&objDisplayEnable,       size);
-	addSavestateValue(&objSizeSelect,          size);
-	addSavestateValue(&bgTileMapSelect,        size);
-	addSavestateValue(&bgWinTileDataSelect,    size);
-	addSavestateValue(&winDisplayEnable,       size);
-	addSavestateValue(&winTileMapSelect,       size);
-	addSavestateValue(&lcdDisplayEnable,       size);
-	addSavestateValue(&bgPaletteIndexAutoInc,  size);
-	addSavestateValue(&objPaletteIndexAutoInc, size);
+	addSavestateValue(&winDisplayEnable, sizeof(bool));
 	// Bytes
+	unsigned int byte = sizeof(unsigned char);
 	addSavestateValue(&bgPaletteIndex,  byte);
 	addSavestateValue(&objPaletteIndex, byte);
-	addSavestateValue(ngbcPaletteColor, byte * 12);
+	addSavestateValue(dmgPaletteColor, byte * 12);
 	addSavestateValue(bgPaletteData,    byte * 64);
 	addSavestateValue(objPaletteData,   byte * 64);
-	//ColorRGB gbcPaletteColors[16][4];
+	//ColorRGB cgbPaletteColor[16][4];
 }
 

@@ -15,80 +15,141 @@ class ConsoleGBC;
 
 class GPU : public SystemComponent {
 public:
+	/** Default constructor
+	  */
 	GPU();
 
+	/** Destructor
+	  */
 	~GPU();
 	
+	/** Initialize GPU and output window (LCD)
+	  */
 	void initialize();
 
+	/** Update the interpreter console and draw it to the screen
+	  */
 	void drawConsole();
 
+	/** Draw both VRAM tilemaps (0x8000 and 0x9800) in an external window
+	  */
 	void drawTileMaps(Window *win);
 
+	/** Draw one of the drawing layers in an external window
+	  * @param mapSelect If set to true, selects VRAM tile map at address 0x9C00, else selects map at 0x9800
+	  */
 	void drawLayer(Window *win, bool mapSelect=true);
 
-	void disableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = false; }
+	/** Disable one of the three drawing layers
+	  * Layers are still rendered internally, but they are not drawn to the screen
+	  *  0: Background layer
+	  *  1: Window layer
+	  *  2: Sprites layer
+	  */
+	void disableRenderLayer(const unsigned char &layer){ 
+		if(layer <= 3)
+			userLayerEnable[layer] = false; 
+	}
 	
-	void enableRenderLayer(const unsigned char &layer){ userLayerEnable[layer] = true; }
+	/** Enable one of the three drawing layers
+	  * Layers are still rendered internally, but they are not drawn to the screen
+	  *  0: Background layer
+	  *  1: Window layer
+	  *  2: Sprites layer
+	  */
+	void enableRenderLayer(const unsigned char &layer){ 
+		if(layer <= 3)
+			userLayerEnable[layer] = true; 
+	}
 
-	void drawNextScanline(SpriteHandler *oam);
+	/** Draw the next LCD scanline
+	  * @param oam Pointer to the system sprite manager
+	  * @return The number of ticks to delay the 4 MHz pixel clock due to sprite rendering
+	  */
+	unsigned short drawNextScanline(SpriteHandler *oam);
 
+	/** Draw the current screen buffer
+	  */
 	void render();
 
+	/** Process OpenGL window events
+	  */
 	void processEvents();
 
-	Window *getWindow(){ return window.get(); }
+	/** Get pointer to the graphical output window
+	  */
+	Window *getWindow(){ 
+		return window.get(); 
+	}
 
+	/** Get the status of the OpenGL window
+	  */
 	bool getWindowStatus();
 
+	/** Get the number of sprites drawn on the most recent LCD scanline
+	  */
+	unsigned char getSpritesDrawn() const {
+		return nSpritesDrawn;
+	}
+
+	/** Get a DMG color code from DMG palette data array
+	  */
 	unsigned char getDmgPaletteColorHex(const unsigned short &index) const ;
 
+	/** Get a 15-bit color (5-bit RGB components) from sprite palette data array
+	  */
 	unsigned short getBgPaletteColorHex(const unsigned short &index) const ;
 
+	/** Get a 15-bit color (5-bit RGB components) from sprite palette data array
+	  */
 	unsigned short getObjPaletteColorHex(const unsigned short &index) const ;
 	
+	/** Set the OpenGL pixel scaling factor
+	  */
 	void setPixelScale(const unsigned int &n);
 
+	/** Print a string to the interpreter console
+	  */
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
 
+	/** Write to a GPU register
+	  */
 	bool writeRegister(const unsigned short &reg, const unsigned char &val) override ;
 	
+	/** Read a GPU register
+	  */
 	bool readRegister(const unsigned short &reg, unsigned char &val) override ;
 
+	/** Define all GPU system registers
+	  */
 	void defineRegisters() override ;
 
 private:
-	bool bgDisplayEnable;
-	bool objDisplayEnable;
-	bool objSizeSelect; ///< Sprite size [0: 8x8, 1: 8x16]
-	bool bgTileMapSelect;
-	bool bgWinTileDataSelect;
-	bool winDisplayEnable;
-	bool winTileMapSelect;
-	bool lcdDisplayEnable;
+	bool winDisplayEnable; ///< Set to true if the window layer is enabled and is on screen
 
-	bool bgPaletteIndexAutoInc;
-	bool objPaletteIndexAutoInc;
+	unsigned char nSpritesDrawn; ///< Number of sprites drawn on the most recent scanline
 
-	// Gameboy colors
-	unsigned char ngbcPaletteColor[3][4]; ///< Original GB background palettes
+	unsigned char bgPaletteIndex; ///< Current index in the background palette data array
 
-	unsigned char bgPaletteIndex;
-	unsigned char objPaletteIndex;
+	unsigned char objPaletteIndex; ///< Current index in the sprite palette data array
 
-	// GBC colors
+	unsigned char dmgPaletteColor[3][4]; ///< Original GB background palettes
+
 	unsigned char bgPaletteData[64]; ///< GBC background palette 0-7
+
 	unsigned char objPaletteData[64]; ///< GBC sprite palette 0-7
 
-	ColorRGB gbcPaletteColors[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
+	ColorRGB cgbPaletteColor[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
 
 	std::unique_ptr<Window> window; ///< Pointer to the main renderer window
 	
 	std::unique_ptr<ConsoleGBC> console; ///< Pointer to the console object used for printing text.
 	
-	ColorGBC currentLineSprite[256];
-	ColorGBC currentLineWindow[256];
-	ColorGBC currentLineBackground[256];
+	ColorGBC currentLineSprite[256]; ///< Pixel color and palette information for the current sprite layer scanline
+	
+	ColorGBC currentLineWindow[256]; ///< Pixel color and palette information for the current window layer scanline
+	
+	ColorGBC currentLineBackground[256]; ///< Pixel color and palette information for the current background layer scanline
 
 	bool userLayerEnable[3]; ///< Flags for the three render layers.
 
@@ -136,6 +197,8 @@ private:
 	  */
 	void updateObjectPalette();
 	
+	/** Return true if the window layer is enabled and is on screen
+	  */
 	bool checkWindowVisible();
 	
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
