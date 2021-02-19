@@ -1,12 +1,14 @@
 #include "Register.hpp"
 #include "Support.hpp"
 
-Register::Register(const std::string &name, const std::string &bits) : value(0), readBits(0), writeBits(0), sName(name), address(0), comp(0x0) { 
-	// Read/Write bits
-	// 0: Not readable or writeable
-	// 1: Read-only
-	// 2: Write-only
-	// 3: Readable and writeable
+Register::Register(const std::string &name, const std::string &bits) : 
+	value(0), 
+	readBits(0), 
+	writeBits(0), 
+	sName(name), 
+	address(0), 
+	comp(0x0) 
+{ 
 	setMasks(bits);
 }
 
