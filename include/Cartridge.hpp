@@ -48,8 +48,14 @@ public:
 
 	/** Return true if the cartridge has an internal RAM bank
 	  */
-	bool hasRam(){ 
+	bool hasRam() const { 
 		return !ram.empty(); 
+	}
+
+	/** Return true if a ROM is loaded in memory
+	  */
+	bool isLoaded() const {
+		return bLoaded; 
 	}
 
 	/** Get pointer to internal RAM bank
@@ -144,6 +150,8 @@ public:
 	void print();
 
 private:
+	bool bLoaded; ///< Set to true if a ROM is loaded in memory
+
 	bool ramSelect; ///< Cartridge ROM/RAM select (0: ROM, 1: RAM)
 
 	bool extRamEnabled; ///< Cartridge internal RAM enabled

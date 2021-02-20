@@ -15,6 +15,7 @@ constexpr unsigned short ROM_HIGH     = 0x8000;
 
 Cartridge::Cartridge() : 
 	SystemComponent("Cartridge", 0x54524143), // "CART" 
+	bLoaded(false),
 	ramSelect(false), 
 	extRamEnabled(false),
 	extRamSupport(false),
@@ -191,10 +192,15 @@ bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	if(verbose) 
 		print();
 	
+	// Set ROM loaded flag
+	bLoaded = true;
+	
 	return true;
 }
 
 void Cartridge::unload(){
+	mem.clear();
+	bLoaded = false;
 }
 
 unsigned int Cartridge::readHeader(std::ifstream &f){
