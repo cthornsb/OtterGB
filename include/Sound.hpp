@@ -173,6 +173,11 @@ private:
 
 	std::unique_ptr<MidiFile::MidiFileReader> midiFile; ///< Midi file recorder
 	
+	/** Power down APU
+	  * Stop audio output stream, disable audio output channels, clear all APU registers, and reset all audio DACs.
+	  */
+	void powerDown();
+	
 	/** Handle enabling or disabling channel output when that channel's DAC is triggered (by writting to NRx4)
 	  * @param ch Audio channel number (1, 2, 3, or 4)
 	  * @return True if the specified channel is now enabled and return false otherwise

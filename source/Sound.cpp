@@ -186,24 +186,8 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 				// Reset frame sequencer (the 512 Hz clock is always running, even while APU is powered down)
 				nSequencerTicks = 0;
 			}
-			else{ // Power off
-				// Pause audio output
-				pause();
-				// Disable channels
-				disableChannel(4); // Ch 4 OFF
-				disableChannel(3); // Ch 3 OFF
-				disableChannel(2); // Ch 2 OFF
-				disableChannel(1); // Ch 1 OFF
-				for(unsigned char i = 0x10; i < 0x30; i++){ // Clear all sound registers (except NR52 and wave RAM)
-					if(i == 0x26) // Skip NR52
-						continue; 
-					sys->clearRegister(i); // Set register to zero
-				}
-				// Reset DACs
-				ch1.reset();
-				ch2.reset();
-				ch3.reset();
-				ch4.reset();
+			else{ // Power down APU
+				powerDown();
 			}
 			break;
 		default:
@@ -458,6 +442,28 @@ void SoundProcessor::stopMidiFile(){
 	midiFile->finalize(nMidiClockTicks); 
 	midiFile->write(); // Write midi file to disk
 	bRecordMidi = false;
+}
+
+void SoundProcessor::powerDown(){
+	// Pause audio output
+	pause();
+	
+	// Disable channels
+	disableChannel(4); // Ch 4 OFF
+	disableChannel(3); // Ch 3 OFF
+	disableChannel(2); // Ch 2 OFF
+	disableChannel(1); // Ch 1 OFF
+	for(unsigned char i = 0x10; i < 0x30; i++){ // Clear all sound registers (except NR52 and wave RAM)
+		if(i == 0x26) // Skip NR52
+			continue; 
+		sys->clearRegister(i); // Set register to zero
+	}
+	
+	// Reset DACs
+	ch1.reset();
+	ch2.reset();
+	ch3.reset();
+	ch4.reset();
 }
 
 bool SoundProcessor::handleTriggerEnable(const int& ch){
