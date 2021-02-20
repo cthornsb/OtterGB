@@ -114,12 +114,14 @@ public:
 		return bRecordMidi;
 	}
 
-	// The sound controller has no associated RAM, so return false to avoid trying to access it.
+	/** The sound controller has no associated RAM, so return false to avoid trying to access it
+	  */
 	bool preWriteAction() override { 
 		return false; 
 	}
 
-	// The sound controller has no associated RAM, so return false to avoid trying to access it.	
+	/** The sound controller has no associated RAM, so return false to avoid trying to access it.
+	  */
 	bool preReadAction() override { 
 		return false; 
 	}
@@ -130,12 +132,20 @@ public:
 	  */
 	bool checkRegister(const unsigned short &reg) override;
 
+	/** Write APU register
+	  */
 	bool writeRegister(const unsigned short &reg, const unsigned char &val) override;
 	
+	/** Read APU register
+	  */
 	bool readRegister(const unsigned short &reg, unsigned char &val) override;
 
+	/** Clock the audio DACs, the mixer, and the frame sequencer
+	  */
 	bool onClockUpdate() override;
 	
+	/** Define APU registers
+	  */
 	void defineRegisters() override;
 
 private:
@@ -155,7 +165,7 @@ private:
 	
 	ShiftRegister ch4; ///< Channel 4 (noise)
 
-	unsigned char wavePatternRAM[16];
+	unsigned char wavePatternRAM[16]; ///< 4-bit WAVE audio samples
 	
 	unsigned int nSequencerTicks; ///< Frame sequencer tick counter
 	
@@ -169,10 +179,18 @@ private:
 	  */
 	bool handleTriggerEnable(const int& ch);
 
+	/** Get a pointer to one of the four audio DACs (ch=1 to 4)
+	  * @return Pointer to channel ch's audio DAC or null if invalid channel
+	  */
 	AudioUnit* getAudioUnit(const int& ch);
 
+	/** Get a const pointer to one of the four audio DACs (ch=1 to 4)
+	  * @return Pointer to channel ch's audio DAC or null if invalid channel
+	  */
 	const AudioUnit* getConstAudioUnit(const int& ch) const ;
 
+	/** Clock the frame sequencer, disabling any DACs which clocking has caused to expire
+	  */
 	void rollover() override;
 
 	/** Add elements to a list of values which will be written to / read from an emulator savestate

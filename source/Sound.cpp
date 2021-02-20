@@ -335,7 +335,7 @@ bool SoundProcessor::onClockUpdate(){
 	
 	// Update the 512 Hz frame sequencer.
 	if(++nCyclesSinceLastTick >= nPeriod){
-		this->reset();
+		this->reload();
 		if(bMasterSoundEnable)
 			this->rollover();
 		return true;

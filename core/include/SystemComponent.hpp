@@ -384,6 +384,11 @@ public:
 		verboseMode = state; 
 	}
 
+	/** Reset system component to initial conditions
+	  * Clear component memory and call onUserReset().
+	  */
+	void reset();
+
 protected:
 	SystemGBC *sys; ///< Pointer to the system bus
 
@@ -476,6 +481,15 @@ protected:
 	  *  Read 2 byte RAM bank select
 	  */
 	unsigned int readSavestateHeader(std::ifstream &f);
+	
+	/** Reset component memory
+	  */
+	void resetMemory();
+	
+	/** Handle call to reset system component
+	  * Called from reset().
+	  */
+	virtual void onUserReset() { }
 };
 
 #endif

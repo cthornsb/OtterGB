@@ -103,16 +103,16 @@ void SystemComponent::readFastBank0(const unsigned short &loc, unsigned char &de
 void SystemComponent::print(const unsigned short bytesPerRow/*=10*/){
 }
 
+void SystemComponent::reset(){
+	resetMemory();
+	this->onUserReset();
+}
+
 unsigned int SystemComponent::writeMemoryToFile(std::ofstream &f){
 	if(!size)
 		return 0;
 
 	// Write memory contents to the output file.	
-	/*unsigned int nWritten = 0;	
-	for(unsigned short i = 0; i < nBanks; i++){
-		f.write((char*)&mem[i][0], nBytes);
-		nWritten += nBytes;
-	}*/
 	f.write((char*)&mem[0][0], size);
 
 	return size;
@@ -123,13 +123,6 @@ unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
 		return 0;
 
 	// Write memory contents to the output file.
-	/*unsigned int nRead = 0;	
-	for(unsigned short i = 0; i < nBanks; i++){
-		f.read((char*)&mem[i][0], nBytes);
-		if(f.eof() || !f.good())
-			return nRead;
-		nRead += nBytes;
-	}*/
 	f.read((char*)&mem[0][0], size);
 
 	return size;
@@ -193,3 +186,13 @@ unsigned int SystemComponent::readSavestateHeader(std::ifstream &f){
 	f.read((char*)&bs, 2); // Read the bank select
 	return 13;
 }
+
+void SystemComponent::resetMemory(){
+	if(!size)
+		return;
+	for(std::vector<std::vector<unsigned char> >::iterator iter = mem.begin(); iter != mem.end(); iter++){
+		std::fill(iter->begin(), iter->end(), 0);
+	}
+	bs = 0; // Reset bank select
+}
+

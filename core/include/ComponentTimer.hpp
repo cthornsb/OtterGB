@@ -62,7 +62,7 @@ public:
 	
 	/** Reset the number of cycles since the last time the clock rolled over
 	  */
-	void reset(){ 
+	void reload(){ 
 		nCyclesSinceLastTick = 0; 
 	}
 
@@ -79,7 +79,7 @@ protected:
 	  * Called when clocking the timer causes it to reset
 	  */
 	virtual void rollover(){ 
-		reset();
+		reload();
 	}
 };
 
