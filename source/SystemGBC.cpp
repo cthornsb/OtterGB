@@ -1248,8 +1248,8 @@ void SystemGBC::resumeUntilNextVBlank(){
 }
 
 void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
-	bLockedVRAM = lockVRAM;
-	bLockedOAM = lockOAM;
+	//bLockedVRAM = lockVRAM;
+	//bLockedOAM = lockOAM;
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){

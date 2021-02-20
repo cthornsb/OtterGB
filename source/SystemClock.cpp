@@ -19,8 +19,8 @@ constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 456;   // CPU cycles per HSYNC (
 SystemClock::SystemClock() : 
 	SystemComponent("Clock", 0x204b4c43), // "CLK "
 	vsync(false), 
-	cyclesSinceLastVSync(VERTICAL_SYNC_CYCLES), 
-	cyclesSinceLastHSync(HORIZONTAL_SYNC_CYCLES),
+	cyclesSinceLastVSync(0), 
+	cyclesSinceLastHSync(0),
 	currentClockSpeed(0),
 	cyclesPerVSync(0),
 	cyclesPerHSync(0),
@@ -46,14 +46,14 @@ void SystemClock::setDoubleSpeedMode(){
 	waitUntilNextVSync();
 	currentClockSpeed = SYSTEM_CLOCK_FREQUENCY * 2;
 	modeStart[0] = MODE0_START * 2;
-	modeStart[1] = VERTICAL_SYNC_CYCLES * 2;
-	modeStart[2] = HORIZONTAL_SYNC_CYCLES * 2;
-	modeStart[3] = HORIZONTAL_SYNC_CYCLES * 2;
+	modeStart[1] = MODE1_START * 2;
+	modeStart[2] = MODE2_START * 2;
+	modeStart[3] = MODE3_START * 2;
 	cyclesPerVSync = VERTICAL_SYNC_CYCLES * 2;
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES * 2;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	framePeriod = 1E6*VERTICAL_SYNC_CYCLES/SYSTEM_CLOCK_FREQUENCY; // in microseconds
+	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
 }
 
 void SystemClock::setNormalSpeedMode(){
@@ -67,7 +67,7 @@ void SystemClock::setNormalSpeedMode(){
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	framePeriod = 1E6*VERTICAL_SYNC_CYCLES/(4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
+	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
 }
 
 // Tick the system clock.
