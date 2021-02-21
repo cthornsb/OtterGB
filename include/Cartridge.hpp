@@ -174,11 +174,11 @@ private:
 
 	char manufacturer[5]; ///< 4 character manufacturer code
 
-	unsigned char gbcFlag; ///< Gameboy Color flag
+	unsigned char gbcFlag; ///< CGB flag
 
 	char licensee[3]; ///< 2 character licensee code
 
-	unsigned char sgbFlag; ///< Super gameboy flag
+	unsigned char sgbFlag; ///< SGB flag
 
 	unsigned char cartridgeType; ///< Catridge type ID
 

@@ -210,9 +210,9 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	f.read((char*)bootBitmapString, 48); // Boot bitmap
 	f.read((char*)titleString, 11); titleString[11] = '\0'; // Cartridge title
 	f.read((char*)manufacturer, 4); manufacturer[4] = '\0'; // Manufacturer string
-	f.read((char*)&gbcFlag, 1); // Gameboy Color flag
+	f.read((char*)&gbcFlag, 1); // CGB flag
 	f.read((char*)licensee, 2); licensee[2] = '\0'; // Licensee
-	f.read((char*)&sgbFlag, 1); // Super Gameboy flag
+	f.read((char*)&sgbFlag, 1); // SGB flag
 	f.read((char*)&cartridgeType, 1); // Cartridge type
 	f.read((char*)&romSize, 1); // Size of onboard ROM
 	f.read((char*)&ramSize, 1); // Size of onboard RAM (if present)
@@ -222,7 +222,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	f.read((char*)&headerChecksum, 1); //
 	f.read((char*)&globalChecksum, 2); // High byte first
 
-	// Check for Gameboy Color mode flag
+	// Check for CGB mode flag
 	bGBCMODE = ((gbcFlag & 0x80) != 0);
 	
 	// Set cartridge type

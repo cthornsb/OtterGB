@@ -82,7 +82,7 @@ Register *rFF75 = 0x0;
 Register *rFF76 = 0x0;
 Register *rFF77 = 0x0;
 
-// Gameboy Color flag
+// CGB flag
 bool bGBCMODE = false;
 
 // Double-speed flag

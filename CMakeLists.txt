@@ -174,14 +174,14 @@ if(ENABLE_DEBUGGER)
 	add_subdirectory(qtfiles)
 endif()
 
-#Set the Gameboy boot ROM
+#Set the DMG bootstrap ROM
 if(NOT GB_BOOT_ROM)
-	set(GB_BOOT_ROM "" CACHE STRING "Gameboy boot program" FORCE)
+	set(GB_BOOT_ROM "" CACHE STRING "DMG bootstrap program" FORCE)
 endif(NOT GB_BOOT_ROM)
 
-#Set the Gameboy Color boot ROM
+#Set the CGB bootstrap ROM
 if(NOT GBC_BOOT_ROM)
-	set(GBC_BOOT_ROM "" CACHE STRING "Gameboy Color boot program" FORCE)
+	set(GBC_BOOT_ROM "" CACHE STRING "CGB bootstrap program" FORCE)
 endif(NOT GBC_BOOT_ROM)
 
 #Add the graphics directory.

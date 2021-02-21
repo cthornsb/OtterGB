@@ -47,15 +47,15 @@ const std::string sysError      = " [System] Error! ";
 const std::string sysFatalError = " [System] FATAL ERROR! ";
 
 #ifdef GB_BOOT_ROM
-	const std::string gameboyBootRomPath(GB_BOOT_ROM);
+	const std::string bootstrapRomPathDMG(GB_BOOT_ROM);
 #else
-	const std::string gameboyBootRomPath("");
+	const std::string bootstrapRomPathDMG("");
 #endif
 
 #ifdef GBC_BOOT_ROM
-	const std::string gameboyColorBootRomPath(GBC_BOOT_ROM);
+	const std::string bootstrapRomPathCGB(GBC_BOOT_ROM);
 #else
-	const std::string gameboyColorBootRomPath("");
+	const std::string bootstrapRomPathCGB("");
 #endif
 
 /** INTERRUPTS:
@@ -1001,19 +1001,19 @@ bool SystemGBC::reset() {
 		bool loadBootROM = false;
 		std::ifstream bootstrap;
 		if(bGBCMODE){
-			if(!gameboyColorBootRomPath.empty()){
-				bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrapRomPathCGB.empty()){
+				bootstrap.open(bootstrapRomPathCGB.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load GBC boot ROM \"" << bootstrapRomPathCGB << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}
 		}
 		else{
-			if(!gameboyBootRomPath.empty()){
-				bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
+			if(!bootstrapRomPathDMG.empty()){
+				bootstrap.open(bootstrapRomPathDMG.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load GB boot ROM \"" << gameboyBootRomPath << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load GB boot ROM \"" << bootstrapRomPathDMG << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}

@@ -85,7 +85,7 @@ extern Register *rFF75;
 extern Register *rFF76;	
 extern Register *rFF77;
 
-// Gameboy Color flag
+// CGB flag
 extern bool bGBCMODE;
 
 // Double-speed flag
