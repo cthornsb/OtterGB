@@ -308,6 +308,7 @@ void ConsoleGBC::handleInput(){
 			break;
 		case cmdType::RESET: // Reset
 			sys->reset();
+			sys->closeDebugConsole();
 			break;
 		case cmdType::QSAVE: // Quicksave
 			if(nArgs >= 2){ // User specified filename

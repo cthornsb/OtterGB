@@ -302,7 +302,7 @@ void SystemGBC::initialize(){
 	addDummyRegister(0x0, 0x50); // The "register" used to disable the bootstrap ROM
 	rIE  = new Register("IE",  "33333000");
 	rIME = new Register("IME", "30000000");
-	(*rIME) = 1; // Interrupts enabled by default
+	enableInterrupts(); // Interrupts enabled by default
 
 	// Undocumented registers
 	addSystemRegister(0x6C, rFF6C, "FF6C", "30000000");
@@ -488,11 +488,11 @@ void SystemGBC::handleJoypadInterrupt(){
 }
 
 void SystemGBC::enableInterrupts(){ 
-	(*rIME) = 1; 
+	rIME->setValue(1);
 }
 
 void SystemGBC::disableInterrupts(){ 
-	(*rIME) = 0;
+	rIME->setValue(0);
 }
 
 bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
@@ -952,26 +952,51 @@ bool SystemGBC::reset() {
 	if(!initSuccessful)
 		return false;
 
-	// Set default register values.
-	cpu->reset();
-
 	// Read the ROM into memory if it is not currently loaded
 	if(bNeedsReloaded){
 		if(cart->isLoaded()) // Unload previously loaded ROM
 			cart->unload();
 	
 		// Read new ROM file
+		if(verboseMode){
+			std::cout << sysMessage << "Reading input ROM file \"" << romPath << "\"" << std::endl;
+		}
 		bool retval = cart->readRom(romPath, verboseMode);
 
 		// Check that the ROM is loaded and the window is open
 		if (!retval || !gpu->getWindowStatus()){
-			std::cout << sysError << "Failed to read input ROM file (" << romPath << ")." << std::endl;
+			std::cout << sysError << "Failed to read ROM file (" << romPath << ")." << std::endl;
 			return false;
 		}
 
 		// ROM loaded successfully 		
 		bNeedsReloaded = false;
 	}
+
+	// Clear system registers
+	for(std::vector<Register>::iterator reg = registers.begin(); reg != registers.end(); reg++){
+		reg->clear();
+	}
+
+	// Set default register values.
+	cpu->reset();
+	// Reset all system components (except for ROM)
+	/*for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
+		if(comp->first != "Cartridge")
+			comp->second->reset2();
+	}*/
+
+	// Interrupts enabled by default
+	enableInterrupts();
+	rIE->clear();
+
+	// Reset CPU state flags
+	cpuStopped = false;
+	cpuHalted = false;
+
+	// Reset VRAM and OAM locks
+	bLockedVRAM = false;
+	bLockedOAM = false;
 
 	// Load save data (if available)
 	if(autoLoadExtRam)
@@ -986,59 +1011,51 @@ bool SystemGBC::reset() {
 	}
 
 	// Load the boot ROM (if available)
-	bool loadBootROM = false;
-	std::ifstream bootstrap;
-	if(bGBCMODE){
-		if(!gameboyColorBootRomPath.empty()){
-			bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
-			if(!bootstrap.good())
-				std::cout << sysWarning << "Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\"." << std::endl;
-			else
-				loadBootROM = true;
+	if(bootROM.empty()){
+		bool loadBootROM = false;
+		std::ifstream bootstrap;
+		if(bGBCMODE){
+			if(!gameboyColorBootRomPath.empty()){
+				bootstrap.open(gameboyColorBootRomPath.c_str(), std::ios::binary);
+				if(!bootstrap.good())
+					std::cout << sysWarning << "Failed to load GBC boot ROM \"" << gameboyColorBootRomPath << "\"." << std::endl;
+				else
+					loadBootROM = true;
+			}
+		}
+		else{
+			if(!gameboyBootRomPath.empty()){
+				bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
+				if(!bootstrap.good())
+					std::cout << sysWarning << "Failed to load GB boot ROM \"" << gameboyBootRomPath << "\"." << std::endl;
+				else
+					loadBootROM = true;
+			}
+		}
+		if(loadBootROM){
+			bootstrap.seekg(0, bootstrap.end);
+			bootLength = (unsigned short)bootstrap.tellg();
+			bootstrap.seekg(0);
+			bootROM.insert(bootROM.begin(), bootLength, 0); // Reserve enough space for bootstrap
+			bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire contents all at once
+			bootstrap.close();
+			std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;
 		}
 	}
-	else{
-		if(!gameboyBootRomPath.empty()){
-			bootstrap.open(gameboyBootRomPath.c_str(), std::ios::binary);
-			if(!bootstrap.good())
-				std::cout << sysWarning << "Failed to load GB boot ROM \"" << gameboyBootRomPath << "\"." << std::endl;
-			else
-				loadBootROM = true;
-		}
-	}
-	
-	if(loadBootROM){
-		bootstrap.seekg(0, bootstrap.end);
-		bootLength = (unsigned short)bootstrap.tellg();
-		bootstrap.seekg(0);
-		bootROM.reserve(bootLength);
-		bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire boot ROM at once
-		bootstrap.close();
-		std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;
-		cpu->setProgramCounter(0);
-		bootSequence = true;
-	}
-	else{ // Initialize the system registers with default values.
-		// Timer registers
-		(*rTIMA)  = 0x00;
-		(*rTMA)   = 0x00;
-		(*rTAC)   = 0x00;
-		
+
+	if(bootROM.empty()){ // Initialize the system registers with default values.
 		// Sound processor registers
 		(*rNR10)  = 0x80;
 		(*rNR11)  = 0xBF;
 		(*rNR12)  = 0xFE;
 		(*rNR14)  = 0xBF;
 		(*rNR21)  = 0x3F;
-		(*rNR22)  = 0x00;
 		(*rNR24)  = 0xBF;
 		(*rNR30)  = 0x7F;
 		(*rNR31)  = 0xFF;
 		(*rNR32)  = 0x9F;
 		(*rNR33)  = 0xBF;
 		(*rNR41)  = 0xFF;
-		(*rNR42)  = 0x00;
-		(*rNR43)  = 0x00;
 		(*rNR44)  = 0xBF;
 		(*rNR50)  = 0x77;
 		(*rNR51)  = 0xF3;
@@ -1046,32 +1063,23 @@ bool SystemGBC::reset() {
 
 		// GPU registers
 		(*rLCDC)  = 0x91;
-		(*rSCY)   = 0x00;
-		(*rSCX)   = 0x00;
-		(*rLYC)   = 0x00;
 		(*rBGP)   = 0xFC;
 		(*rOBP0)  = 0xFF;
 		(*rOBP1)  = 0xFF;
-		(*rWY)    = 0x00;
-		(*rWX)    = 0x00;
-
-		// Interrupt enable
-		(*rIE)    = 0x00;
 
 		// Undocumented registers (for completeness)
 		(*rFF6C)  = 0xFE;
-		(*rFF72)  = 0x00;
-		(*rFF73)  = 0x00;
-		(*rFF74)  = 0x00;
 		(*rFF75)  = 0x8F;
-		(*rFF76)  = 0x00;
-		(*rFF77)  = 0x00;
 
-		// Set the PC to the entry point of the program. Skip the boot sequence.
+		// Set the PC to the entry point of the program. Skip boot sequence.
 		cpu->setProgramCounter(cart->getProgramEntryPoint());
 		
-		// Disable the boot sequence
+		// Disable boot sequence
 		bootSequence = false;
+	}
+	else{ 
+		cpu->setProgramCounter(0); // Set program counter to beginning of bootstrap ROM
+		bootSequence = true; // Bootstrap already loaded, re-enable it
 	}
 
 	return true;
