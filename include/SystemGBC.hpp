@@ -207,6 +207,12 @@ public:
 		return romPath; 
 	}
 	
+	/** Return the current ROM directory
+	  */
+	std::string getRomDirectory() const {
+		return romDirectory;
+	}
+	
 	/** Return the current ROM filename
 	  */
 	std::string getRomFilename() const { 
@@ -376,11 +382,22 @@ public:
 		frameSkip = frames;
 	}
 
-	/** Set the system path directory to use for loading ROM files
+	/** Set the explicit input ROM filename
 	  */
 	void setRomPath(const std::string &path){
 		romPath = path;
 	}
+	
+	/** Set the system path directory to use for loading ROM files
+	  */
+	void setRomDirectory(const std::string& path){
+		romDirectory = path;
+	}
+	
+	/** Set the filename of input ROM
+	  * Not to be confused with setRomPath() which explicitly sets the ROM path.
+	  */
+	void setRomFilename(const std::string& fname);
 
 	/** Set program counter breakpoint
 	  * Execution will pause when the specified point in the program is reached.
@@ -660,6 +677,8 @@ private:
 	
 	bool bLockedOAM; ///< Set if OAM is locked while being read by PPU
 
+	bool bNeedsReloaded; ///< Set if ROM file should be reloaded on call to reset()
+
 	unsigned char dmaSourceH; ///< DMA source MSB
 	
 	unsigned char dmaSourceL; ///< DMA source LSB
@@ -669,6 +688,8 @@ private:
 	unsigned char dmaDestinationL; ///< DMA destination LSB
 
 	std::string romPath; ///< Full path to input ROM file
+	
+	std::string romDirectory; ///< Input ROM directory path (no filename)
 	
 	std::string romFilename; ///< Input ROM filename (with no path or extension)
 	
@@ -713,8 +734,11 @@ private:
 #endif
 
 	Breakpoint breakpointProgramCounter; ///< Program counter breakpoint
+	
 	Breakpoint breakpointMemoryWrite; ///< Memory address write access breakpoint
+	
 	Breakpoint breakpointMemoryRead; ///< Memory address read access breakpoint
+	
 	Breakpoint breakpointOpcode; ///< LR35902 opcode read breakpoint
 
 	unsigned short memoryAccessWrite[2]; ///< Memory address write access region

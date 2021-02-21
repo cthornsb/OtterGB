@@ -13,22 +13,24 @@ class SystemGBC;
 
 enum class cmdType{ 
 	NONE, 
-	QUIT,     // Close interpreter
-	HELP,     // Print help information
-	REG8,     // Get or set 8-bit register
-	REG16,    // Get or set 16-bit register
-	INST,     // Print most recent instruction
-	READ,     // Read from memory
-	WRITE,    // Write to memory
-	READREG,  // Read system register
-	WRITEREG, // Write system register
-	HEX,      // Convert a value to hexadecimal
-	BIN,      // Convert a value to binary
-	DEC,      // Convert a value to decimal
-	CLS,      // Clear terminal
-	RESET,    // Reset emulator
-	QSAVE,    // Quick-save
-	QLOAD     // Quick-load
+	QUIT,      ///< Close interpreter
+	HELP,      ///< Print help information
+	REG8,      ///< Get or set 8-bit register
+	REG16,     ///< Get or set 16-bit register
+	INST,      ///< Print most recent instruction
+	READ,      ///< Read from memory
+	WRITE,     ///< Write to memory
+	READREG,   ///< Read system register
+	WRITEREG,  ///< Write system register
+	HEX,       ///< Convert a value to hexadecimal
+	BIN,       ///< Convert a value to binary
+	DEC,       ///< Convert a value to decimal
+	CLS,       ///< Clear terminal
+	RESET,     ///< Reset emulator
+	QSAVE,     ///< Quick-save
+	QLOAD,     ///< Quick-load
+	DIRECTORY, ///< ROM directory
+	FILENAME   ///< ROM filename
 };
 
 class ConsoleCommand{

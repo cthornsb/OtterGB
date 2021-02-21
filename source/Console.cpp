@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "SystemGBC.hpp"
 #include "LR35902.hpp"
 #include "Console.hpp"
@@ -47,6 +45,8 @@ ConsoleGBC::ConsoleGBC() :
 	addConsoleCommand("reset",0, cmdType::RESET, "", "Reset emulator");
 	addConsoleCommand("qsave",0, cmdType::QSAVE, "[fname]", "Quicksave");
 	addConsoleCommand("qload",0, cmdType::QLOAD, "[fname]", "Quickload");
+	addConsoleCommand("dir"  ,0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
+	addConsoleCommand("file" ,0, cmdType::FILENAME, "[fname]", "Print ROM filename");
 	put('>');
 }
 
@@ -75,8 +75,8 @@ void ConsoleGBC::setSystem(SystemGBC* ptr) {
 
 void ConsoleGBC::newline(){
 	buffer.pop_front();
-	if(nX > 1)
-		line += buffer.back().substr(1, nX-1);
+	//if(nX > 1)
+	//	line += buffer.back().substr(1, nX-1);
 	buffer.push_back(std::string(nCols, ' '));
 	nX = 0;
 }
@@ -122,20 +122,22 @@ void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
 	}
 	else if(c == '\n' || c == '\r'){ // New line
 		buffer.back()[nX] = ' ';
-		buffer.pop_front();
-		if(flag && nX > 1)
-			line += buffer.back().substr(1, nX-1);
-		buffer.push_back(std::string(nCols, ' '));
-		nX = 0;
-		if(flag){
+		newline();
+		if(flag){ // User input
 			handleInput();
 			put('>');
 		}
+		else{ // Printing output
+			line = "";
+		}
 	}
 	else if(c == 0x8){ // Backspace
+		if(!line.empty()) // Pop off the last character
+			line.pop_back();
 		unput();
 	}
 	else{
+		line += c;
 		put(c);
 	}
 }
@@ -145,10 +147,9 @@ void ConsoleGBC::handleInput(){
 	LR35902 *cpu = sys->getCPU();
 	Register* reg = 0x0;
 	std::vector<std::string> args;
-	std::string userinput = toLowercase(line);
-	if (parser.isExpression(userinput)) {
+	if (parser.isExpression(line)) {
 		NumericalString value;
-		if (parser.parse(userinput, value)) {
+		if (parser.parse(line, value)) {
 			if(value.type == NUMTYPE::INTEGER)
 				(*this) << value.getUInt() << "\n";
 			else if(value.type == NUMTYPE::BOOLEAN)
@@ -160,7 +161,7 @@ void ConsoleGBC::handleInput(){
 		line = "";
 		return;
 	}
-	unsigned int nArgs = splitString(userinput, args, ' ');
+	unsigned int nArgs = splitString(line, args, ' ');
 	line = "";
 	if(!nArgs)
 		return;
@@ -169,7 +170,7 @@ void ConsoleGBC::handleInput(){
 	if(iter == commands.end()){
 		// CPU opcodes
 		OpcodeData data;
-		if(cpu->findOpcode(userinput, data)){ // Valid LR35902 opcode found
+		if(cpu->findOpcode(line, data)){ // Valid LR35902 opcode found
 			(*this) << data.getShortInstruction() << "\n";
 			while(data.executing()){
 				data.clock(cpu);
@@ -322,6 +323,22 @@ void ConsoleGBC::handleInput(){
 			}
 			else{
 				sys->quickload();
+			}
+			break;
+		case cmdType::DIRECTORY: // Display / set ROM directory
+			if(nArgs >= 2){ // User specified filename
+				sys->setRomDirectory(args.at(1));
+			}
+			else{
+				(*this) << sys->getRomDirectory() << "/\n";
+			}
+			break;
+		case cmdType::FILENAME: // Display / set ROM filename
+			if(nArgs >= 2){ // User specified filename
+				sys->setRomFilename(args.at(1));
+			}
+			else{
+				(*this) << sys->getRomFilename() + "." + sys->getRomExtension() << "\n";
 			}
 			break;
 		default:

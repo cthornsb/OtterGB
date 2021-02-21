@@ -54,6 +54,9 @@ void SystemClock::setDoubleSpeedMode(){
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
 	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
+	if(verboseMode){
+		std::cout << " [Clock] Switched CPU speed to double-speed mode." << std::endl;
+	}
 }
 
 void SystemClock::setNormalSpeedMode(){
@@ -68,6 +71,9 @@ void SystemClock::setNormalSpeedMode(){
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
 	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
+	if(verboseMode){
+		std::cout << " [Clock] Switched CPU speed to normal." << std::endl;
+	}
 }
 
 // Tick the system clock.
@@ -219,7 +225,7 @@ void SystemClock::startMode1(){
 void SystemClock::startMode2(){
 	lcdDriverMode = 2;
 	rSTAT->setBits(0, 1, 0x2);
-	sys->lockMemory(true, false); // OAM inaccessible
+	sys->lockMemory(false, true); // OAM inaccessible
 	if(rSTAT->bit5()) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
 }

@@ -100,11 +100,13 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	consoleIsOpen(false),
 	bLockedVRAM(false),
 	bLockedOAM(false),
+	bNeedsReloaded(true),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
 	dmaDestinationL(0),
 	romPath(),
+	romDirectory(),
 	romFilename(),
 	romExtension(),
 	pauseAfterNextInstruction(false),
@@ -178,19 +180,10 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		fatalError = true;
 		return;
 	}
-
+	
 	// Get the ROM filename and file extension
-	size_t index = romPath.find_last_of('/');
-	if(index != std::string::npos)
-		romFilename = romPath.substr(index+1);
-	else
-		romFilename = romPath;
-	index = romFilename.find_last_of('.');
-	if(index != std::string::npos){
-		romExtension = romFilename.substr(index+1);
-		romFilename = romFilename.substr(0, index);
-	}
-
+	setRomFilename(romPath);
+	
 	// Define all system components
 	serial.reset(new SerialController);
 	dma.reset(new DmaController);
@@ -460,7 +453,8 @@ bool SystemGBC::execute(){
 void SystemGBC::handleHBlankPeriod(){
 	if(!emulationPaused){
 		if(nFrames % frameSkip == 0){
-			sclk->setPixelClockPause( gpu->drawNextScanline(oam.get()) );
+			// We multiply the pixel clock pause period by two if in double-speed mode
+			sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
 		}
 		dma->onHBlank();
 	}
@@ -512,8 +506,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		if(bLockedVRAM) // PPU is using VRAM, access restricted
-			return false;
+		//if(bLockedVRAM) // PPU is using VRAM, access restricted
+		//	return false;
 		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
@@ -524,8 +518,8 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		wram->write(loc, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		if(bLockedOAM) // PPU is using OAM, access restricted
-			return false;
+		//if(bLockedOAM) // PPU is using OAM, access restricted
+		//	return false;
 		oam->write(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
@@ -574,8 +568,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		cart->readFast(loc-0x4000, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		if(bLockedVRAM) // PPU is using VRAM, access restricted
-			return false;
+		//if(bLockedVRAM) // PPU is using VRAM, access restricted
+		//	return false;
 		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
@@ -586,8 +580,8 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		wram->read(loc, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		if(bLockedOAM) // PPU is using OAM, access restricted
-			return false;
+		//if(bLockedOAM) // PPU is using OAM, access restricted
+		//	return false;
 		oam->read(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
@@ -739,6 +733,27 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 	}
 }
 
+void SystemGBC::setRomFilename(const std::string& fname){
+	size_t index = fname.find_last_of('/');
+	if(index != std::string::npos){
+		romFilename = fname.substr(index + 1);
+		romDirectory = fname.substr(0, index);
+	}
+	else
+		romFilename = fname;
+	index = romFilename.find_last_of('.');
+	if(index != std::string::npos){
+		romExtension = romFilename.substr(index+1);
+		romFilename = romFilename.substr(0, index);
+	}
+	romPath = romDirectory + "/" + romFilename + "." + romExtension;
+	std::cout << " dir=" << romDirectory << std::endl;
+	std::cout << " rom=" << romFilename << std::endl;
+	std::cout << " ext=" << romExtension << std::endl;
+	std::cout << " path=" << romPath << std::endl;
+	bNeedsReloaded = true;
+}
+	
 void SystemGBC::setBreakpoint(const unsigned short &pc){
 	breakpointProgramCounter.enable(pc);
 }
@@ -940,13 +955,22 @@ bool SystemGBC::reset() {
 	// Set default register values.
 	cpu->reset();
 
-	// Read the ROM into memory
-	bool retval = cart->readRom(romPath, verboseMode);
+	// Read the ROM into memory if it is not currently loaded
+	if(bNeedsReloaded){
+		if(cart->isLoaded()) // Unload previously loaded ROM
+			cart->unload();
+	
+		// Read new ROM file
+		bool retval = cart->readRom(romPath, verboseMode);
 
-	// Check that the ROM is loaded and the window is open
-	if (!retval || !gpu->getWindowStatus()){
-		std::cout << sysError << "Failed to read input ROM file (" << romPath << ")." << std::endl;
-		return false;
+		// Check that the ROM is loaded and the window is open
+		if (!retval || !gpu->getWindowStatus()){
+			std::cout << sysError << "Failed to read input ROM file (" << romPath << ")." << std::endl;
+			return false;
+		}
+
+		// ROM loaded successfully 		
+		bNeedsReloaded = false;
 	}
 
 	// Load save data (if available)
