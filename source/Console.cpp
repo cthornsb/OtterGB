@@ -18,6 +18,7 @@ ConsoleGBC::ConsoleGBC() :
 	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit emulator");
 	addConsoleCommand("close",0, cmdType::CLOSE, "", "Close console");
 	addConsoleCommand("help", 0, cmdType::HELP, "[cmd]", "Print list of commands or syntax for (cmd)");
+	addConsoleCommand("about",0, cmdType::ABOUT, "", "Print program information");
 	addConsoleCommand("a",    0, cmdType::REG8, "[val]", "Print A register");
 	addConsoleCommand("b",    0, cmdType::REG8, "[val]", "Print B register");
 	addConsoleCommand("c",    0, cmdType::REG8, "[val]", "Print C register");
@@ -230,6 +231,12 @@ void ConsoleGBC::handleInput(){
 					(*this) << allcmd->first << "\n";
 				}
 			}
+			break;
+		case cmdType::ABOUT:
+			//(*this) << "ottergb v" << Globals::VersionString << "\n";
+			(*this) << "ottergb v0.0\n";
+			(*this) << "by C Thornsberry\n";
+			(*this) << "github.com/cthornsb\n";
 			break;
 		case cmdType::REG8: // 8 bit cpu registers
 			if(nArgs >= 2){

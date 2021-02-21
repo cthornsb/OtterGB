@@ -16,6 +16,7 @@ enum class cmdType{
 	QUIT,      ///< Exit emulator
 	CLOSE,     ///< Close console
 	HELP,      ///< Print help information
+	ABOUT,     ///< Print program details
 	REG8,      ///< Get or set 8-bit register
 	REG16,     ///< Get or set 16-bit register
 	INST,      ///< Print most recent instruction
