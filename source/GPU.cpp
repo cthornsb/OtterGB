@@ -59,27 +59,10 @@ void GPU::initialize(){
 	window->setupKeyboardHandler();
 	window->clear();
 
-	// Set default palettes
-	if(bGBCMODE){ // Gameboy Color palettes (all white at startup)
-		for(int i = 0; i < 16; i++)
-			for(int j = 0; j < 4; j++)
-				cgbPaletteColor[i][j] = Colors::WHITE;
-	}
-	else{ // Gameboy palettes
-		cgbPaletteColor[0][0] = Colors::GB_GREEN;
-		cgbPaletteColor[0][1] = Colors::GB_LTGREEN;
-		cgbPaletteColor[0][2] = Colors::GB_DKGREEN;
-		cgbPaletteColor[0][3] = Colors::GB_DKSTGREEN;
-	}
+	// Set default color palettes
+	this->onUserReset();
 }
 
-/** Retrieve the color of a pixel in a tile bitmap.
-  * @param index The index of the tile in VRAM [0x8000,0x8FFF].
-  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
-  * @param dy    The vertical pixel in the bitmap [0,7] where the top-most pixel is denoted as y=0.
-  * @param bank  The VRAM bank number [0,1]
-  * @return      The color of the pixel in the range [0,3]
-  */
 unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned char &dx, const unsigned char &dy, const unsigned char &bank/*=0*/){
 	 // Retrieve a line of the bitmap at the requested pixel
 	unsigned char pixelColor = (mem[bank][index+2*dy] & (0x1 << dx)) >> dx; // LS bit of the color
@@ -87,14 +70,6 @@ unsigned char GPU::getBitmapPixel(const unsigned short &index, const unsigned ch
 	return pixelColor; // [0,3]
 }
 
-/** Draw a background tile.
-  * @param x The current horizontal pixel [0,256).
-  * @param y The vertical pixel row of the tile to draw.
-  * @param x0 Horizontal pixel offset in the layer.
-  * @param offset The memory offset of the selected tilemap in VRAM.
-  * @param line Array of all pixels for the current scanline.
-  * @return The number of pixels drawn.
-  */
 unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, const unsigned char &x0,
                             const unsigned short &offset, ColorGBC *line){
 	unsigned char tileY, tileX;
@@ -142,11 +117,11 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 	// Draw the specified line
 	unsigned char rx = x;
 	for(unsigned char dx = pixelX; dx <= 7; dx++){
-		if(bGBCMODE){ // Gameboy Color palettes
+		if(bGBCMODE){ // CGB palettes
 			pixelColor = getBitmapPixel(bmpLow, (!bgHorizontalFlip ? (7-dx) : dx), pixelY, (bgBankNumber ? 1 : 0));
 			line[rx].setColorBG(pixelColor, bgPaletteNumber, bgPriority);
 		}
-		else{ // Original gameboy palettes
+		else{ // DMG palettes
 			pixelColor = getBitmapPixel(bmpLow, (7-dx), pixelY);
 			line[rx].setColorBG(pixelColor, 0);
 		}
@@ -157,11 +132,6 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 	return (7-pixelX)+1;
 }
 
-/** Draw the current sprite.
-  * @param y The current LCD screen scanline [0,256).
-  * @param oam The currently selected sprite to draw.
-  * @return Returns true if the current scanline passes through the sprite and return false otherwise.
-  */
 bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	unsigned char xp = oam.xPos-8+rSCX->getValue(); // Top left
 	unsigned char yp = oam.yPos-16+rSCY->getValue(); // Top left
@@ -195,11 +165,11 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	// Draw the specified line
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(!currentLineSprite[xp].getColor()){
-			if(bGBCMODE){ // Gameboy Color sprite palettes (OBP0-7)
+			if(bGBCMODE){ // GBC sprite palettes (OBP0-7)
 				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY, (oam.gbcVramBank ? 1 : 0));
 				currentLineSprite[xp].setColorOBJ(pixelColor, oam.gbcPalette+8, oam.objPriority);
 			}
-			else{ // Original gameboy sprite palettes (OBP0-1)
+			else{ // DMG sprite palettes (OBP0-1)
 				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY);
 				currentLineSprite[xp].setColorOBJ(pixelColor, (oam.ngbcPalette ? 2 : 1), oam.objPriority);
 			}
@@ -619,10 +589,6 @@ bool GPU::readRegister(const unsigned short &reg, unsigned char &dest){
 	return true;
 }
 
-/** Get the real RGB values for a 15-bit GBC format color.
-  * @param low The low byte (RED and lower 3 bits of GREEN) of the GBC color.
-  * @param high The high byte (upper 2 bits of GREEN and BLUE) of the GBC color.
-  */
 ColorRGB GPU::getColorRGB(const unsigned char &low, const unsigned char &high){
 	unsigned char r = low & 0x1F;
 	unsigned char g = ((low & 0xE0) >> 5) + ((high & 0x3) << 3);
@@ -630,9 +596,6 @@ ColorRGB GPU::getColorRGB(const unsigned char &low, const unsigned char &high){
 	return ColorRGB(r/31.0f, g/31.0f, b/31.0f);
 }
 
-/** Update true RGB background palette by converting GBC format colors.
-  * The color pointed to by the current bgPaletteIndex (register 0xFF68) will be udpated.
-  */
 void GPU::updateBackgroundPalette(){
 	unsigned char lowByte, highByte;
 	if((bgPaletteIndex % 2) == 1){ // Odd, MSB of a color pair
@@ -646,9 +609,6 @@ void GPU::updateBackgroundPalette(){
 	cgbPaletteColor[bgPaletteIndex/8][(bgPaletteIndex%8)/2] = getColorRGB(lowByte, highByte);
 }
 
-/** Update true RGB sprite palette by converting GBC format colors.
-  * The color pointed to by the current objPaletteIndex (register 0xFF6A) will be updated.
-  */
 void GPU::updateObjectPalette(){
 	unsigned char lowByte, highByte;
 	if((objPaletteIndex % 2) == 1){ // Odd, MSB of a color pair
@@ -699,5 +659,45 @@ void GPU::userAddSavestateValues(){
 	addSavestateValue(bgPaletteData,    byte * 64);
 	addSavestateValue(objPaletteData,   byte * 64);
 	//ColorRGB cgbPaletteColor[16][4];
+}
+
+void GPU::onUserReset(){
+	winDisplayEnable = false;
+	nSpritesDrawn = 0;
+	bgPaletteIndex = 0;
+	objPaletteIndex = 0;
+
+	for(unsigned char i = 0; i < 4; i++){
+		dmgPaletteColor[0][i] = i;
+		dmgPaletteColor[1][i] = i;
+		dmgPaletteColor[2][i] = i;
+	}
+
+	for(unsigned char i = 0; i < 64; i++){
+		bgPaletteData[i] = 0;
+		objPaletteData[i] = 0;
+	}
+
+	if(bGBCMODE){ // GBC palettes (all white at startup)
+		for(int i = 0; i < 16; i++)
+			for(int j = 0; j < 4; j++)
+				cgbPaletteColor[i][j] = Colors::WHITE;
+	}
+	else{ // DMG palettes
+		cgbPaletteColor[0][0] = Colors::GB_GREEN;
+		cgbPaletteColor[0][1] = Colors::GB_LTGREEN;
+		cgbPaletteColor[0][2] = Colors::GB_DKGREEN;
+		cgbPaletteColor[0][3] = Colors::GB_DKSTGREEN;
+	}
+
+	// Reset scanline buffers
+	for(int i = 0; i < 256; i++){
+		currentLineSprite[i].reset();
+		currentLineWindow[i].reset();
+		currentLineBackground[i].reset();
+	}
+
+	// Clear all sprite updates
+	sprites.clear();
 }
 

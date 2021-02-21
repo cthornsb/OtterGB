@@ -18,7 +18,9 @@ public:
 		srcStart(0), 
 		destStart(0),
 		length(0),
-		currentCycle(0) { }
+		currentCycle(0) 
+	{ 
+	}
 
 	bool active() const ;
 
@@ -122,6 +124,10 @@ private:
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
 	  */
 	void userAddSavestateValues() override;
+	
+	/** Terminate any ongoing memory transfers
+	  */
+	void onUserReset() override;
 };
 
 #endif

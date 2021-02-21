@@ -90,3 +90,8 @@ bool WorkRam::readRegister(const unsigned short &reg, unsigned char &dest){
 void WorkRam::defineRegisters(){
 	sys->addSystemRegister(this, 0x70, rSVBK, "SVBK", "33300000");
 }
+
+void WorkRam::onUserReset(){
+	bs = 1; // Lowest WRAM swap bank is bank 1
+}
+

@@ -40,6 +40,10 @@ private:
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
 	  */
 	void userAddSavestateValues() override;
+	
+	/** Reset system timer
+	  */
+	void onUserReset() override;
 };
 
 #endif

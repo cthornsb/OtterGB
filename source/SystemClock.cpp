@@ -260,3 +260,14 @@ void SystemClock::userAddSavestateValues(){
 	//hrclock::time_point cycleTimer;
 }
 
+void SystemClock::onUserReset(){
+	vsync = false;
+	setNormalSpeedMode();
+	timeOfInitialization = hrclock::now();
+	timeOfLastVSync = hrclock::now();
+	cycleTimer = hrclock::now();
+	cycleCounter = 0;
+	nClockPause = 0;
+	lcdDriverMode = 2;
+}
+

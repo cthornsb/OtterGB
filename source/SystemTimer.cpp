@@ -116,3 +116,11 @@ void SystemTimer::userAddSavestateValues(){
 	addSavestateValue(&clockSelect,     sizeUChar);
 }
 
+void SystemTimer::onUserReset(){
+	nDividerCycles = 0;
+	dividerRegister = 0;
+	timerModulo = 0;
+	clockSelect = 0;
+	reload();
+}
+

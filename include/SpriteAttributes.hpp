@@ -99,7 +99,7 @@ public:
 	
 	/** Ignore any pending sprite attribute updates
 	  */
-	void reset();
+	void clear();
 	
 private:
 	bool bModified[40]; ///< Set if the attributes of a sprite have been modified
@@ -111,6 +111,10 @@ private:
 	  * @param attr Sprite attributes pointer where decoded sprite attributes will be stored
 	  */
 	void getSpriteData(unsigned char *ptr, SpriteAttributes *attr);
+	
+	/** Ignore any pending sprite attribute updates
+	  */
+	void onUserReset();
 };
 
 #endif

@@ -94,7 +94,7 @@ SpriteAttributes SpriteHandler::getSpriteAttributes(const unsigned char &index){
 	return attr;
 }
 
-void SpriteHandler::reset(){
+void SpriteHandler::clear(){
 	for(unsigned short i = 0; i < 40; i++)
 		bModified[i] = false;
 	while(!lModified.empty())
@@ -117,5 +117,9 @@ void SpriteHandler::getSpriteData(unsigned char *ptr, SpriteAttributes *attr){
 	attr->xFlip       = bitTest(ptr[3], 5);
 	attr->yFlip       = bitTest(ptr[3], 6);
 	attr->objPriority = bitTest(ptr[3], 7); // 0: Use OAM priority, 1: Use BG priority
+}
+
+void SpriteHandler::onUserReset(){
+	clear();
 }
 

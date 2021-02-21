@@ -51,8 +51,6 @@ public:
 
 	void initialize();
 
-	void reset();
-
 	/** Read the next instruction from memory and return the number of clock cycles. 
 	  */
 	unsigned short evaluate();
@@ -1024,6 +1022,10 @@ protected:
 	void SET_7_aHL(){ set_d8(&memoryValue, 7); }
 
 	void userAddSavestateValues() override;
+	
+	/** Reset CPU registers and terminate any currently executing instructions
+	  */
+	void onUserReset() override;
 };
 
 #endif

@@ -1364,16 +1364,6 @@ void LR35902::initialize(){
 	opcodes.setMemoryAccess(this);
 }
 
-void LR35902::reset(){
-	// Set startup values for the CPU registers
-	setAF(0x11B0); // 0x01B0
-	setBC(0x0013); // 0x0013
-	setDE(0x00D8); // 0x00D8
-	setHL(0x014D); // 0x014D
-	SP = 0xFFFE;   // 0xFFFE
-	PC = 0x0100;   // 0x0100
-}
-
 void LR35902::userAddSavestateValues(){
 	addSavestateValue(&A, sizeof(unsigned char));
 	addSavestateValue(&B, sizeof(unsigned char));
@@ -1385,5 +1375,18 @@ void LR35902::userAddSavestateValues(){
 	addSavestateValue(&L, sizeof(unsigned char));
 	addSavestateValue(&SP, sizeof(unsigned short));
 	addSavestateValue(&PC, sizeof(unsigned short));
+}
+
+void LR35902::onUserReset(){
+	// Set startup values for the CPU registers
+	setAF(0x11B0); // 0x01B0
+	setBC(0x0013); // 0x0013
+	setDE(0x00D8); // 0x00D8
+	setHL(0x014D); // 0x014D
+	SP = 0xFFFE;   // 0xFFFE
+	PC = 0x0100;   // 0x0100
+	halfCarry = false;
+	fullCarry = false;
+	lastOpcode = OpcodeData(); // Reset currently executing opcode
 }
 

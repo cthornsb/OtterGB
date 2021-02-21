@@ -23,6 +23,11 @@ void SoundMixer::setBalance(const float& bal){
 	}
 }
 
+void SoundMixer::reset(){
+	nCyclesSinceLastClock = 0;
+	reload(); // Refill counter so timer starts immediately
+}
+
 bool SoundMixer::update(){
 	if(bMuted){
 		fOutputSamples[0] = 0.f;

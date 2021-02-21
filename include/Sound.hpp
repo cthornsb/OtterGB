@@ -201,6 +201,10 @@ private:
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
 	  */
 	void userAddSavestateValues() override;
+	
+	/** Shut down APU and clear all DACs
+	  */
+	void onUserReset() override;
 };
 
 #endif

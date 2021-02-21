@@ -22,6 +22,9 @@ public:
 	bool readRegister(const unsigned short &reg, unsigned char &dest) override ;
 
 private:
+	/** Set bank select to 1, the lowest bank of WRAM swap
+	  */
+	void onUserReset() override;
 };
 
 #endif

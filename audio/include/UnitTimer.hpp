@@ -9,7 +9,6 @@ public:
 		bEnabled(false),
 		nPeriod(0),
 		nCounter(0),
-		nFrequency(0),
 		nPeriodMultiplier(1),
 		nCyclesSinceLastClock(0),
 		nWavelengthPeriod(8)
@@ -22,7 +21,6 @@ public:
 		bEnabled(false),
 		nPeriod(period),
 		nCounter(0),
-		nFrequency(0),
 		nPeriodMultiplier(1),
 		nCyclesSinceLastClock(0),
 		nWavelengthPeriod(8)
@@ -62,15 +60,13 @@ public:
 	/** Set the frequency and period of the timer
 	  */
 	void setFrequency(const unsigned short& freq){
-		nFrequency = (freq & 0x7ff);
-		setPeriod(2048 - nFrequency);
+		setPeriod(2048 - (freq & 0x7ff));
 	}
 	
 	/** Set the frequency and period of the timer using two input bytes
 	  */
 	void setFrequency(const unsigned char& lowByte, const unsigned char& highByte){
-		nFrequency = ((highByte & 0x7) << 8) + lowByte;
-		setPeriod(2048 - nFrequency);
+		setPeriod(2048 - (((highByte & 0x7) << 8) + lowByte));
 	}
 
 	/** Enable the timer
@@ -106,8 +102,6 @@ protected:
 	unsigned short nPeriod; ///< Period of timer
 	
 	unsigned short nCounter; ///< Current timer value
-	
-	unsigned short nFrequency; ///< 11-bit frequency (0 to 2047)
 	
 	unsigned short nPeriodMultiplier; ///< Period multiplier factor
 	

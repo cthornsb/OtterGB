@@ -24,7 +24,7 @@ public:
 		bSendInputToOutput{{0, 0, 0, 0}, {0, 0, 0, 0}}
 	{ 
 		bEnabled = true; // Enable timer
-		nCounter = nPeriod; // Refill counter so timer starts immediately
+		reload(); // Refill counter so timer starts immediately
 	}
 
 	/** Destructor
@@ -152,6 +152,8 @@ public:
 	void setNormalSpeedMode(){
 		nPeriod = MIXER_CLOCK_PERIOD;
 	}
+	
+	void reset() override;
 	
 private:
 	bool bMuted; ///< Audio output muted by user

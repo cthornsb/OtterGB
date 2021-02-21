@@ -601,3 +601,11 @@ void SoundProcessor::userAddSavestateValues(){
 	ShiftRegister ch4; ///< Channel 4 (noise)*/
 }
 
+void SoundProcessor::onUserReset(){
+	stopMidiFile(); // Stop midi file recording (if active)
+	powerDown(); // Power off the APU
+	reload(); // Reset APU clock
+	mixer->reset(); // Reset mixer clock
+	nSequencerTicks = 0;
+}
+

@@ -182,3 +182,8 @@ void DmaController::userAddSavestateValues(){
 	addSavestateValue(&currentCycle, sizeUShort);
 }
 
+void DmaController::onUserReset(){
+	nBytesRemaining = 0;
+	nCyclesRemaining = 0;
+}
+

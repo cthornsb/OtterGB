@@ -747,10 +747,6 @@ void SystemGBC::setRomFilename(const std::string& fname){
 		romFilename = romFilename.substr(0, index);
 	}
 	romPath = romDirectory + "/" + romFilename + "." + romExtension;
-	std::cout << " dir=" << romDirectory << std::endl;
-	std::cout << " rom=" << romFilename << std::endl;
-	std::cout << " ext=" << romExtension << std::endl;
-	std::cout << " path=" << romPath << std::endl;
 	bNeedsReloaded = true;
 }
 	
@@ -979,12 +975,15 @@ bool SystemGBC::reset() {
 	}
 
 	// Set default register values.
-	cpu->reset();
 	// Reset all system components (except for ROM)
-	/*for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
+	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
 		if(comp->first != "Cartridge")
-			comp->second->reset2();
-	}*/
+			comp->second->reset();
+	}
+	
+	// Reset cartridge ROM
+	cart->setBank(1); // Set the default ROM bank for SWAP
+	cart->getRam()->setBank(0); // Set initial cartridge RAM swap bank
 
 	// Interrupts enabled by default
 	enableInterrupts();
