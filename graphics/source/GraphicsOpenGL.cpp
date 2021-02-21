@@ -40,30 +40,7 @@ void handleKeysUp(unsigned char key, int x, int y){
   * @param y Y coordinate of the mouse when the key was pressed (not used)
   */
 void handleSpecialKeys(int key, int x, int y){
-	unsigned char ckey = 0x0;
-	switch (key) {
-		case GLUT_KEY_UP:
-			ckey = 0x52;
-			break;
-		case GLUT_KEY_LEFT:
-			ckey = 0x50;
-			break;
-		case GLUT_KEY_DOWN:
-			ckey = 0x51;
-			break;
-		case GLUT_KEY_RIGHT:
-			ckey = 0x4F;
-			break;
-		default:
-			if (key >= GLUT_KEY_F1 && key <= GLUT_KEY_F12) { // Function keys
-				ckey = 0xF0;
-				ckey |= (key & 0x0F);
-			}
-			else { return; }
-			break;
-	}
-	if(ckey)
-		handleKeys(ckey, x, y);
+	getCurrentWindow()->getKeypress()->keySpecial(key, true);
 }
 
 /** Handle OpenGL special key releases.
@@ -73,25 +50,7 @@ void handleSpecialKeys(int key, int x, int y){
   * @param y Y coordinate of the mouse when the key was released (not used)
   */
 void handleSpecialKeysUp(int key, int x, int y){
-	unsigned char ckey = 0x0;
-	switch (key) {
-		case GLUT_KEY_UP:
-			ckey = 0x52;
-			break;
-		case GLUT_KEY_LEFT:
-			ckey = 0x50;
-			break;
-		case GLUT_KEY_DOWN:
-			ckey = 0x51;
-			break;
-		case GLUT_KEY_RIGHT:
-			ckey = 0x4F;
-			break;
-		default:
-			return;
-	}
-	if(ckey)
-		handleKeysUp(ckey, x, y);
+	getCurrentWindow()->getKeypress()->keySpecial(key, false);
 }
 
 /** Handle window resizes.
@@ -139,17 +98,26 @@ void displayFunction() {
 // class KeyStates
 /////////////////////////////////////////////////////////////////////
 
-KeyStates::KeyStates() : count(0), streamMode(false) {
+KeyStates::KeyStates() : 
+	nCount(0), 
+	bStreamMode(false),
+	bLeftShift(false),
+	bLeftCtrl(false),
+	bLeftAlt(false),
+	bRightShift(false),
+	bRightCtrl(false),
+	bRightAlt(false)
+{
 	reset();
 }
 
 void KeyStates::enableStreamMode(){
-	streamMode = true;
+	bStreamMode = true;
 	reset();
 }
 
 void KeyStates::disableStreamMode(){
-	streamMode = false;
+	bStreamMode = false;
 	reset();
 }
 
@@ -162,10 +130,10 @@ bool KeyStates::poll(const unsigned char &key){
 }
 
 void KeyStates::keyDown(const unsigned char &key){
-	if(!streamMode){
+	if(!bStreamMode){
 		if(!states[key]){
 			states[key] = true;
-			count++;
+			nCount++;
 		}
 	}
 	else{
@@ -174,11 +142,104 @@ void KeyStates::keyDown(const unsigned char &key){
 }
 
 void KeyStates::keyUp(const unsigned char &key){
-	if(!streamMode){
+	if(!bStreamMode){
 		if(states[key]){
 			states[key] = false;
-			count--;
+			nCount--;
 		}
+	}
+}
+
+void KeyStates::keySpecial(const int &key, bool bKeyDown){
+	unsigned char ckey = 0x0;
+	switch (key) {
+	case GLUT_KEY_F1:
+		ckey = 0xf1;
+		break;
+	case GLUT_KEY_F2:
+		ckey = 0xf2;
+		break;
+	case GLUT_KEY_F3:
+		ckey = 0xf3;
+		break;
+	case GLUT_KEY_F4:
+		ckey = 0xf4;
+		break;
+	case GLUT_KEY_F5:
+		ckey = 0xf5;
+		break;
+	case GLUT_KEY_F6:
+		ckey = 0xf6;
+		break;
+	case GLUT_KEY_F7:
+		ckey = 0xf7;
+		break;
+	case GLUT_KEY_F8:
+		ckey = 0xf8;
+		break;
+	case GLUT_KEY_F9:
+		ckey = 0xf9;
+		break;
+	case GLUT_KEY_F10:
+		ckey = 0xfa;
+		break;
+	case GLUT_KEY_F11:
+		ckey = 0xfb;
+		break;
+	case GLUT_KEY_F12:
+		ckey = 0xfc;
+		break;
+	case GLUT_KEY_LEFT:
+		ckey = 0x50;
+		break;
+	case GLUT_KEY_UP:
+		ckey = 0x52;
+		break;
+	case GLUT_KEY_RIGHT:
+		ckey = 0x4f;
+		break;
+	case GLUT_KEY_DOWN:
+		ckey = 0x51;
+		break;
+	case GLUT_KEY_PAGE_UP:
+		break;
+	case GLUT_KEY_PAGE_DOWN:
+		break;
+	case GLUT_KEY_HOME:
+		break;
+	case GLUT_KEY_END:
+		break;
+	case GLUT_KEY_INSERT:
+		break;
+	case GLUT_KEY_DELETE:
+		break;
+	// KEY MODIFIERS //
+	case GLUT_KEY_SHIFT_L:
+		bLeftShift = bKeyDown;
+		break;
+	case GLUT_KEY_SHIFT_R:
+		bRightShift = bKeyDown;
+		break;
+	case GLUT_KEY_CTRL_L:
+		bLeftCtrl = bKeyDown;
+		break;
+	case GLUT_KEY_CTRL_R:
+		bRightCtrl = bKeyDown;
+		break;
+	case GLUT_KEY_ALT_L:
+		bLeftAlt = bKeyDown;
+		break;
+	case GLUT_KEY_ALT_R:
+		bRightAlt = bKeyDown;
+		break;
+	default:
+		break;
+	}
+	if(ckey){
+		if(bKeyDown)
+			keyDown(ckey);
+		else
+			keyUp(ckey);
 	}
 }
 
@@ -195,7 +256,13 @@ void KeyStates::reset(){
 		states[i] = false;
 	while(!buffer.empty())
 		buffer.pop();
-	count = 0;
+	bLeftShift = false;
+	bLeftCtrl = false;
+	bLeftAlt = false;
+	bRightShift = false;
+	bRightCtrl = false;
+	bRightAlt = false;
+	nCount = 0;
 }
 
 /////////////////////////////////////////////////////////////////////

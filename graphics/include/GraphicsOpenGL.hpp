@@ -10,32 +10,112 @@ class GPU;
 
 class KeyStates{
 public:
+	/** Default constructor
+	  */
 	KeyStates();
 	
+	/** Enable text stream mode
+	  */
 	void enableStreamMode();
 	
+	/** Disable text stream mode and return to keypress mode
+	  */
 	void disableStreamMode();
 	
-	bool empty() const { return (count == 0); }
+	/** Return true if no keys are currently pressed
+	  */
+	bool empty() const { 
+		return (nCount == 0); 
+	}
 	
-	bool check(const unsigned char &key) const { return states[key]; }
+	/** Check the current state of a key without modifying it
+	  */
+	bool check(const unsigned char &key) const { 
+		return states[key]; 
+	}
+
+	/** Return true if left shift is currently pressed
+	  */	
+	bool leftShift() const {
+		return bLeftShift;
+	}
+
+	/** Return true if right shift is currently pressed
+	  */	
+	bool rightShift() const {
+		return bLeftShift;
+	}
+
+	/** Return true if left ctrl is currently pressed
+	  */	
+	bool leftCtrl() const {
+		return bLeftShift;
+	}
+
+	/** Return true if right ctrl is currently pressed
+	  */	
+	bool rightCtrl() const {
+		return bLeftShift;
+	}
+
+	/** Return true if left alt is currently pressed
+	  */	
+	bool leftAlt() const {
+		return bLeftShift;
+	}
 	
+	/** Return true if right alt is currently pressed
+	  */
+	bool rightAlt() const {
+		return bLeftShift;
+	}
+	
+	/** Poll the state of a key
+	  * If the state of the key is currently pressed, mark it as released. 
+	  * This method is useful for making the key sensitive to being pressed, but not to being held down.
+	  */
 	bool poll(const unsigned char &key);
 	
+	/** Press a key
+	  * If bStreamMode is set, key is added to the stream buffer.
+	  */
 	void keyDown(const unsigned char &key);
 	
+	/** Release a key
+	  */
 	void keyUp(const unsigned char &key);
 	
+	/** Press or release a special key (e.g. function key, shift, etc)
+	  */
+	void keySpecial(const int &key, bool bKeyDown);
+	
+	/** Get a character from the stream buffer
+	  * If the stream buffer is empty, return false.
+	  */
 	bool get(char& key);
 
+	/** Reset the stream buffer and all key states
+	  */
 	void reset();
 
 private:
-	unsigned short count; ///< Number of standard keyboard keys which are currently pressed
+	unsigned short nCount; ///< Number of standard keyboard keys which are currently pressed
 
-	bool streamMode; ///< Flag to set keyboard to behave as stream buffer
+	bool bStreamMode; ///< Flag to set keyboard to behave as stream buffer
 
-	std::queue<char> buffer;
+	bool bLeftShift; ///< Set if left shift is pressed
+	
+	bool bLeftCtrl; ///< Set if left ctrl is pressed
+	
+	bool bLeftAlt; ///< Set if left alt is pressed
+	
+	bool bRightShift; ///< Set if right shift is pressed
+	
+	bool bRightCtrl; ///< Set if right ctrl is pressed
+	
+	bool bRightAlt; ///< Set if right alt is pressed
+
+	std::queue<char> buffer; ///< Text stream buffer
 
 	bool states[256]; ///< States of keyboard keys (true indicates key is down) 
 };
