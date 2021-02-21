@@ -14,8 +14,9 @@ ConsoleGBC::ConsoleGBC() :
 	line(),
 	buffer(nRows, std::string(nCols, ' '))
 { 
-	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit console");
-	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit console");
+	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit emulator");
+	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit emulator");
+	addConsoleCommand("close",0, cmdType::CLOSE, "", "Close console");
 	addConsoleCommand("help", 0, cmdType::HELP, "[cmd]", "Print list of commands or syntax for (cmd)");
 	addConsoleCommand("a",    0, cmdType::REG8, "[val]", "Print A register");
 	addConsoleCommand("b",    0, cmdType::REG8, "[val]", "Print B register");
@@ -204,6 +205,9 @@ void ConsoleGBC::handleInput(){
 		case cmdType::NONE:
 			break;
 		case cmdType::QUIT:
+			sys->quit();
+			break;
+		case cmdType::CLOSE:
 			sys->closeDebugConsole();
 			break;
 		case cmdType::HELP:

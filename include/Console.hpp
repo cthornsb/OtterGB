@@ -13,7 +13,8 @@ class SystemGBC;
 
 enum class cmdType{ 
 	NONE, 
-	QUIT,      ///< Close interpreter
+	QUIT,      ///< Exit emulator
+	CLOSE,     ///< Close console
 	HELP,      ///< Print help information
 	REG8,      ///< Get or set 8-bit register
 	REG16,     ///< Get or set 16-bit register
