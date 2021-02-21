@@ -679,6 +679,10 @@ private:
 
 	bool bNeedsReloaded; ///< Set if ROM file should be reloaded on call to reset()
 
+	bool bUseTileViewer; ///< Set if user has requested tile bitmap viewer window
+	
+	bool bUseLayerViewer; ///< Set if user has requested render layer viewer window
+
 	unsigned char dmaSourceH; ///< DMA source MSB
 	
 	unsigned char dmaSourceL; ///< DMA source LSB
