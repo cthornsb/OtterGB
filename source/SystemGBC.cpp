@@ -956,14 +956,21 @@ bool SystemGBC::reset() {
 		// ROM loaded successfully 		
 		bNeedsReloaded = false;
 	}
+
+	// Enable CGB features for DMG games
+	if(forceColor && !bGBCMODE){
+		if(verboseMode)
+			std::cout << sysMessage << "Enabling CGB features" << std::endl;
+		bGBCMODE = true;
+	}
 	
-	// Switching CGB states
-	if(stateBeforeReset != bGBCMODE){
+	// Switching CGB states with a loaded bootstrap ROM
+	if(!bootROM.empty() && stateBeforeReset != bGBCMODE){
 		if(verboseMode){
 			if(stateBeforeReset) // CGB -> DMG
-				std::cout << sysMessage << "Switching from CGB to DMG mode." << std::endl;
+				std::cout << sysMessage << "Switching from CGB to DMG mode" << std::endl;
 			else // DMG -> CGB
-				std::cout << sysMessage << "Switching from DMG to CGB mode." << std::endl;
+				std::cout << sysMessage << "Switching from DMG to CGB mode" << std::endl;
 		}
 		// Switching states means that any loaded bootstrap ROM will not work, so unload it
 		bootROM.clear();
@@ -1000,14 +1007,6 @@ bool SystemGBC::reset() {
 	// Load save data (if available)
 	if(autoLoadExtRam)
 		readExternalRam();
-
-	// Enable GBC features for original GB games.
-	if(forceColor){
-		if(!bGBCMODE)
-			bGBCMODE = true;
-		else // Disable force color for GBC games
-			forceColor = false;
-	}
 
 	// Load the boot ROM (if available)
 	if(bootROM.empty()){
@@ -1075,6 +1074,11 @@ bool SystemGBC::reset() {
 		
 		// Disable boot sequence
 		bootSequence = false;
+
+		if(forceColor){
+			gpu->setColorPaletteDMG(); // Set default monochrome color palette
+			bGBCMODE = false; // Disable CGB mode so that DMG graphics display correctly
+		}
 	}
 	else{ 
 		cpu->setProgramCounter(0); // Set program counter to beginning of bootstrap ROM

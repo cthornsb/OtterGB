@@ -108,6 +108,14 @@ public:
 	  */
 	void setPixelScale(const unsigned int &n);
 
+	/** Set default green DMG mode background and sprite color palettes
+	  */
+	void setColorPaletteDMG();
+
+	/** Set DMG mode background and sprite color palettes
+	  */
+	void setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3);
+
 	/** Print a string to the interpreter console
 	  */
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);

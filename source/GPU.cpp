@@ -167,7 +167,7 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 		if(!currentLineSprite[xp].getColor()){
 			if(bGBCMODE){ // GBC sprite palettes (OBP0-7)
 				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY, (oam.gbcVramBank ? 1 : 0));
-				currentLineSprite[xp].setColorOBJ(pixelColor, oam.gbcPalette+8, oam.objPriority);
+				currentLineSprite[xp].setColorOBJ(pixelColor, oam.gbcPalette + 8, oam.objPriority);
 			}
 			else{ // DMG sprite palettes (OBP0-1)
 				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY);
@@ -410,10 +410,10 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 			default:
 				break;
 		}
-		if(bGBCMODE)
+		if(bGBCMODE) // CGB
 			currentPixelRGB = &cgbPaletteColor[currentPixel->getPalette()][currentPixel->getColor()];
-		else
-			currentPixelRGB = &cgbPaletteColor[0][dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
+		else // DMG
+			currentPixelRGB = &cgbPaletteColor[currentPixel->getPaletteDMG()][dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
 		window->setDrawColor(currentPixelRGB);
 		window->drawPixel(x, rLY->getValue());
 		rx++;
@@ -454,6 +454,23 @@ unsigned short GPU::getObjPaletteColorHex(const unsigned short &index) const {
 
 void GPU::setPixelScale(const unsigned int &n){
 	window->setScalingFactor(n);
+}
+
+void GPU::setColorPaletteDMG(){
+	setColorPaletteDMG(Colors::GB_GREEN, Colors::GB_LTGREEN, Colors::GB_DKGREEN, Colors::GB_DKSTGREEN);
+}
+
+void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3){
+	const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
+	for(int i = 0; i < 3; i++){
+		cgbPaletteColor[indices[i]][0] = c0;
+		cgbPaletteColor[indices[i]][1] = c1;
+		cgbPaletteColor[indices[i]][2] = c2;
+		cgbPaletteColor[indices[i]][3] = c3;
+		//for(int j = 0; j < 4; j++){
+		//	cgbPaletteColor[i][j].toGrayscale();
+		//}
+	}
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
@@ -655,7 +672,7 @@ void GPU::userAddSavestateValues(){
 	unsigned int byte = sizeof(unsigned char);
 	addSavestateValue(&bgPaletteIndex,  byte);
 	addSavestateValue(&objPaletteIndex, byte);
-	addSavestateValue(dmgPaletteColor, byte * 12);
+	addSavestateValue(dmgPaletteColor,  byte * 12);
 	addSavestateValue(bgPaletteData,    byte * 64);
 	addSavestateValue(objPaletteData,   byte * 64);
 	//ColorRGB cgbPaletteColor[16][4];
@@ -683,11 +700,8 @@ void GPU::onUserReset(){
 			for(int j = 0; j < 4; j++)
 				cgbPaletteColor[i][j] = Colors::WHITE;
 	}
-	else{ // DMG palettes
-		cgbPaletteColor[0][0] = Colors::GB_GREEN;
-		cgbPaletteColor[0][1] = Colors::GB_LTGREEN;
-		cgbPaletteColor[0][2] = Colors::GB_DKGREEN;
-		cgbPaletteColor[0][3] = Colors::GB_DKSTGREEN;
+	else{ // Default DMG palettes
+		setColorPaletteDMG();
 	}
 
 	// Reset scanline buffers

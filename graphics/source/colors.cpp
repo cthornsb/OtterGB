@@ -47,9 +47,10 @@
 
 	void ColorRGB::toGrayscale(){
 		// Based on the sRGB convention
-		r *= 0.2126f;
-		g *= 0.7152f;
-		b *= 0.0722f;
+		float value = r * 0.2126f + g * 0.7152f + b * 0.0722f;
+		r = value;
+		g = value;
+		b = value;
 	}
 
 #endif
@@ -103,5 +104,5 @@ ColorRGB& ColorRGB::operator /= (const float &rhs){
 }
 
 void ColorRGB::dump() const {
-	std::cout << "r=" << (int)r << ", g=" << (int)g << ", b=" << (int)b << std::endl;
+	std::cout << "r=" << r << ", g=" << g << ", b=" << b << std::endl;
 }
