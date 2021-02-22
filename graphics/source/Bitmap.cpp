@@ -12,10 +12,22 @@ unsigned char getBitmapPixel(const unsigned char &dx, const unsigned char &high,
 	return pixelColor; // [0,3]
 }
 
-Bitmap::Bitmap() : blank(true) {
+Bitmap::Bitmap() : 
+	blank(true) 
+{
 	for(unsigned short j = 0; j < 8; j++){ // Bitmap row
 		for(unsigned short k = 0; k < 8; k++){ // Bitmap col
 			pixels[k][j] = 0; // Transparent
+		}
+	}
+}
+
+Bitmap::Bitmap(unsigned char* bmp) :
+	blank(true)
+{
+	for(unsigned short j = 0; j < 8; j++){ // Bitmap row
+		for(unsigned short k = 0; k < 8; k++){ // Bitmap col
+			set(k, j, bmp[j * 8 + k]);
 		}
 	}
 }
@@ -25,7 +37,17 @@ unsigned char Bitmap::get(const unsigned short &x, const unsigned short &y) cons
 }
 
 void Bitmap::set(const unsigned short &x, const unsigned short &y, const unsigned char &color){
+	if(color != 0)
+		blank = false;
 	pixels[x][y] = color;
+}
+
+void Bitmap::set(const unsigned char* data){
+	for(unsigned short i = 0; i < 8; i++){ // Bitmap row
+		for(unsigned short j = 0; j < 8; j++){ // Bitmap col
+			set(j, i, getBitmapPixel(7 - j, data[2 * i], data[2 * i + 1]));
+		}
+	}
 }
 
 void Bitmap::dump(){
@@ -54,34 +76,16 @@ void CharacterMap::setPaletteColor(unsigned short &index, const ColorRGB &color)
 }
 
 bool CharacterMap::loadCharacterMap(const std::string &fname){
-	// The character map
-	const unsigned short nVals = 95;
-	const char letters[95] = {32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-		                      42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
-		                      52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-		                      62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
-		                      72, 73, 74, 75, 76, 77, 78, 79, 80, 81,
-		                      82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
-		                      92, 93, 94, 95, 96, 97, 98, 99, 100, 101,
-		                      102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
-		                      112, 113, 114, 115, 116, 117, 118, 119, 120, 121,
-		                      122, 123, 124, 125, 126};
-                          
-	unsigned char rgb[nVals][16];
+	// Load the ascii character map
+	unsigned char rgb[16];
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
 	if(!ifile.good())
 		return false;
-	for(unsigned short x = 0; x < nVals; x++){
-		ifile.read((char*)&rgb[x][0], 16); // 16 bytes per bitmap (2 per row)
+	for(unsigned short x = 0; x < 128; x++){
+		ifile.read((char*)rgb, 16); // 16 bytes per bitmap (2 per row)
+		cmap[x].set(rgb);
 	}
 	ifile.close();
-	for(unsigned short ch = 0; ch < nVals; ch++){ // Character index
-		for(unsigned short j = 0; j < 8; j++){ // Bitmap row
-			for(unsigned short k = 0; k < 8; k++){ // Bitmap col
-				cmap[(unsigned int)letters[ch]].set(k, j, getBitmapPixel((7-k), rgb[ch][2*j], rgb[ch][2*j+1]));
-			}
-		}
-	}
 	return true;
 }
 
