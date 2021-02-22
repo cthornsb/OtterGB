@@ -936,6 +936,7 @@ bool SystemGBC::reset() {
 		return false;
 
 	// Read the ROM into memory if it is not currently loaded
+	bool stateBeforeReset = bGBCMODE;
 	if(bNeedsReloaded){
 		if(cart->isLoaded()) // Unload previously loaded ROM
 			cart->unload();
@@ -954,6 +955,18 @@ bool SystemGBC::reset() {
 
 		// ROM loaded successfully 		
 		bNeedsReloaded = false;
+	}
+	
+	// Switching CGB states
+	if(stateBeforeReset != bGBCMODE){
+		if(verboseMode){
+			if(stateBeforeReset) // CGB -> DMG
+				std::cout << sysMessage << "Switching from CGB to DMG mode." << std::endl;
+			else // DMG -> CGB
+				std::cout << sysMessage << "Switching from DMG to CGB mode." << std::endl;
+		}
+		// Switching states means that any loaded bootstrap ROM will not work, so unload it
+		bootROM.clear();
 	}
 
 	// Clear system registers

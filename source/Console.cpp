@@ -348,6 +348,8 @@ void ConsoleGBC::handleInput(){
 		case cmdType::FILENAME: // Display / set ROM filename
 			if(nArgs >= 2){ // User specified filename
 				sys->setRomFilename(args.at(1));
+				sys->reset();
+				sys->closeDebugConsole();
 			}
 			else{
 				(*this) << sys->getRomFilename() + "." + sys->getRomExtension() << "\n";
