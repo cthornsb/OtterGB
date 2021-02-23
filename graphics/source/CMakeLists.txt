@@ -2,6 +2,7 @@ set(GRAPHICS_SOURCES
 	Bitmap.cpp
 	colors.cpp
 	ColorGBC.cpp 
+	ColorPalette.cpp
 )
 if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 	# To install OpenGL:

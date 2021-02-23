@@ -155,6 +155,9 @@ void MainWindow::updateMainTab(){
 	// Frames per second
 	setLineEditText(ui->lineEdit_FPS, components->sclk->getFramerate());
 	
+	// Emulator CGB mode
+	setRadioButtonState(ui->radioButton_CgbMode, bGBCMODE);
+	
 	// Instruction history
 	if(ui->checkBox_Show_Instructions->isChecked()){
 		const int maxInstructions = 14;
@@ -334,7 +337,7 @@ void MainWindow::updateCartridgeTab(){
 	setLineEditHex(ui->lineEdit_ROM_Bank, cart->getBankSelect());
 	setLineEditHex(ui->lineEdit_SRAM_Bank, cart->getRam()->getBankSelect());
 	setRadioButtonState(ui->radioButton_RomSramEnabled, cart->getExternalRamEnabled());
-	setRadioButtonState(ui->radioButton_RomCgbMode, bGBCMODE);
+	setRadioButtonState(ui->radioButton_RomCgbEnabled, cart->getSupportCGB());
 }
 
 void MainWindow::updateRegistersTab(){
@@ -546,11 +549,6 @@ void MainWindow::on_checkBox_Sprites_stateChanged(int arg1)
 		components->gpu->disableRenderLayer(2);
 }
 
-void MainWindow::on_checkBox_Show_Framerate_stateChanged(int arg1)
-{
-	sys->setDisplayFramerate(arg1 != 0);
-}
-
 void MainWindow::on_checkBox_Breakpoint_PC_stateChanged(int arg1)
 {
 	if(arg1){
@@ -630,6 +628,11 @@ void MainWindow::on_lineEdit_Breakpoint_Read_editingFinished()
 		on_checkBox_Breakpoint_Read_stateChanged(1);
 	else
 		ui->checkBox_Breakpoint_Read->setChecked(true);
+}
+
+void MainWindow::on_lineEdit_PaletteSelect_editingFinished()
+{
+	components->gpu->setColorPaletteDMG((unsigned short)std::stoul(ui->lineEdit_PaletteSelect->text().toStdString(), 0, 16));
 }
 
 void MainWindow::on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1)

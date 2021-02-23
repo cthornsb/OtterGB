@@ -8,6 +8,7 @@
 #include "Console.hpp"
 #include "GPU.hpp"
 #include "SystemClock.hpp"
+#include "ColorPalette.hpp"
 
 constexpr unsigned short VRAM_LOW  = 0x8000;
 constexpr unsigned short VRAM_HIGH = 0xA000;
@@ -19,6 +20,7 @@ constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
 GPU::GPU() : 
 	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
+	bUserSelectedPalette(false),
 	winDisplayEnable(false),
 	nSpritesDrawn(0),
 	bgPaletteIndex(0),
@@ -457,10 +459,36 @@ void GPU::setPixelScale(const unsigned int &n){
 }
 
 void GPU::setColorPaletteDMG(){
+	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
+		return;
 	setColorPaletteDMG(Colors::GB_GREEN, Colors::GB_LTGREEN, Colors::GB_DKGREEN, Colors::GB_DKSTGREEN);
+	bUserSelectedPalette = false; // Unset user palette flag, since we're using the default palette
+}
+
+void GPU::setColorPaletteDMG(const unsigned short& paletteID){
+	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
+		return;
+#ifdef TOP_DIRECTORY
+	std::string path = std::string(TOP_DIRECTORY) + "/assets/palettes.dat";
+#else
+	std::string path = "./assets/palettes.dat";
+#endif // ifdef TOP_DIRECTORY
+	ColorPaletteDMG palette;
+	if(palette.find(path, paletteID, verboseMode)){
+		const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
+		for(int i = 0; i < 3; i++){
+			cgbPaletteColor[indices[i]][0] = palette[i][0];
+			cgbPaletteColor[indices[i]][1] = palette[i][1];
+			cgbPaletteColor[indices[i]][2] = palette[i][2];
+			cgbPaletteColor[indices[i]][3] = palette[i][3];
+		}
+		bUserSelectedPalette = true;
+	}
 }
 
 void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3){
+	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
+		return;
 	const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
 	for(int i = 0; i < 3; i++){
 		cgbPaletteColor[indices[i]][0] = c0;
@@ -471,6 +499,7 @@ void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRG
 		//	cgbPaletteColor[i][j].toGrayscale();
 		//}
 	}
+	bUserSelectedPalette = true;
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
@@ -684,24 +713,29 @@ void GPU::onUserReset(){
 	bgPaletteIndex = 0;
 	objPaletteIndex = 0;
 
+	// Reset DMG palettes
 	for(unsigned char i = 0; i < 4; i++){
 		dmgPaletteColor[0][i] = i;
 		dmgPaletteColor[1][i] = i;
 		dmgPaletteColor[2][i] = i;
 	}
 
+	// Clear palette data
 	for(unsigned char i = 0; i < 64; i++){
 		bgPaletteData[i] = 0;
 		objPaletteData[i] = 0;
 	}
 
-	if(bGBCMODE){ // GBC palettes (all white at startup)
-		for(int i = 0; i < 16; i++)
-			for(int j = 0; j < 4; j++)
-				cgbPaletteColor[i][j] = Colors::WHITE;
-	}
-	else{ // Default DMG palettes
-		setColorPaletteDMG();
+	if(!bUserSelectedPalette){
+		if(bGBCMODE){ // GBC palettes (all white at startup)
+			for(int i = 0; i < 16; i++)
+				for(int j = 0; j < 4; j++)
+					cgbPaletteColor[i][j] = Colors::WHITE;
+			bUserSelectedPalette = false; // Ignore user palettes for CGB games
+		}
+		else{ // Default DMG palettes
+			setColorPaletteDMG();
+		}
 	}
 
 	// Reset scanline buffers

@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "Support.hpp"
-#include "SystemRegisters.hpp"
 #include "Cartridge.hpp"
 
 constexpr unsigned short ROM_ZERO_LOW = 0x0000;
@@ -222,9 +221,6 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	f.read((char*)&headerChecksum, 1); //
 	f.read((char*)&globalChecksum, 2); // High byte first
 
-	// Check for CGB mode flag
-	bGBCMODE = ((gbcFlag & 0x80) != 0);
-	
 	// Set cartridge type
 	mbcType = CartMBC::UNKNOWN;
 	if(cartridgeType == 0x0 || cartridgeType == 0x8 || cartridgeType == 0x9)

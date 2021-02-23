@@ -133,9 +133,10 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
 	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<multiplier>", "Set target framerate multiplier (default=1)."));
 	handler.add(optionExt("volume", required_argument, NULL, 'V', "<volume>", "Set initial output volume (in range 0 to 1)."));
-	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose mode."));
+	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose output mode."));
+	handler.add(optionExt("palette", required_argument, NULL, 'p', "<palette>", "Set palette number for DMG games (base 16)."));
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
-	handler.add(optionExt("use-color", no_argument, NULL, 'C', "", "Use GBC mode for original GB games."));
+	handler.add(optionExt("force-color", no_argument, NULL, 'C', "", "Use CGB mode for original DMG games."));
 	handler.add(optionExt("no-load-sram", no_argument, NULL, 'n', "", "Do not load external cartridge RAM (SRAM) at boot."));
 #ifdef USE_QT_DEBUGGER			
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
@@ -221,7 +222,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			setVerboseMode(true);
 		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
 			gpu->setPixelScale(cfgFile.getUInt());
-		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use GBC mode for original GB games
+		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use CGB mode for original DMG games
 			setForceColorMode(true);
 		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
@@ -241,23 +242,25 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 #ifndef _WIN32
 	if(handler.good()){ // Handle user command line arguments
 		if(handler.getOption(2)->active) // Set framerate multiplier
-			sclk->setFramerateMultiplier(strtod(handler.getOption(2)->argument.c_str(), NULL));
+			sclk->setFramerateMultiplier(std::stod(handler.getOption(2)->argument, NULL));
 		if(handler.getOption(3)->active) // Set master output volume
-			sound->getMixer()->setVolume(strtod(handler.getOption(3)->argument.c_str(), NULL));
+			sound->getMixer()->setVolume(std::stod(handler.getOption(3)->argument, NULL));
 		if(handler.getOption(4)->active) // Toggle verbose flag
 			setVerboseMode(true);
-		if(handler.getOption(5)->active) // Set pixel scaling factor
-			gpu->setPixelScale(strtoul(handler.getOption(5)->argument.c_str(), NULL, 10));
-		if(handler.getOption(6)->active) // Use GBC mode for original GB games
+		if(handler.getOption(5)->active) // Set DMG color palette
+			gpu->setColorPaletteDMG((unsigned short)std::stoul(handler.getOption(5)->argument, NULL, 16));
+		if(handler.getOption(6)->active) // Set pixel scaling factor
+			gpu->setPixelScale(std::stoul(handler.getOption(6)->argument, NULL, 10));
+		if(handler.getOption(7)->active) // Use GBC mode for original GB games
 			forceColor = true;
-		if(handler.getOption(7)->active) // Do not automatically save/load external cartridge RAM (SRAM)
+		if(handler.getOption(8)->active) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
 #ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(8)->active){ // Toggle debug flag
+		if(handler.getOption(9)->active){ // Toggle debug flag
 			setDebugMode(true);
-			if(handler.getOption(9)->active) // Open tile-viewer window
+			if(handler.getOption(10)->active) // Open tile-viewer window
 				bUseTileViewer = true;
-			if(handler.getOption(10)->active) // Open layer-viewer window
+			if(handler.getOption(11)->active) // Open layer-viewer window
 				bUseLayerViewer = true;
 		}
 #endif // ifdef USE_QT_DEBUGGER
@@ -953,27 +956,40 @@ bool SystemGBC::reset() {
 			return false;
 		}
 
+		// Check if ROM supports CGB features
+		bGBCMODE = cart->getSupportCGB();
+
 		// ROM loaded successfully 		
 		bNeedsReloaded = false;
 	}
 
-	// Enable CGB features for DMG games
-	if(forceColor && !bGBCMODE){
-		if(verboseMode)
-			std::cout << sysMessage << "Enabling CGB features" << std::endl;
-		bGBCMODE = true;
-	}
-	
-	// Switching CGB states with a loaded bootstrap ROM
-	if(!bootROM.empty() && stateBeforeReset != bGBCMODE){
-		if(verboseMode){
-			if(stateBeforeReset) // CGB -> DMG
-				std::cout << sysMessage << "Switching from CGB to DMG mode" << std::endl;
-			else // DMG -> CGB
-				std::cout << sysMessage << "Switching from DMG to CGB mode" << std::endl;
+	if(forceColor){
+		if(bGBCMODE){ // Do not allow forceColor mode for CGB mode
+			if(verboseMode)
+				std::cout << sysWarning << "Using force-color mode with CGB games is not allowed." << std::endl;
+			forceColor = false;
 		}
-		// Switching states means that any loaded bootstrap ROM will not work, so unload it
-		bootROM.clear();
+		else{ // Enable CGB bootstrap for starting DMG games
+			if(verboseMode)
+				std::cout << sysMessage << "Enabling CGB bootstrap" << std::endl;
+			bGBCMODE = true;
+		}
+	}
+
+	// Switching CGB states 
+	if(stateBeforeReset != bGBCMODE){
+		if(!bootROM.empty()){ // Loaded bootstrap ROM is invalid for this operating mode
+			if(verboseMode){
+				if(stateBeforeReset) // CGB -> DMG
+					std::cout << sysMessage << "Switching from CGB to DMG mode" << std::endl;
+				else // DMG -> CGB
+					std::cout << sysMessage << "Switching from DMG to CGB mode" << std::endl;
+			}
+			// Switching states means that any loaded bootstrap ROM will not work, so unload it
+			bootROM.clear();
+		}
+		// In the event that the user has set a custom DMG palette, disable overwrite protection before resetting PPU
+		gpu->disableUserPalette();
 	}
 
 	// Clear system registers
@@ -981,7 +997,6 @@ bool SystemGBC::reset() {
 		reg->clear();
 	}
 
-	// Set default register values.
 	// Reset all system components (except for ROM)
 	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
 		if(comp->first != "Cartridge")
@@ -1076,7 +1091,11 @@ bool SystemGBC::reset() {
 		bootSequence = false;
 
 		if(forceColor){
-			gpu->setColorPaletteDMG(); // Set default monochrome color palette
+			if(!gpu->isUserPaletteSet()){
+				if(verboseMode)
+					std::cout << sysWarning << "Forced color mode with no palette set, default will be used." << std::endl;
+				gpu->setColorPaletteDMG(); // Set default monochrome color palette
+			}
 			bGBCMODE = false; // Disable CGB mode so that DMG graphics display correctly
 		}
 	}

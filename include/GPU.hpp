@@ -85,6 +85,12 @@ public:
 	/** Get the status of the OpenGL window
 	  */
 	bool getWindowStatus();
+	
+	/** Return true if the user has specified a DMG color palette to use for DMG games
+	  */
+	bool isUserPaletteSet() const {
+		return bUserSelectedPalette;
+	}
 
 	/** Get the number of sprites drawn on the most recent LCD scanline
 	  */
@@ -112,9 +118,20 @@ public:
 	  */
 	void setColorPaletteDMG();
 
+	/** Set DMG mode background and sprite color palettes using a pre-defined CGB palette
+	  * @param paletteID Pre-defined CGB palette ID number (MSB table number, LSB entry number)
+	  */
+	void setColorPaletteDMG(const unsigned short& paletteID);
+
 	/** Set DMG mode background and sprite color palettes
 	  */
 	void setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3);
+
+	/** User-set color palette will be cleared on next emulator reset
+	  */
+	void disableUserPalette(){
+		bUserSelectedPalette = false;
+	}
 
 	/** Print a string to the interpreter console
 	  */
@@ -133,7 +150,9 @@ public:
 	void defineRegisters() override ;
 
 private:
-	bool winDisplayEnable; ///< Set to true if the window layer is enabled and is on screen
+	bool bUserSelectedPalette; ///< Set if user has specified a DMG color palette to use for DMG games
+
+	bool winDisplayEnable; ///< Set if the window layer is enabled and is on screen
 
 	unsigned char nSpritesDrawn; ///< Number of sprites drawn on the most recent scanline
 

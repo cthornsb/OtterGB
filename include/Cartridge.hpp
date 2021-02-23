@@ -134,6 +134,12 @@ public:
 		return rumbleSupport; 
 	}
 	
+	 /** Return true if cartridge supports CGB features
+	   */
+	 bool getSupportCGB() const {
+	 	return ((gbcFlag & 0x80) == 0x80);
+	 }
+	
 	/** Read input ROM file and load entire ROM into memory
 	  * @param fname Path to input ROM file
 	  * @param verbose If set to true, ROM header will be printed to stdout

@@ -66,8 +66,6 @@ private slots:
 
     void on_checkBox_Sprites_stateChanged(int arg1);
 
-	void on_checkBox_Show_Framerate_stateChanged(int arg1);
-
 	void on_checkBox_Breakpoint_PC_stateChanged(int arg1);
 
 	void on_checkBox_Breakpoint_Write_stateChanged(int arg1);
@@ -81,6 +79,8 @@ private slots:
 	void on_lineEdit_Breakpoint_Write_editingFinished();
 
 	void on_lineEdit_Breakpoint_Read_editingFinished();
+	
+	void on_lineEdit_PaletteSelect_editingFinished();
 
 	void on_comboBox_Breakpoint_Opcode_currentIndexChanged(int arg1);
 
