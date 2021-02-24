@@ -513,8 +513,7 @@ bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 		case 0xFF40: // LCDC (LCD Control Register)
 			if(!rLCDC->bit7()) // LY is reset if LCD goes from on to off
 				sys->getClock()->resetScanline();
-			if(rLCDC->bit5()) // Allow the window layer
-				checkWindowVisible();
+			checkWindowVisible();
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
 			break;
