@@ -1,3 +1,4 @@
+#include <iostream> // TEMP
 #include <algorithm>
 
 #include "SystemRegisters.hpp"
@@ -135,11 +136,11 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 }
 
 bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
-	unsigned char xp = oam.xPos-8+rSCX->getValue(); // Top left
-	unsigned char yp = oam.yPos-16+rSCY->getValue(); // Top left
+	unsigned char xp = oam.xPos - 8; // Top left
+	unsigned char yp = oam.yPos - 16; // Top left
 
 	// Check that the current scanline goes through the sprite
-	if(y < yp || y >= yp+(!rLCDC->bit2() ? 8 : 16))
+	if(y < yp || y >= yp + (!rLCDC->bit2() ? 8 : 16))
 		return false;
 
 	unsigned char pixelY = y - yp; // Vertical pixel in the tile
@@ -165,6 +166,7 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 	}
 	
 	// Draw the specified line
+	xp += rSCX->getValue();
 	for(unsigned short dx = 0; dx < 8; dx++){
 		if(!currentLineSprite[xp].getColor()){
 			if(bGBCMODE){ // GBC sprite palettes (OBP0-7)
@@ -260,16 +262,16 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	//  scanline, the background scroll register SCX, and the state of the window layer.
 	unsigned short nPauseTicks = 0;
 
-	// Here (ry) is the real vertical coordinate on the background
-	// and (rLY) is the current scanline.
-	unsigned char ry = rLY->getValue() + rSCY->getValue();
+	// Here (ry) is the real vertical coordinate on the backgroun and (ly) is the current scanline.
+	unsigned char ly = rLY->getValue();
+	unsigned char ry = ly + rSCY->getValue();
 	
 	if(!rLCDC->bit7()){ // Screen disabled (draw a "white" line)
 		if(bGBCMODE)
 			window->setDrawColor(Colors::WHITE);
 		else
 			window->setDrawColor(cgbPaletteColor[0][0]);
-		window->drawLine(0, rLY->getValue(), 159, rLY->getValue());
+		window->drawLine(0, ly, 159, ly);
 		return 0;
 	}
 
@@ -293,7 +295,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 
 	// Handle the window layer
 	bool windowVisible = false; // Is the window visible on this line?
-	if(winDisplayEnable && (rLY->getValue() >= rWY->getValue())){
+	if(winDisplayEnable && (ly >= rWY->getValue())){
 		if(userLayerEnable[1]){
 			rx = rWX->getValue()-7;
 			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
@@ -325,7 +327,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 			// Get the number of sprites on this scanline
 			// Each sprite pauses the clock for N = 11 - min(5, (x + SCX) mod 8)
 			for(auto sp = sprites.cbegin(); sp != sprites.cend(); sp++){
-				if(drawSprite(ry, *sp)){ // Draw the line of the sprite
+				if(drawSprite(ly, *sp)){ // Draw a row of the sprite
 					nPauseTicks += 11 - std::min(5, (sp->xPos + rx) % 8);
 					if(++nSpritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
 						break;
@@ -417,7 +419,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 		else // DMG
 			currentPixelRGB = &cgbPaletteColor[currentPixel->getPaletteDMG()][dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
 		window->setDrawColor(currentPixelRGB);
-		window->drawPixel(x, rLY->getValue());
+		window->drawPixel(x, ly);
 		rx++;
 	}
 	
