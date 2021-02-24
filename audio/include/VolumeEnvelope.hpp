@@ -10,7 +10,8 @@ public:
 	VolumeEnvelope() :
 		UnitTimer(),
 		bAdd(true),
-		nVolume(0)
+		nVolume(0),
+		nInitialVolume(0)
 	{ 
 	}
 
@@ -35,6 +36,7 @@ public:
 	/** Set the initial 4-bit volume
 	  */
 	void setVolume(const unsigned char& volume) { 
+		nInitialVolume = volume & 0xf;
 		nVolume = volume & 0xf; 
 	}
 	
@@ -54,6 +56,8 @@ private:
 	bool bAdd; ///< Increase volume on timer rollover
 
 	unsigned char nVolume; ///< Current 4-bit volume
+	
+	unsigned char nInitialVolume; ///< Initial 4-bit volume (register NRx2)
 	
 	/** Counter rolled over, increase or decrease the output volume and refill the timer
 	  * If the new volume is outside the range [0, 15] the volume is left un-changed and the timer is not refilled.
