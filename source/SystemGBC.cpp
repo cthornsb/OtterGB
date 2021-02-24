@@ -216,6 +216,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	if(cfgFile.good()){ // Handle user input from config file
 		if (cfgFile.search("MASTER_VOLUME", true)) // Set master output volume
 			sound->getMixer()->setVolume(cfgFile.getFloat());
+		if(cfgFile.search("COLOR_PALETTE", true)) // Set DMG game color palette
+			gpu->setColorPaletteDMG(getUserInputUShort(cfgFile.getCurrentParameterString()));
 		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
 			sclk->setFramerateMultiplier(cfgFile.getFloat());
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
@@ -223,7 +225,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
 			gpu->setPixelScale(cfgFile.getUInt());
 		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use CGB mode for original DMG games
-			setForceColorMode(true);
+			forceColor = true;
 		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
 #ifdef USE_QT_DEBUGGER			
