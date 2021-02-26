@@ -27,6 +27,8 @@ SystemClock::SystemClock() :
 	lcdDriverMode(2), 
 	framerate(0),
 	framePeriod(0),
+	dDeltaFramePeriod(0),
+	dRunningAverage(),
 	timeOfInitialization(hrclock::now()),
 	timeOfLastVSync(hrclock::now()),
 	cycleTimer(hrclock::now()),
@@ -39,7 +41,7 @@ SystemClock::SystemClock() :
 }
 
 void SystemClock::setFramerateMultiplier(const float &freq){
-	framePeriod = 1E6*VERTICAL_SYNC_CYCLES/SYSTEM_CLOCK_FREQUENCY/freq; // in microseconds
+	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / SYSTEM_CLOCK_FREQUENCY / freq; // in microseconds
 }
 
 void SystemClock::setDoubleSpeedMode(){
@@ -189,15 +191,20 @@ bool SystemClock::compareScanline(){
 
 void SystemClock::waitUntilNextVSync(){
 	static unsigned int frameCount = 0;
-	static double totalRenderTime = 0;
 	std::chrono::duration<double, std::micro> wallTime = hrclock::now() - timeOfLastVSync;
-	double timeToSleep = framePeriod - wallTime.count(); // microseconds
+	double timeToSleep = (framePeriod + dDeltaFramePeriod) - wallTime.count(); // microseconds
 	if(timeToSleep > 0)
 		std::this_thread::sleep_for(std::chrono::microseconds((long long)timeToSleep));
-	totalRenderTime += std::chrono::duration_cast<std::chrono::duration<double>>(hrclock::now() - timeOfLastVSync).count();
 	if((++frameCount % 60) == 0){
-		framerate = frameCount/totalRenderTime;
-		totalRenderTime = 0;
+		double totalRenderTime = std::chrono::duration_cast<std::chrono::duration<double>>(hrclock::now() - timeOfLastVSync).count();
+		dRunningAverage.push_back(framePeriod - 1E6 * totalRenderTime);
+		if(dRunningAverage.size() > 20)
+			dRunningAverage.pop_front();
+		double averageDelta = 0;
+		for(auto d : dRunningAverage)
+			averageDelta += d;
+		averageDelta /= 20;
+		framerate = 1 / totalRenderTime;
 		frameCount = 0;
 	}
 	timeOfLastVSync = hrclock::now();

@@ -1,6 +1,8 @@
 #ifndef SYSTEM_CLOCK_HPP
 #define SYSTEM_CLOCK_HPP
 
+#include <deque>
+
 #include "SystemComponent.hpp"
 #include "HighResTimer.hpp" // typedef hrclock
 
@@ -118,6 +120,10 @@ private:
 	double framerate; ///< Instantaneous framerate computed once per second
 	
 	double framePeriod; ///< Wall clock time between successive frames (microseconds)
+
+	double dDeltaFramePeriod; ///< Running average difference between target frame period and actual frame period
+
+	std::deque<double> dRunningAverage;
 
 	hrclock::time_point timeOfInitialization; ///< Time that the system clock was initialized
 	
