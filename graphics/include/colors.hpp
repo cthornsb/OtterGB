@@ -1,23 +1,11 @@
 #ifndef COLORS_HPP
 #define COLORS_HPP
 
-#ifndef USE_SDL_RENDERER
-
-	class ColorRGB{
-	public:
-		float r;
-		float g;
-		float b;
-		
-#else
-
-	class ColorRGB{
-	public:
-		unsigned char r;
-		unsigned char g;
-		unsigned char b;
-
-#endif
+class ColorRGB{
+public:
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
 
 	/** Default constructor (black)
 	  */
@@ -33,11 +21,15 @@
 
 	/** Equality operator
 	  */
-	bool operator == (const ColorRGB &rhs) const { return (r==rhs.r && g==rhs.g && b==rhs.b); }
+	bool operator == (const ColorRGB &rhs) const { 
+		return (r==rhs.r && g==rhs.g && b==rhs.b); 
+	}
 
 	/** Inequality operator
 	  */
-	bool operator != (const ColorRGB &rhs) const { return (r!=rhs.r || g!=rhs.g || b!=rhs.b); }
+	bool operator != (const ColorRGB &rhs) const { 
+		return (r!=rhs.r || g!=rhs.g || b!=rhs.b); 
+	}
 
 	/** Add a color to this color and return the result
 	  */
@@ -85,11 +77,15 @@
 	
 	/** Convert a floating point value in the range [0, 1] to an unsigned char between 0 and 255
 	  */
-	static unsigned char toUChar(const float &val){ return ((unsigned char)(val*255)); }
+	static unsigned char toUChar(const float &val){ 
+		return ((unsigned char)(val*255)); 
+	}
 	
 	/** Convert an unsigned char to a floating point value in the range [0, 1]
 	  */
-	static float toFloat(const unsigned char &val){ return (float(val)/255); }
+	static float toFloat(const unsigned char &val){ 
+		return (float(val)/255);
+	}
 };
 
 namespace Colors{

@@ -24,6 +24,7 @@ class WorkRam;
 class SystemClock;
 class SystemTimer;
 class LR35902;
+class Window;
 
 class ComponentList{
 public:
@@ -431,6 +432,14 @@ public:
 	void setQtDebugger(MainWindow* ptr);
 #endif
 
+	/** Open tile viewer debugger window
+	  */
+	void openTileViewer();
+
+	/** Open draw layer viewer debugger window
+	  */
+	void openLayerViewer();
+
 	/** Set target emulation framerate
 	  */
 	void setFramerateMultiplier(const float& freq);
@@ -547,11 +556,9 @@ public:
 	  */
 	void resumeCPU();
 	
-#ifdef USE_QT_DEBUGGER
 	/** Update debugger gui and process Qt events
 	  */
-	void updateDebugger();
-#endif
+	void updateDebuggers();
 
 	/** Pause emulation
 	  * Audio output interface is also disabled.
@@ -732,6 +739,10 @@ private:
 	std::unique_ptr<SystemTimer> timer; ///< Pointer to system timer
 	
 	std::unique_ptr<LR35902> cpu; ///< Pointer to LR35902 emulator
+	
+	std::unique_ptr<Window> tileViewer; ///< Pointer to tile viewer window
+	
+	std::unique_ptr<Window> layerViewer; ///< Pointer to layer viewer window
 	
 #ifdef USE_QT_DEBUGGER
 	MainWindow* gui; ///< Pointer to Qt gui debugger (if available)

@@ -14,7 +14,6 @@ class QApplication;
 
 class QLineEdit;
 class QRadioButton;
-class Window;
 
 namespace Ui {
 class MainWindow;
@@ -48,10 +47,6 @@ public:
 	void closeAllWindows();
 	
 	void updatePausedState(bool state=true);
-	
-	void openTileViewer();
-	
-	void openLayerViewer();
 	
 	/** The application is exiting
 	  */
@@ -206,10 +201,6 @@ private:
 	std::map<std::string, std::vector<Register*> > registers;
 
 	std::unique_ptr<ComponentList> components;
-
-	std::unique_ptr<Window> tileViewer;
-	
-	std::unique_ptr<Window> layerViewer;
 
     void setLineEditText(QLineEdit *line, const std::string &str);
     

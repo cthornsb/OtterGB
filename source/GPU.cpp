@@ -196,30 +196,27 @@ void GPU::drawTileMaps(Window *win){
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
 	const unsigned short tilesPerRow = W/8;
 	unsigned short tileX, tileY;
-	unsigned char pixelColor;
 	for(unsigned short i = 0; i < 384; i++){
 		tileY = i / tilesPerRow;
 		for(unsigned char dy = 0; dy < 8; dy++){
 			tileX = i % tilesPerRow;
 			for(unsigned char dx = 0; dx < 8; dx++){
-				pixelColor = getBitmapPixel(16*i, (7-dx), dy);
-				switch(pixelColor){
-					case 0:
-						win->setDrawColor(Colors::WHITE);
-						break;
-					case 1:
-						win->setDrawColor(Colors::LTGRAY);
-						break;
-					case 2:
-						win->setDrawColor(Colors::DKGRAY);
-						break;
-					case 3:
-						win->setDrawColor(Colors::BLACK);
-						break;
-					default:
-						break;
+				switch(getBitmapPixel(16*i, (7-dx), dy)){
+				case 0:
+					win->buffWrite(tileX * 8 + dx, tileY * 8 + dy, Colors::WHITE);
+					break;
+				case 1:
+					win->buffWrite(tileX * 8 + dx, tileY * 8 + dy, Colors::LTGRAY);
+					break;
+				case 2:
+					win->buffWrite(tileX * 8 + dx, tileY * 8 + dy, Colors::DKGRAY);
+					break;
+				case 3:
+					win->buffWrite(tileX * 8 + dx, tileY * 8 + dy, Colors::BLACK);
+					break;
+				default:
+					break;
 				}
-				win->drawPixel(tileX*8+dx, tileY*8+dy);
 			}
 		}
 	}
@@ -235,22 +232,21 @@ void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 			pixelX += drawTile(pixelX, (unsigned char)y, 0, (mapSelect ? 0x1C00 : 0x1800), line);
 		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
 			switch(line[px].getColor()){
-				case 0:
-					win->setDrawColor(Colors::WHITE);
-					break;
-				case 1:
-					win->setDrawColor(Colors::LTGRAY);
-					break;
-				case 2:
-					win->setDrawColor(Colors::DKGRAY);
-					break;
-				case 3:
-					win->setDrawColor(Colors::BLACK);
-					break;
-				default:
-					break;
+			case 0:
+				win->buffWrite(px, y, Colors::WHITE);
+				break;
+			case 1:
+				win->buffWrite(px, y, Colors::LTGRAY);
+				break;
+			case 2:
+				win->buffWrite(px, y, Colors::DKGRAY);
+				break;
+			case 3:
+				win->buffWrite(px, y, Colors::BLACK);
+				break;
+			default:
+				break;
 			}
-			win->drawPixel(px, y);
 		}
 	}
 }
@@ -268,10 +264,9 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	
 	if(!rLCDC->bit7()){ // Screen disabled (draw a "white" line)
 		if(bGBCMODE)
-			window->setDrawColor(Colors::WHITE);
+			window->buffWriteLine(ly, Colors::WHITE);
 		else
-			window->setDrawColor(cgbPaletteColor[0][0]);
-		window->drawLine(0, ly, 159, ly);
+			window->buffWriteLine(ly, cgbPaletteColor[0][0]);
 		return 0;
 	}
 
@@ -339,7 +334,6 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	// Render the current scanline
 	rx = rSCX->getValue(); // This will automatically handle screen wrapping
 	ColorGBC *currentPixel;
-	ColorRGB *currentPixelRGB; // Real RGB color of the current pixel
 	unsigned char layerSelect = 0;
 	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
 		// Determine what layer should be drawn
@@ -415,11 +409,9 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 				break;
 		}
 		if(bGBCMODE) // CGB
-			currentPixelRGB = &cgbPaletteColor[currentPixel->getPalette()][currentPixel->getColor()];
+			window->buffWrite(x, ly, getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
 		else // DMG
-			currentPixelRGB = &cgbPaletteColor[currentPixel->getPaletteDMG()][dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]];
-		window->setDrawColor(currentPixelRGB);
-		window->drawPixel(x, ly);
+			window->buffWrite(x, ly, getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
 		rx++;
 	}
 	
@@ -431,7 +423,7 @@ void GPU::render(){
 	// Update the screen
 	window->setCurrent();
 	if(rLCDC->bit7() && window->status()){ // Check for events
-		window->render();
+		window->render2();
 	}
 }
 
@@ -641,6 +633,10 @@ ColorRGB GPU::getColorRGB(const unsigned char &low, const unsigned char &high){
 	unsigned char g = ((low & 0xE0) >> 5) + ((high & 0x3) << 3);
 	unsigned char b = (high & 0x7C) >> 2;
 	return ColorRGB(r/31.0f, g/31.0f, b/31.0f);
+}
+
+ColorRGB& GPU::getPaletteColor(const unsigned char& palette, const unsigned char& color){
+	return cgbPaletteColor[palette][color];
 }
 
 void GPU::updateBackgroundPalette(){

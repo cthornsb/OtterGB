@@ -213,6 +213,11 @@ private:
 	  * @param high The high byte (upper 2 bits of GREEN and BLUE) of the GBC color.
 	  */
 	ColorRGB getColorRGB(const unsigned char &low, const unsigned char &high);
+
+	/** Get pointer to one of the four colors of one of the CGB palettes
+	  * For DMG mode, palette 0 is used for BGP and palettes 8 and 9 are used for OBP0 and OBP1 respectively.
+	  */
+	ColorRGB& getPaletteColor(const unsigned char& palette, const unsigned char& color);
 	
 	/** Update true RGB background palette by converting GBC format colors.
 	  * The color pointed to by the current bgPaletteIndex (register 0xFF68) will be udpated.

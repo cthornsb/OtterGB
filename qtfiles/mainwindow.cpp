@@ -101,51 +101,6 @@ void MainWindow::update()
 		default:
 			break;
 	}
-	// Update tile viewer (if enabled)
-	if(tileViewer){
-		components->gpu->drawTileMaps(tileViewer.get());
-		tileViewer->render();
-	}
-	// Update tile viewer (if enabled)
-	if(layerViewer){
-		components->gpu->drawLayer(layerViewer.get(), ui->radioButton_PPU_Map0->isChecked());
-		if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
-			unsigned char x0 = rSCX->getValue();
-			unsigned char x1 = x0 + 159;
-			unsigned char y0 = rSCY->getValue();
-			unsigned char y1 = y0 + 143;
-			layerViewer->setDrawColor(Colors::RED);
-			if(x0 < x1){ // Viewport does not wrap horiontally
-				layerViewer->drawLine(x0, y0, x1, y0);
-				layerViewer->drawLine(x0, y1, x1, y1);
-			}
-			else{ // Viewport wraps horizontally
-				layerViewer->drawLine(0, y0, x1, y0);
-				layerViewer->drawLine(x0, y0, 255, y0);
-				layerViewer->drawLine(0, y1, x1, y1);
-				layerViewer->drawLine(x0, y1, 255, y1);
-			}
-			if(y0 < y1){ // Viewport does not wrap vertically
-				layerViewer->drawLine(x0, y0, x0, y1);
-				layerViewer->drawLine(x1, y0, x1, y1);
-			}
-			else{ // Viewport wraps vertically
-				layerViewer->drawLine(x0, 0, x0, y1);
-				layerViewer->drawLine(x0, y0, x0, 255);
-				layerViewer->drawLine(x1, 0, x1, y1);
-				layerViewer->drawLine(x1, y0, x1, 255);
-			}			
-			x0 = rWX->getValue()-7;
-			y0 = rWY->getValue();
-			if(rLCDC->getBit(5) && x0 < 160 && y0 < 144){ // Draw the window box
-				x1 = 159 - x0;
-				y1 = 143 - y0;
-				layerViewer->setDrawColor(Colors::GREEN);
-				layerViewer->drawRectangle(0, 0, x1, y1);
-			}
-		}
-		layerViewer->render();
-	}
 }
 
 void MainWindow::updateMainTab(){
@@ -468,22 +423,6 @@ void MainWindow::updatePausedState(bool state/*=true*/){
 		ui->pushButton_PauseResume->setText("Pause");
 }
 
-void MainWindow::openTileViewer(){
-	// Initialize tile bitmap viewer
-	if(tileViewer)
-		return;
-	tileViewer = std::unique_ptr<Window>(new Window(160, 160));
-	tileViewer->initialize();
-}
-
-void MainWindow::openLayerViewer(){
-	// Initialize BG/WIN layer viewer
-	if(layerViewer)
-		return;
-	layerViewer = std::unique_ptr<Window>(new Window(256, 256));
-	layerViewer->initialize();
-}
-
 void MainWindow::setLineEditText(QLineEdit *line, const std::string &str){
 	line->setText(getQString(str));
 }
@@ -709,13 +648,13 @@ void MainWindow::on_pushButton_Refresh_pressed()
 
 void MainWindow::on_pushButton_PPU_TileViewer_pressed()
 {
-	openTileViewer();
+	sys->openTileViewer();
 	ui->pushButton_PPU_TileViewer->setEnabled(false);
 }
 
 void MainWindow::on_pushButton_PPU_LayerViewer_pressed()
 {
-	openLayerViewer();
+	sys->openLayerViewer();
 	ui->pushButton_PPU_LayerViewer->setEnabled(false);
 }
 

@@ -138,11 +138,10 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	handler.add(optionExt("scale-factor", required_argument, NULL, 'S', "<N>", "Set the integer size multiplier for the screen (default 2)."));
 	handler.add(optionExt("force-color", no_argument, NULL, 'C', "", "Use CGB mode for original DMG games."));
 	handler.add(optionExt("no-load-sram", no_argument, NULL, 'n', "", "Do not load external cartridge RAM (SRAM) at boot."));
-#ifdef USE_QT_DEBUGGER			
 	handler.add(optionExt("debug", no_argument, NULL, 'd', "", "Enable Qt debugging GUI."));
 	handler.add(optionExt("tile-viewer", no_argument, NULL, 'T', "", "Enable VRAM tile viewer (if debug gui enabled)."));
 	handler.add(optionExt("layer-viewer", no_argument, NULL, 'L', "", "Enable BG/WIN layer viewer (if debug gui enabled)."));
-#endif // ifdef USE_QT_DEBUGGER
+
 	// Handle user input.
 	if(!handler.setup(argc, argv)){
 		fatalError = true;
@@ -228,15 +227,13 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			forceColor = true;
 		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
-#ifdef USE_QT_DEBUGGER			
-		if (cfgFile.searchBoolFlag("DEBUG_MODE")) { // Toggle debug flag
+		if (cfgFile.searchBoolFlag("DEBUG_MODE")) // Toggle debug flag
 			setDebugMode(true);
-			if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
-				bUseTileViewer = true;
-			if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
-				bUseLayerViewer = true;
-		}
-#endif // ifdef USE_QT_DEBUGGER
+		if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
+			openTileViewer();
+		if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
+			openLayerViewer();
+			
 		// Setup key mapping
 		joy->setButtonMap(&cfgFile);
 	}
@@ -257,15 +254,12 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			forceColor = true;
 		if(handler.getOption(8)->active) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
-#ifdef USE_QT_DEBUGGER			
-		if(handler.getOption(9)->active){ // Toggle debug flag
+		if(handler.getOption(9)->active) // Toggle debug flag
 			setDebugMode(true);
-			if(handler.getOption(10)->active) // Open tile-viewer window
-				bUseTileViewer = true;
-			if(handler.getOption(11)->active) // Open layer-viewer window
-				bUseLayerViewer = true;
-		}
-#endif // ifdef USE_QT_DEBUGGER
+		if(handler.getOption(10)->active) // Open tile-viewer window
+			openTileViewer();
+		if(handler.getOption(11)->active) // Open layer-viewer window
+			openLayerViewer();
 	}
 #endif // ifndef _WIN32
 	pauseAfterNextInstruction = false;
@@ -354,6 +348,7 @@ bool SystemGBC::execute(){
 
 			// Tick the system sclk
 			sclk->onClockUpdate();
+			
 #ifdef USE_QT_DEBUGGER
 			if(pauseAfterNextClock){
 				pauseAfterNextClock = false;					
@@ -389,17 +384,15 @@ bool SystemGBC::execute(){
 						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 17);
 					gpu->render();
 				}
-#ifdef USE_QT_DEBUGGER
 				if(debugMode){
-					if(!pauseAfterNextVBlank){
-						updateDebugger();
-					}
-					else{
+					updateDebuggers();
+#ifdef USE_QT_DEBUGGER
+					if(pauseAfterNextVBlank){
 						pauseAfterNextVBlank = false;
 						pause();
 					}
-				}
 #endif
+				}
 			}
 		}
 		else{
@@ -420,14 +413,12 @@ bool SystemGBC::execute(){
 
 			// Maintain framerate but do not advance the system clock
 			sclk->wait();
-#ifndef USE_QT_DEBUGGER
+
+			if(debugMode)// Process debugger events
+				updateDebuggers();
 		}
 	}
-#else
-			if(debugMode) // Process events for the Qt GUI
-				updateDebugger();
-		}
-	}
+#ifdef USE_QT_DEBUGGER
 	if(debugMode)
 		gui->quit();
 #endif
@@ -763,12 +754,26 @@ void SystemGBC::setAudioInterface(SoundManager* ptr){
 void SystemGBC::setQtDebugger(MainWindow* ptr){
 	ptr->connectToSystem(this);
 	gui = ptr; 
-	if(bUseTileViewer) // Open tile-viewer window
-		gui->openTileViewer();
-	if(bUseLayerViewer) // Open layer-viewer window
-		gui->openLayerViewer();
 }
 #endif
+
+void SystemGBC::openTileViewer(){
+	if(bUseTileViewer) // Already open
+		return;
+	tileViewer.reset(new Window(160, 160));
+	tileViewer->initialize();
+	bUseTileViewer = true;
+	debugMode = true;
+}
+
+void SystemGBC::openLayerViewer(){
+	if(bUseLayerViewer) // Already open
+		return;
+	layerViewer.reset(new Window(256, 256));
+	layerViewer->initialize();
+	bUseLayerViewer = true;
+	debugMode = true;
+}
 
 void SystemGBC::setFramerateMultiplier(const float& freq){
 	sclk->setFramerateMultiplier(freq);
@@ -908,21 +913,70 @@ void SystemGBC::resumeCPU(){
 	}
 }
 
+
+void SystemGBC::updateDebuggers(){
 #ifdef USE_QT_DEBUGGER
-void SystemGBC::updateDebugger(){
 	gui->update();
 	gui->processEvents();
-}
 #endif
+	// Update tile viewer (if enabled)
+	if(bUseTileViewer){
+		gpu->drawTileMaps(tileViewer.get());
+		tileViewer->setCurrent();
+		tileViewer->render2();
+	}
+	// Update layer viewer (if enabled)
+	if(bUseLayerViewer){
+		gpu->drawLayer(layerViewer.get());//, ui->radioButton_PPU_Map0->isChecked());
+		layerViewer->setCurrent();
+		layerViewer->render2();
+		//if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
+			unsigned char x0 = rSCX->getValue();
+			unsigned char x1 = x0 + 159;
+			unsigned char y0 = rSCY->getValue();
+			unsigned char y1 = y0 + 143;
+			layerViewer->setDrawColor(Colors::RED);
+			if(x0 < x1){ // Viewport does not wrap horiontally
+				layerViewer->drawLine(x0, y0, x1, y0);
+				layerViewer->drawLine(x0, y1, x1, y1);
+			}
+			else{ // Viewport wraps horizontally
+				layerViewer->drawLine(0, y0, x1, y0);
+				layerViewer->drawLine(x0, y0, 255, y0);
+				layerViewer->drawLine(0, y1, x1, y1);
+				layerViewer->drawLine(x0, y1, 255, y1);
+			}
+			if(y0 < y1){ // Viewport does not wrap vertically
+				layerViewer->drawLine(x0, y0, x0, y1);
+				layerViewer->drawLine(x1, y0, x1, y1);
+			}
+			else{ // Viewport wraps vertically
+				layerViewer->drawLine(x0, 0, x0, y1);
+				layerViewer->drawLine(x0, y0, x0, 255);
+				layerViewer->drawLine(x1, 0, x1, y1);
+				layerViewer->drawLine(x1, y0, x1, 255);
+			}			
+			x0 = rWX->getValue()-7;
+			y0 = rWY->getValue();
+			if(rLCDC->getBit(5) && x0 < 160 && y0 < 144){ // Draw the window box
+				x1 = 159 - x0;
+				y1 = 143 - y0;
+				layerViewer->setDrawColor(Colors::GREEN);
+				layerViewer->drawRectangle(0, 0, x1, y1);
+			}
+		//}
+		layerViewer->render();
+	}
+}
 
 void SystemGBC::pause(){ 
 	emulationPaused = true; 
-#ifdef USE_QT_DEBUGGER
 	if(debugMode){
+#ifdef USE_QT_DEBUGGER
 		gui->updatePausedState(true);
-		updateDebugger();
-	}
 #endif
+		updateDebuggers();
+	}
 	sound->pause(); // Stop audio output
 }
 

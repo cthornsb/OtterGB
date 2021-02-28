@@ -2,6 +2,8 @@
 #include "HighResTimer.hpp"
 
 HighResTimer::HighResTimer() :
+	dTotalTime(0),
+	nStops(0),
 	tInitialization(hrclock::now()),
 	tLastStart()
 {
@@ -11,8 +13,11 @@ void HighResTimer::start(){
 	tLastStart = hrclock::now();
 }
 
-double HighResTimer::stop() const {
-	return std::chrono::duration<double>(hrclock::now() - tLastStart).count();
+double HighResTimer::stop(){
+	nStops++;
+	double retval = std::chrono::duration<double>(hrclock::now() - tLastStart).count();
+	dTotalTime += retval;
+	return retval;
 }
 
 double HighResTimer::uptime() const {
@@ -20,6 +25,7 @@ double HighResTimer::uptime() const {
 }
 
 void HighResTimer::reset(){
-	tInitialization = hrclock::now();
+	dTotalTime = 0;
+	nStops = 0;
 }
 

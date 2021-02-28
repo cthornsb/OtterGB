@@ -5,6 +5,7 @@
 #include <queue>
 
 #include "colors.hpp"
+#include "ImageBuffer.hpp"
 
 class GPU;
 
@@ -133,7 +134,10 @@ public:
 		aspect(1),
 		nMult(1), 
 		winID(0), 
-		init(false)
+		init(false),
+		gpu(0x0),
+		keys(),
+		buffer()
 	{ 
 	}
 	
@@ -147,9 +151,20 @@ public:
 		height(h),
 		aspect(float(w)/h),
 		nMult(scale), 
-		init(false)
+		init(false),
+		gpu(0x0),
+		keys(),
+		buffer()
 	{
 	}
+
+	/** Copy constructor
+	  */
+	Window(const Window&) = delete;
+	
+	/** Assignment operator
+	  */
+	Window& operator = (const Window&) = delete;
 
 	/** Destructor
 	  */
@@ -260,9 +275,29 @@ public:
 	  */
 	static void drawRectangle(const int &x1, const int &y1, const int &x2, const int &y2);
 
+	/** Write pixel data from an array to the GPU frame buffer
+	  */
+	static void drawBitmap(const unsigned int& width, const unsigned int& height, const float& x0, const float& y0, const unsigned char* data);
+
+	/** Write pixel data from an image buffer to the GPU frame buffer
+	  */
+	static void drawPixels(const unsigned int& width, const unsigned int& height, const float& x0, const float& y0, const ImageBuffer* data);
+
+	/** Write to CPU frame buffer
+	  */
+	void buffWrite(const unsigned short& x, const unsigned short& y, const ColorRGB& color);
+
+	/** Draw a horizontal line to CPU frame buffer
+	  */
+	void buffWriteLine(const unsigned short& y, const ColorRGB& color);
+
 	/** Render the current frame
 	  */
-	static void render();
+	void render();
+
+	/** Render the current frame
+	  */
+	void render2();
 
 	/** Return true if the window has been closed and return false otherwise
 	  */
@@ -271,6 +306,10 @@ public:
 	/** Initialize OpenGL and open the window
 	  */
 	void initialize();
+
+	/** Set pixel scaling factor
+	  */
+	void updatePixelZoom();
 
 	void setKeyboardStreamMode();
 
@@ -301,5 +340,7 @@ private:
 	GPU *gpu; ///< Pointer to the graphics processor
 
 	KeyStates keys; ///< The last key which was pressed by the user
+	
+	ImageBuffer buffer; ///< CPU-side frame buffer
 };
 #endif

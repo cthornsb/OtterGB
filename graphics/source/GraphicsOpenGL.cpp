@@ -63,29 +63,16 @@ void reshapeScene(GLint width, GLint height){
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	int wprime = width;
-	int hprime = height;
-	float aspect = float(wprime)/hprime;
-
-	if(aspect > currentWindow->getAspectRatio()){ // Wider window (height constrained)
-		wprime = (int)(currentWindow->getAspectRatio() * hprime);
-		glPointSize(float(hprime)/currentWindow->getHeight());
-	}
-	else{ // Taller window (width constrained)
-		hprime = (int)(wprime / currentWindow->getAspectRatio());
-		glPointSize(float(wprime)/currentWindow->getWidth());
-	}
-
-	glViewport(0, 0, wprime, hprime); // Update the viewport
-	gluOrtho2D(0, currentWindow->getWidth(), currentWindow->getHeight(), 0);
+	// Update viewport
+	glViewport(0, 0, width, height);
+	glOrtho(0, currentWindow->getWidth(), currentWindow->getHeight(), 0, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 
 	// Update window size
-	currentWindow->setWidth(wprime);
-	currentWindow->setHeight(hprime);
+	currentWindow->setWidth(width);
+	currentWindow->setHeight(height);
+	currentWindow->updatePixelZoom();
 
-	glutPostRedisplay();
-	
 	// Clear the window.
 	currentWindow->clear();
 }
@@ -344,7 +331,30 @@ void Window::drawRectangle(const int &x1, const int &y1, const int &x2, const in
 	drawLine(x1, y2, x1, y1); // Left
 }
 
+void Window::drawBitmap(const unsigned int& width, const unsigned int& height, const float& x0, const float& y0, const unsigned char* data){
+	glRasterPos2i(x0, y0);
+	glBitmap(width, height, 0, 0, 0, 0, data);
+}
+
+void Window::drawPixels(const unsigned int& width, const unsigned int& height, const float& x0, const float& y0, const ImageBuffer* data){
+	glRasterPos2i(x0, y0);
+	glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, data->get());
+}
+
+void Window::buffWrite(const unsigned short& x, const unsigned short& y, const ColorRGB& color){
+	buffer.setPixel(x, y, color);
+}
+
+void Window::buffWriteLine(const unsigned short& y, const ColorRGB& color){
+	buffer.setPixelRow(y, color);
+}
+
 void Window::render(){
+	glFlush();
+}
+
+void Window::render2(){
+	drawPixels(W, H ,0, H, &buffer);
 	glFlush();
 }
 
@@ -370,6 +380,9 @@ void Window::initialize(){
 	winID = glutCreateWindow("gbc");
 	listOfWindows[winID] = this;
 
+	// Setup frame buffer
+	buffer.resize(W, H);
+
 	// Set window size handler
 	glutReshapeFunc(reshapeScene);
 
@@ -377,6 +390,10 @@ void Window::initialize(){
 	glutDisplayFunc(displayFunction);
 
 	init = true;
+}
+
+void Window::updatePixelZoom(){
+	glPixelZoom((float)width / W, (float)height / H);
 }
 
 void Window::setKeyboardStreamMode(){

@@ -96,8 +96,11 @@ void CharacterMap::putCharacter(const char &val, const unsigned short &x, const 
 			pixelColor = cmap[(unsigned int)val].get(dx, dy);
 			if(transparency && pixelColor == 0) // Transparent
 				continue;
-			window->setDrawColor(palette[pixelColor]);
-			window->drawPixel(8*x+dx, 8*y+dy);
+			window->buffWrite(
+				8 * x + dx, 
+				8 * y + dy, 
+				palette[pixelColor]
+			);
 		}
 	}
 }

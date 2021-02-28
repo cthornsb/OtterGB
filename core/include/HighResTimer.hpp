@@ -10,21 +10,28 @@ class HighResTimer{
 public:
 	HighResTimer();
 
-	/** Get the time elapsed since the timer was reset
+	/** Get the average elapsed time for each start / stop cycle (in seconds)
 	  */
 	double operator () () {
-		return uptime();
+		return (dTotalTime / nStops);
+	}
+	
+	/** Get the number of start / stop cycles
+	  */
+	unsigned int getCount() const {
+		return nStops;
 	}
 	
 	/** Start the timer
 	  */
 	void start();
 	
-	/** Stop the timer and return the time elapsed since start() called
+	/** Stop the timer and return the time elapsed since start() called (in seconds)
+	  * Time elapsed is added to total time accumulator.
 	  */
-	double stop() const;
+	double stop();
 	
-	/** Get total time since timer initialization
+	/** Get total time since timer initialization (in seconds)
 	  */
 	double uptime() const;
 	
@@ -33,6 +40,10 @@ public:
 	void reset();
 	
 private:
+	double dTotalTime; ///< Total time between all starts and stops (in seconds)
+	
+	unsigned int nStops; ///< Number of times the timer has been started and stopped
+
 	hrclock::time_point tInitialization; ///< The time that the timer was initialized
 	
 	hrclock::time_point tLastStart; ///< The most recent time that the timer was started
