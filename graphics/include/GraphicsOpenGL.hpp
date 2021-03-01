@@ -3,154 +3,39 @@
 
 #include <vector>
 #include <queue>
+#include <memory>
+#include <map>
+
+#include <GLFW/glfw3.h>
 
 #include "colors.hpp"
+#include "KeyStates.hpp"
 #include "ImageBuffer.hpp"
 
 class GPU;
 
-class KeyStates{
-public:
-	/** Default constructor
-	  */
-	KeyStates();
-	
-	/** Enable text stream mode
-	  */
-	void enableStreamMode();
-	
-	/** Disable text stream mode and return to keypress mode
-	  */
-	void disableStreamMode();
-	
-	/** Return true if no keys are currently pressed
-	  */
-	bool empty() const { 
-		return (nCount == 0); 
+struct DestroyGLFWwindow {
+	void operator()(GLFWwindow* ptr) {
+		glfwDestroyWindow(ptr);
 	}
-	
-	/** Check the current state of a key without modifying it
-	  */
-	bool check(const unsigned char &key) const { 
-		return states[key]; 
-	}
-
-	/** Return true if left shift is currently pressed
-	  */	
-	bool leftShift() const {
-		return bLeftShift;
-	}
-
-	/** Return true if right shift is currently pressed
-	  */	
-	bool rightShift() const {
-		return bLeftShift;
-	}
-
-	/** Return true if left ctrl is currently pressed
-	  */	
-	bool leftCtrl() const {
-		return bLeftShift;
-	}
-
-	/** Return true if right ctrl is currently pressed
-	  */	
-	bool rightCtrl() const {
-		return bLeftShift;
-	}
-
-	/** Return true if left alt is currently pressed
-	  */	
-	bool leftAlt() const {
-		return bLeftShift;
-	}
-	
-	/** Return true if right alt is currently pressed
-	  */
-	bool rightAlt() const {
-		return bLeftShift;
-	}
-	
-	/** Poll the state of a key
-	  * If the state of the key is currently pressed, mark it as released. 
-	  * This method is useful for making the key sensitive to being pressed, but not to being held down.
-	  */
-	bool poll(const unsigned char &key);
-	
-	/** Press a key
-	  * If bStreamMode is set, key is added to the stream buffer.
-	  */
-	void keyDown(const unsigned char &key);
-	
-	/** Release a key
-	  */
-	void keyUp(const unsigned char &key);
-	
-	/** Press or release a special key (e.g. function key, shift, etc)
-	  */
-	void keySpecial(const int &key, bool bKeyDown);
-	
-	/** Get a character from the stream buffer
-	  * If the stream buffer is empty, return false.
-	  */
-	bool get(char& key);
-
-	/** Reset the stream buffer and all key states
-	  */
-	void reset();
-
-private:
-	unsigned short nCount; ///< Number of standard keyboard keys which are currently pressed
-
-	bool bStreamMode; ///< Flag to set keyboard to behave as stream buffer
-
-	bool bLeftShift; ///< Set if left shift is pressed
-	
-	bool bLeftCtrl; ///< Set if left ctrl is pressed
-	
-	bool bLeftAlt; ///< Set if left alt is pressed
-	
-	bool bRightShift; ///< Set if right shift is pressed
-	
-	bool bRightCtrl; ///< Set if right ctrl is pressed
-	
-	bool bRightAlt; ///< Set if right alt is pressed
-
-	std::queue<char> buffer; ///< Text stream buffer
-
-	bool states[256]; ///< States of keyboard keys (true indicates key is down) 
 };
 
 class Window{
 public:
 	/** Default constructor
 	  */
-	Window() : 
-		W(0), 
-		H(0), 
-		A(1),
-		width(0),
-		height(0),
-		aspect(1),
-		nMult(1), 
-		winID(0), 
-		init(false),
-		gpu(0x0),
-		keys(),
-		buffer()
-	{ 
-	}
+	Window() = delete;
 	
 	/** Constructor taking the width and height of the window
 	  */
 	Window(const int &w, const int &h, const int& scale=1) : 
-		W(w), 
-		H(h),
-		A(float(w)/h),
-		width(w),
-		height(h),
-		aspect(float(w)/h),
-		nMult(scale), 
+		win(),
+		nNativeWidth(w), 
+		nNativeHeight(h),
+		fNativeAspect(float(w)/h),
+		width(nNativeWidth * scale),
+		height(nNativeHeight * scale),
+		aspect(fNativeAspect),
 		init(false),
 		gpu(0x0),
 		keys(),
@@ -174,59 +59,67 @@ public:
 
 	bool processEvents();
 
-	GPU *getGPU(){ return gpu; }
+	GPU *getGPU(){
+		return gpu; 
+	}
 
 	/** Get the width of the window (in pixels)
 	  */
-	int getCurrentWidth() const { return W; }
+	int getNativeWidth() const {
+		return nNativeWidth; 
+	}
 	
 	/** Get the height of the window (in pixels)
 	  */
-	int getCurrentHeight() const { return H; }
+	int getNativetHeight() const {
+		return nNativeHeight;
+	}
 
-	/** Get the width of the window (in pixels)
+	/** Get the aspect ratio of the window (W/H)
 	  */
-	int getWidth() const { return W; }
+	float getNativeAspectRatio() const {
+		return fNativeAspect;
+	}
+
+	/** Get the current width of the window (in pixels)
+	  */
+	int getWidth() const {
+		return width;
+	}
 	
-	/** Get the height of the window (in pixels)
+	/** Get the current height of the window (in pixels)
 	  */
-	int getHeight() const { return H; }
-
-	/** Get screen scale multiplier.
-	  */
-	int getScale() const { return nMult; }
+	int getHeight() const {
+		return height;
+	}
 
 	/** Get the aspect ratio of the window (W/H)
 	  */
-	float getCurrentAspectRatio() const { return aspect; }
-
-	/** Get the aspect ratio of the window (W/H)
-	  */
-	float getAspectRatio() const { return A; }
-
-	/** Get the GLUT window ID number
-	  */
-	int getWindowID() const { return winID; }
+	float getAspectRatio() const {
+		return aspect;
+	}
 
 	/** Get a pointer to the last user keypress event
 	  */
-	KeyStates* getKeypress(){ return &keys; }
+	KeyStates* getKeypress(){
+		return &keys;
+	}
 
 	/** Set pointer to the pixel processor
 	  */
-	void setGPU(GPU *ptr){ gpu = ptr; }
+	void setGPU(GPU *ptr){
+		gpu = ptr;
+	}
 
-	/** Set the width of the window (in pixels)
+	/** Set the size of graphical window
+	  * Has no effect if window has not been initialized.
 	  */
-	void setWidth(const int &w){ width = w; }
-	
-	/** Set the height of the window (in pixels)
-	  */
-	void setHeight(const int &h){ height = h; }
+	void updateWindowSize(const int& w, const int& h);
 
-	/** Set the integer pixel scaling multiplier (default = 1)
+	/** Set the size of graphical window
+	  * Has no effect if window has not been initialized.
 	  */
-	void setScalingFactor(const int &scale);
+	void updateWindowSize(const int& scale);
 
 	/** Set the current draw color
 	  */
@@ -295,9 +188,14 @@ public:
 	  */
 	void render();
 
-	/** Render the current frame
+	/** Draw the image buffer but do not render the frame
+	  * Useful if you wish to do additional processing on top of the image buffer.
 	  */
-	void render2();
+	void drawBuffer();
+
+	/** Draw the image buffer and render the frame
+	  */
+	void renderBuffer();
 
 	/** Return true if the window has been closed and return false otherwise
 	  */
@@ -317,24 +215,21 @@ public:
 
 	void setupKeyboardHandler();
 
-	virtual void paintGL();
-	
-	virtual void initializeGL();
-
-	virtual void resizeGL(int width, int height);
-
 private:
-	int W; ///< Original width of the window (in pixels)
-	int H; ///< Original height of the window (in pixels)
-	float A; ///< Original aspect ratio of window
+	std::unique_ptr<GLFWwindow, DestroyGLFWwindow> win;
+
+	int nNativeWidth; ///< Original width of the window (in pixels)
+	
+	int nNativeHeight; ///< Original height of the window (in pixels)
+	
+	float fNativeAspect; ///< Original aspect ratio of window
 
 	int width; ///< Current width of window
+	
 	int height; ///< Current height of window
+	
 	float aspect; ///< Current aspect ratio of window
 	
-	int nMult; ///< Integer multiplier for window scaling
-	int winID; ///< GLUT window identifier
-
 	bool init; ///< Flag indicating that the window has been initialized
 
 	GPU *gpu; ///< Pointer to the graphics processor
@@ -342,5 +237,44 @@ private:
 	KeyStates keys; ///< The last key which was pressed by the user
 	
 	ImageBuffer buffer; ///< CPU-side frame buffer
+	
+	/** Update viewport and projection matrix after resizing window
+	  */
+	void reshape();
 };
+
+class ActiveWindows{
+public:
+	/** Copy constructor
+	  */
+	ActiveWindows(const ActiveWindows&) = delete;
+
+	/** Assignment operator
+	  */
+	ActiveWindows& operator = (const ActiveWindows&) = delete;
+	
+	/** Get reference to the singleton
+	  */
+	static ActiveWindows& get();
+	
+	/** Add a GLFW window to the map
+	  */
+	void add(GLFWwindow* glfw, Window* win);
+	
+	/** Find a pointer to an opengl window object
+	  */
+	Window* find(GLFWwindow* glfw);
+	
+private:
+	std::map<GLFWwindow*, Window*> listOfWindows; ///< Map of GLFW windows
+
+	/** Default constructor (private)
+	  */
+	ActiveWindows() :
+		listOfWindows()
+	{ 
+	}
+};
+
 #endif
+

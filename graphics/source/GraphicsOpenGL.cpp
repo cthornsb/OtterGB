@@ -1,255 +1,29 @@
-#include <map>
-
-#include <GL/freeglut.h>
+#include <iostream>
 
 #include "GraphicsOpenGL.hpp"
 
-std::map<int, Window*> listOfWindows;
-
-Window *getCurrentWindow(){
-	return listOfWindows[glutGetWindow()];
-}
-
-/** Handle OpenGL keyboard presses.
-  * @param key The keyboard character which was pressed.
-  * @param x X coordinate of the mouse when the key was pressed (not used).
-  * @param y Y coordinate of the mouse when the key was pressed (not used).
-  */
-void handleKeys(unsigned char key, int x, int y){
-	Window *currentWindow = getCurrentWindow();
-	if(key == 0x1B){ // Escape
-		currentWindow->close();
-		return;
-	}
-	currentWindow->getKeypress()->keyDown(key);
-}
-
-/** Handle OpenGL keyboard key releases.
-  * @param key The keyboard character which was pressed.
-  * @param x X coordinate of the mouse when the key was released (not used).
-  * @param y Y coordinate of the mouse when the key was released (not used).
-  */
-void handleKeysUp(unsigned char key, int x, int y){
-	getCurrentWindow()->getKeypress()->keyUp(key);
-}
-
-/** Handle OpenGL special key presses.
-  * Redirect special keys to a more convenient format.
-  * @param key The special key which was pressed
-  * @param x X coordinate of the mouse when the key was pressed (not used)
-  * @param y Y coordinate of the mouse when the key was pressed (not used)
-  */
-void handleSpecialKeys(int key, int x, int y){
-	getCurrentWindow()->getKeypress()->keySpecial(key, true);
-}
-
-/** Handle OpenGL special key releases.
-  * Redirect special keys to match the ones used by SDL.
-  * @param key The special key which was pressed
-  * @param x X coordinate of the mouse when the key was released (not used)
-  * @param y Y coordinate of the mouse when the key was released (not used)
-  */
-void handleSpecialKeysUp(int key, int x, int y){
-	getCurrentWindow()->getKeypress()->keySpecial(key, false);
+void handleErrors(int error, const char* description) {
+	std::cout << " [glfw] Error! id=" << error << " : " << description << std::endl;
 }
 
 /** Handle window resizes.
   * @param width The new width of the window after the user has resized it.
   * @param height The new height of the window after the user has resized it.
   */
-void reshapeScene(GLint width, GLint height){
-	Window *currentWindow = getCurrentWindow();
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	// Update viewport
-	glViewport(0, 0, width, height);
-	glOrtho(0, currentWindow->getWidth(), currentWindow->getHeight(), 0, -1, 1);
-	glMatrixMode(GL_MODELVIEW);
-
+void reshapeScene(GLFWwindow* window, int width, int height){
+	Window* currentWindow = ActiveWindows::get().find(window);
+	if(!currentWindow)
+		return;
+	
 	// Update window size
-	currentWindow->setWidth(width);
-	currentWindow->setHeight(height);
-	currentWindow->updatePixelZoom();
-
-	// Clear the window.
-	currentWindow->clear();
+	currentWindow->updateWindowSize(width, height);
 }
 
-void displayFunction() {
-	// This callback does nothing, but is required on Windows
-}
-
-/////////////////////////////////////////////////////////////////////
-// class KeyStates
-/////////////////////////////////////////////////////////////////////
-
-KeyStates::KeyStates() : 
-	nCount(0), 
-	bStreamMode(false),
-	bLeftShift(false),
-	bLeftCtrl(false),
-	bLeftAlt(false),
-	bRightShift(false),
-	bRightCtrl(false),
-	bRightAlt(false)
-{
-	reset();
-}
-
-void KeyStates::enableStreamMode(){
-	bStreamMode = true;
-	reset();
-}
-
-void KeyStates::disableStreamMode(){
-	bStreamMode = false;
-	reset();
-}
-
-bool KeyStates::poll(const unsigned char &key){ 
-	if(states[key]){
-		states[key] = false;
-		return true;
+void windowFocus(GLFWwindow* window, int focused){
+	if (focused){ // The window gained input focus
 	}
-	return false;
-}
-
-void KeyStates::keyDown(const unsigned char &key){
-	if(!bStreamMode){
-		if(!states[key]){
-			states[key] = true;
-			nCount++;
-		}
+	else{ // The window lost input focus
 	}
-	else{
-		buffer.push((char)key);
-	}
-}
-
-void KeyStates::keyUp(const unsigned char &key){
-	if(!bStreamMode){
-		if(states[key]){
-			states[key] = false;
-			nCount--;
-		}
-	}
-}
-
-void KeyStates::keySpecial(const int &key, bool bKeyDown){
-	unsigned char ckey = 0x0;
-	switch (key) {
-	case GLUT_KEY_F1:
-		ckey = 0xf1;
-		break;
-	case GLUT_KEY_F2:
-		ckey = 0xf2;
-		break;
-	case GLUT_KEY_F3:
-		ckey = 0xf3;
-		break;
-	case GLUT_KEY_F4:
-		ckey = 0xf4;
-		break;
-	case GLUT_KEY_F5:
-		ckey = 0xf5;
-		break;
-	case GLUT_KEY_F6:
-		ckey = 0xf6;
-		break;
-	case GLUT_KEY_F7:
-		ckey = 0xf7;
-		break;
-	case GLUT_KEY_F8:
-		ckey = 0xf8;
-		break;
-	case GLUT_KEY_F9:
-		ckey = 0xf9;
-		break;
-	case GLUT_KEY_F10:
-		ckey = 0xfa;
-		break;
-	case GLUT_KEY_F11:
-		ckey = 0xfb;
-		break;
-	case GLUT_KEY_F12:
-		ckey = 0xfc;
-		break;
-	case GLUT_KEY_LEFT:
-		ckey = 0x50;
-		break;
-	case GLUT_KEY_UP:
-		ckey = 0x52;
-		break;
-	case GLUT_KEY_RIGHT:
-		ckey = 0x4f;
-		break;
-	case GLUT_KEY_DOWN:
-		ckey = 0x51;
-		break;
-	case GLUT_KEY_PAGE_UP:
-		break;
-	case GLUT_KEY_PAGE_DOWN:
-		break;
-	case GLUT_KEY_HOME:
-		break;
-	case GLUT_KEY_END:
-		break;
-	case GLUT_KEY_INSERT:
-		break;
-	case GLUT_KEY_DELETE:
-		break;
-	// KEY MODIFIERS //
-	case GLUT_KEY_SHIFT_L:
-		bLeftShift = bKeyDown;
-		break;
-	case GLUT_KEY_SHIFT_R:
-		bRightShift = bKeyDown;
-		break;
-	case GLUT_KEY_CTRL_L:
-		bLeftCtrl = bKeyDown;
-		break;
-	case GLUT_KEY_CTRL_R:
-		bRightCtrl = bKeyDown;
-		break;
-	case GLUT_KEY_ALT_L:
-		bLeftAlt = bKeyDown;
-		break;
-	case GLUT_KEY_ALT_R:
-		bRightAlt = bKeyDown;
-		break;
-	default:
-		break;
-	}
-	if(ckey){
-		if(bKeyDown)
-			keyDown(ckey);
-		else
-			keyUp(ckey);
-	}
-}
-
-bool KeyStates::get(char& key){
-	if(buffer.empty())
-		return false;
-	key = buffer.front();
-	buffer.pop();
-	return true;
-}
-
-void KeyStates::reset(){
-	for(int i = 0; i < 256; i++)
-		states[i] = false;
-	while(!buffer.empty())
-		buffer.pop();
-	bLeftShift = false;
-	bLeftCtrl = false;
-	bLeftAlt = false;
-	bRightShift = false;
-	bRightCtrl = false;
-	bRightAlt = false;
-	nCount = 0;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -257,26 +31,35 @@ void KeyStates::reset(){
 /////////////////////////////////////////////////////////////////////
 
 Window::~Window(){
-	close();
+	// glfw window will automatically be destroyed by its unique_ptr destructor
 }
 
 void Window::close(){
-	glutDestroyWindow(winID);
-	init = false;
+	glfwSetWindowShouldClose(win.get(), GLFW_TRUE);
 }
 
 bool Window::processEvents(){
+	setCurrent();
 	if(!status())
 		return false;
-	glutMainLoopEvent();
+	glfwPollEvents();
 	return true;
 }
 
-void Window::setScalingFactor(const int &scale){ 
-	nMult = scale; 
-	glutReshapeWindow(W*scale, H*scale);
+void Window::updateWindowSize(const int& w, const int& h){
+	width = w;
+	height = h;
+	aspect = float(w) / float(h);
+	if(init){
+		glfwSetWindowSize(win.get(), width, height); // Update physical window size
+		reshape();
+	}
 }
-	
+
+void Window::updateWindowSize(const int& scale){
+	updateWindowSize(nNativeWidth * scale, nNativeHeight * scale);
+}
+
 void Window::setDrawColor(ColorRGB *color, const float &alpha/*=1*/){
 	glColor3f(color->r, color->g, color->b);
 }
@@ -286,7 +69,7 @@ void Window::setDrawColor(const ColorRGB &color, const float &alpha/*=1*/){
 }
 
 void Window::setCurrent(){
-	glutSetWindow(winID);
+	glfwMakeContextCurrent(win.get());
 }
 
 void Window::clear(const ColorRGB &color/*=Colors::BLACK*/){
@@ -318,12 +101,6 @@ void Window::drawLine(const int *x, const int *y, const size_t &N){
 		drawLine(x[i], y[i], x[i+1], y[i+1]);
 }
 
-/** Draw multiple lines to the screen
-  * @param x1 X coordinate of the upper left corner
-  * @param y1 Y coordinate of the upper left corner
-  * @param x2 X coordinate of the bottom right corner
-  * @param y2 Y coordinate of the bottom right corner
-  */
 void Window::drawRectangle(const int &x1, const int &y1, const int &x2, const int &y2){
 	drawLine(x1, y1, x2, y1); // Top
 	drawLine(x2, y1, x2, y2); // Right
@@ -351,87 +128,121 @@ void Window::buffWriteLine(const unsigned short& y, const ColorRGB& color){
 
 void Window::render(){
 	glFlush();
+	glfwSwapBuffers(win.get());
 }
 
-void Window::render2(){
-	drawPixels(W, H ,0, H, &buffer);
-	glFlush();
+void Window::drawBuffer(){
+	drawPixels(nNativeWidth, nNativeHeight ,0, nNativeHeight, &buffer);
+}
+
+void Window::renderBuffer(){
+	drawBuffer();
+	render();
 }
 
 bool Window::status(){
-	return init;
+	return (init && !glfwWindowShouldClose(win.get()));
 }
 
 void Window::initialize(){
-	if(init) return;
+	if(init || nNativeWidth == 0 || nNativeHeight == 0) 
+		return;
 
-	// Dummy command line arguments
-	int dummyArgc = 1;
+	// Set the GLFW error callback
+	glfwSetErrorCallback(handleErrors);
 
 	// Open the graphics window
 	static bool firstInit = true;
-	if(firstInit){ // Stupid glut
-		glutInit(&dummyArgc, NULL);
+	if(firstInit){
+		glfwInit();
 		firstInit = false;
 	}
-	glutInitDisplayMode(GLUT_SINGLE);
-	glutInitWindowSize(W*nMult, H*nMult);
-	glutInitWindowPosition(100, 100);
-	winID = glutCreateWindow("gbc");
-	listOfWindows[winID] = this;
+	
+	// Create the window
+	win.reset(glfwCreateWindow(nNativeWidth, nNativeHeight, "ottergb", NULL, NULL)); // Windowed
+	//win.reset(glfwCreateWindow(nNativeWidth, nNativeHeight, "ottergb", glfwGetPrimaryMonitor(), NULL)); // Fullscreen
+	
+	// Add window to the map
+	ActiveWindows::get().add(win.get(), this);
 
 	// Setup frame buffer
-	buffer.resize(W, H);
+	buffer.resize(nNativeWidth, nNativeHeight);
+
+	// Set initialization flag
+	init = true;
+
+	// Update projection matrix
+	updateWindowSize(width, height);
 
 	// Set window size handler
-	glutReshapeFunc(reshapeScene);
+	glfwSetWindowSizeCallback(win.get(), reshapeScene);
 
-	// Set the display function callback (required for Windows)
-	glutDisplayFunc(displayFunction);
-
-	init = true;
+	// Set window focus callback
+	glfwSetWindowFocusCallback(win.get(), windowFocus);
 }
 
 void Window::updatePixelZoom(){
-	glPixelZoom((float)width / W, (float)height / H);
+	glPixelZoom((float)width / nNativeWidth, (float)height / nNativeHeight);
 }
 
 void Window::setKeyboardStreamMode(){
 	// Enable keyboard repeat
-	glutIgnoreKeyRepeat(0);
 	keys.enableStreamMode();
 }
 
 void Window::setKeyboardToggleMode(){
 	// Disable keyboard repeat
-	glutIgnoreKeyRepeat(1);
 	keys.disableStreamMode();
 }
 
 void Window::setupKeyboardHandler(){
-	// Set keyboard handler
-	glutKeyboardFunc(handleKeys);
-	glutSpecialFunc(handleSpecialKeys);
-
-	// Keyboard up handler
-	glutKeyboardUpFunc(handleKeysUp);
-	glutSpecialUpFunc(handleSpecialKeysUp);
-
-	// Set window size handler
-	glutReshapeFunc(reshapeScene);
+	// Set keyboard callback
+	glfwSetKeyCallback(win.get(), handleKeys);
 
 	// Set keyboard keys to behave as button toggles
 	setKeyboardToggleMode();
+
+	// Disable key repeat
+	glfwSetInputMode(win.get(), GLFW_STICKY_KEYS, GLFW_TRUE);
+	glfwSetInputMode(win.get(), GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+
+	// Set cursor properties
+	//glfwSetInputMode(win.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	//glfwSetInputMode(win.get(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	//glfwSetInputMode(win.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void Window::paintGL(){
-	this->render();
+void Window::reshape(){
+	setCurrent();
+	
+	updatePixelZoom();
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	// Update viewport
+	glViewport(0, 0, width, height);
+	glOrtho(0, nNativeWidth, nNativeHeight, 0, -1, 1);
+	glMatrixMode(GL_MODELVIEW);
+
+	// Clear the window.
+	clear();
 }
 
-void Window::initializeGL(){
-	this->initialize();
+ActiveWindows& ActiveWindows::get(){
+	static ActiveWindows instance;
+	return instance;
 }
 
-void Window::resizeGL(int width, int height){
-	reshapeScene(width, height);
+void ActiveWindows::add(GLFWwindow* glfw, Window* win){
+	listOfWindows[glfw] = win;
 }
+
+Window* ActiveWindows::find(GLFWwindow* glfw){
+	Window* retval = 0x0;
+	auto win = listOfWindows.find(glfw);
+	if(win != listOfWindows.end())
+		retval = win->second;
+	return retval;
+}
+	

@@ -86,9 +86,9 @@ endif(NOT GRAPHICS_LIBRARY)
 
 if(GRAPHICS_LIBRARY MATCHES "OpenGL")
 	if(NOT WIN32)
-		# To install OpenGL and freeglut:
-		#(Ubuntu) sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
-		set(EXTERNAL_GRAPHICS_LIBS -lglut -lGLU -lGL)
+		# To install OpenGL and glfw:
+		#(Ubuntu) sudo apt-get install libglu1-mesa-dev libglfw3-dev mesa-common-dev
+		set(EXTERNAL_GRAPHICS_LIBS -lglfw -lGLU -lGL)
 	else()
 		#Find OpenGL install on Windows (eventually make a CMake module for this)
 		#Precompiled freeglut libs from https://www.transmissionzero.co.uk/software/freeglut-devel/

@@ -423,7 +423,7 @@ void GPU::render(){
 	// Update the screen
 	window->setCurrent();
 	if(rLCDC->bit7() && window->status()){ // Check for events
-		window->render2();
+		window->renderBuffer();
 	}
 }
 
@@ -449,7 +449,7 @@ unsigned short GPU::getObjPaletteColorHex(const unsigned short &index) const {
 }
 
 void GPU::setPixelScale(const unsigned int &n){
-	window->setScalingFactor(n);
+	window->updateWindowSize(n);
 }
 
 void GPU::setColorPaletteDMG(){

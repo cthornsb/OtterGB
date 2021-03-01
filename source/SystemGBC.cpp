@@ -923,13 +923,13 @@ void SystemGBC::updateDebuggers(){
 	if(bUseTileViewer){
 		gpu->drawTileMaps(tileViewer.get());
 		tileViewer->setCurrent();
-		tileViewer->render2();
+		tileViewer->renderBuffer();
 	}
 	// Update layer viewer (if enabled)
 	if(bUseLayerViewer){
 		gpu->drawLayer(layerViewer.get());//, ui->radioButton_PPU_Map0->isChecked());
 		layerViewer->setCurrent();
-		layerViewer->render2();
+		layerViewer->drawBuffer();
 		//if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
 			unsigned char x0 = rSCX->getValue();
 			unsigned char x1 = x0 + 159;
