@@ -1,11 +1,11 @@
 #include <iostream> // TEMP
 #include <algorithm>
 
+#include "OTTWindow.hpp"
+
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Support.hpp"
-#include "Graphics.hpp"
-#include "ColorGBC.hpp"
 #include "Console.hpp"
 #include "GPU.hpp"
 #include "SystemClock.hpp"
@@ -19,10 +19,22 @@ constexpr int MAX_SPRITES_PER_LINE = 10;
 constexpr int SCREEN_WIDTH_PIXELS  = 160;
 constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
+namespace Colors{
+	// Monochrome colors (GB)
+	const ColorRGB GB_DKSTGREEN(15.0f/255,  56.0f/255,  15.0f/255);
+	const ColorRGB GB_DKGREEN(  48.0f/255,  98.0f/255,  48.0f/255);
+	const ColorRGB GB_LTGREEN(  139.0f/255, 172.0f/255, 15.0f/255);
+	const ColorRGB GB_GREEN(    155.0f/255, 188.0f/255, 15.0f/255);
+}
+
 GPU::GPU() : 
 	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
 	bUserSelectedPalette(false),
+	bWindowVisible(false),
 	winDisplayEnable(false),
+	nScanline(0),
+	nPosX(0),
+	nPosY(0),
 	nSpritesDrawn(0),
 	bgPaletteIndex(0),
 	objPaletteIndex(0),
@@ -36,7 +48,9 @@ GPU::GPU() :
 	currentLineWindow(),
 	currentLineBackground(),
 	userLayerEnable{ true, true, true },
-	sprites()
+	sprites(),
+	buffLock(),
+	mode(PPUMODE::SCANLINE)
 {
 }
 
@@ -45,11 +59,7 @@ GPU::~GPU(){
 
 void GPU::initialize(){
 	// Create a new window
-	window = std::unique_ptr<Window>(new Window(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS, 2));
-#ifdef USE_OPENGL 
-	// Create a link to the LCD driver
-	window->setGPU(this);
-#endif
+	window.reset(new OTTWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS, 2));
 
 	// Setup the ascii character map for text output
 	console = std::unique_ptr<ConsoleGBC>(new ConsoleGBC());
@@ -58,8 +68,8 @@ void GPU::initialize(){
 	console->setTransparency(false);
 
 	// Setup the window
-	window->initialize();
-	window->setupKeyboardHandler();
+	window->initialize("ottergb");
+	window->enableKeyboard();
 	window->clear();
 
 	// Set default color palettes
@@ -190,7 +200,7 @@ void GPU::drawConsole(){
 	render();
 }
 
-void GPU::drawTileMaps(Window *win){
+void GPU::drawTileMaps(OTTWindow *win){
 	int W = win->getWidth();
 	win->setCurrent();
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
@@ -222,7 +232,7 @@ void GPU::drawTileMaps(Window *win){
 	}
 }
 
-void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
+void GPU::drawLayer(OTTWindow *win, bool mapSelect/*=true*/){
 	win->setCurrent();
 	unsigned char pixelX;
 	ColorGBC line[256];
@@ -252,62 +262,62 @@ void GPU::drawLayer(Window *win, bool mapSelect/*=true*/){
 }
 
 unsigned short GPU::drawNextScanline(SpriteHandler *oam){
-	window->setCurrent();
-
 	// The pixel clock delay is dependent upon the number of sprites drawn on a given
 	//  scanline, the background scroll register SCX, and the state of the window layer.
 	unsigned short nPauseTicks = 0;
 
-	// Here (ry) is the real vertical coordinate on the backgroun and (ly) is the current scanline.
-	unsigned char ly = rLY->getValue();
-	unsigned char ry = ly + rSCY->getValue();
+	// Here (nScanline) is the current scanline.
+	nScanline = rLY->getValue();
 	
 	if(!rLCDC->bit7()){ // Screen disabled (draw a "white" line)
 		if(bGBCMODE)
-			window->buffWriteLine(ly, Colors::WHITE);
+			writeImageBuffer(nScanline, Colors::WHITE);
 		else
-			window->buffWriteLine(ly, cgbPaletteColor[0][0]);
+			writeImageBuffer(nScanline, cgbPaletteColor[0][0]);
 		return 0;
 	}
 
-	unsigned char rx = rSCX->getValue(); // This will automatically handle screen wrapping
+	// The variables (nPosX) and (nPosY) are the real coordinates on the background layer and will automatically handle screen wrapping.
+	nPosX = rSCX->getValue();
+	nPosY = nScanline + rSCY->getValue();
+
 	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
-		currentLineSprite[rx++].reset();
+		currentLineSprite[nPosX++].reset();
 
 	// A non-zero scroll (SCX) will delay the clock SCX % 8 ticks.		
-	nPauseTicks += rx % 8;
+	nPauseTicks += nPosX % 8;
 
 	// Handle the background layer
-	rx = rSCX->getValue();
+	nPosX = rSCX->getValue();
 	if((bGBCMODE || rLCDC->bit0()) && userLayerEnable[0]){ // Background enabled
 		for(unsigned short x = 0; x <= 20; x++) // Draw the background layer
-			rx += drawTile(rx, ry, 0, (rLCDC->bit3() ? 0x1C00 : 0x1800), currentLineBackground);
+			nPosX += drawTile(nPosX, nPosY, 0, (rLCDC->bit3() ? 0x1C00 : 0x1800), currentLineBackground);
 	}
 	else{ // Background disabled (white)
 		for(unsigned short x = 0; x < 160; x++) // Draw a "white" line
-			currentLineBackground[rx++].reset();
+			currentLineBackground[nPosX++].reset();
 	}
 
 	// Handle the window layer
-	bool windowVisible = false; // Is the window visible on this line?
-	if(winDisplayEnable && (ly >= rWY->getValue())){
+	bWindowVisible = false; // Is the window visible on this line?
+	if(winDisplayEnable && (nScanline >= rWY->getValue())){
 		if(userLayerEnable[1]){
-			rx = rWX->getValue()-7;
+			nPosX = rWX->getValue()-7;
 			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
 			for(unsigned short x = 0; x <= nTiles; x++){
-				rx += drawTile(rx, rWLY->getValue(), rWX->getValue() - 7, (rLCDC->bit6() ? 0x1C00 : 0x1800), currentLineWindow);
+				nPosX += drawTile(nPosX, rWLY->getValue(), rWX->getValue() - 7, (rLCDC->bit6() ? 0x1C00 : 0x1800), currentLineWindow);
 			}
-			windowVisible = true;
+			bWindowVisible = true;
 		}
 		(*rWLY)++; // Increment the scanline in the window region
 	}
 	
 	// The window layer being visible delays for 6 ticks.
-	if(windowVisible)
+	if(bWindowVisible)
 		nPauseTicks += 6;
 
 	// Handle the OBJ (sprite) layer
-	rx = rSCX->getValue();
+	nPosX = rSCX->getValue();
 	if(rLCDC->bit1() && userLayerEnable[2]){
 		nSpritesDrawn = 0;
 		if(oam->modified()){
@@ -322,8 +332,8 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 			// Get the number of sprites on this scanline
 			// Each sprite pauses the clock for N = 11 - min(5, (x + SCX) mod 8)
 			for(auto sp = sprites.cbegin(); sp != sprites.cend(); sp++){
-				if(drawSprite(ly, *sp)){ // Draw a row of the sprite
-					nPauseTicks += 11 - std::min(5, (sp->xPos + rx) % 8);
+				if(drawSprite(nScanline, *sp)){ // Draw a row of the sprite
+					nPauseTicks += 11 - std::min(5, (sp->xPos + nPosX) % 8);
 					if(++nSpritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
 						break;
 				}
@@ -331,8 +341,18 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 		}
 	}
 	
+	// Reset horizontal pixel counter in preparation to render pixel data
+	nPosX = rSCX->getValue();
+	
 	// Render the current scanline
-	rx = rSCX->getValue(); // This will automatically handle screen wrapping
+	renderScanline();
+	
+	// Return the number of pixel clock ticks to delay HBlank interval
+	return nPauseTicks;
+}
+
+void GPU::renderScanline(){
+	// Render the current scanline
 	ColorGBC *currentPixel;
 	unsigned char layerSelect = 0;
 	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
@@ -347,15 +367,15 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 		// 
 		if(bGBCMODE){
 			if(rLCDC->bit0()){ // BG/WIN priority
-				if(currentLineBackground[rx].getPriority()){ // BG priority (tile attributes)
-					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+				if(currentLineBackground[nPosX].getPriority()){ // BG priority (tile attributes)
+					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 						layerSelect = 1;
 					else // Draw background
 						layerSelect = 0;
 				}
-				else if(currentLineSprite[rx].visible()){ // Use OAM priority bit
-					if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
-						if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+				else if(currentLineSprite[nPosX].visible()){ // Use OAM priority bit
+					if(currentLineSprite[nPosX].getPriority() && currentLineBackground[nPosX].getColor()){ // OBJ behind BG color 1-3
+						if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 								layerSelect = 1;
 							else // Draw background
 								layerSelect = 0;
@@ -364,25 +384,25 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 						layerSelect = 2;
 				}
 				else{ // Draw background or window
-					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 						layerSelect = 1;
 					else // Draw background
 						layerSelect = 0;
 				}
 			}
 			else{ // Sprites always on top (if visible)
-				if(currentLineSprite[rx].visible()) // Draw sprite
+				if(currentLineSprite[nPosX].visible()) // Draw sprite
 					layerSelect = 2;
-				else if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+				else if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 					layerSelect = 1;
 				else // Draw background
 					layerSelect = 0;
 			}
 		}
 		else{
-			if(currentLineSprite[rx].visible()){ // Use OAM priority bit
-				if(currentLineSprite[rx].getPriority() && currentLineBackground[rx].getColor()){ // OBJ behind BG color 1-3
-					if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+			if(currentLineSprite[nPosX].visible()){ // Use OAM priority bit
+				if(currentLineSprite[nPosX].getPriority() && currentLineBackground[nPosX].getColor()){ // OBJ behind BG color 1-3
+					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 							layerSelect = 1;
 						else // Draw background
 							layerSelect = 0;
@@ -390,33 +410,30 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 				else // OBJ above BG (except for color 0 which is always transparent)
 					layerSelect = 2;
 			}
-			else if(windowVisible && x >= (rWX->getValue()-7)) // Draw window
+			else if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
 				layerSelect = 1;
 			else // Draw background
 				layerSelect = 0;
 		}
 		switch(layerSelect){
 			case 0: // Draw background
-				currentPixel = &currentLineBackground[rx];
+				currentPixel = &currentLineBackground[nPosX];
 				break;
 			case 1: // Draw window
 				currentPixel = &currentLineWindow[x];
 				break;
 			case 2: // Draw sprite
-				currentPixel = &currentLineSprite[rx];
+				currentPixel = &currentLineSprite[nPosX];
 				break;
 			default:
 				break;
 		}
 		if(bGBCMODE) // CGB
-			window->buffWrite(x, ly, getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
+			window->buffWrite(x, nScanline, getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
 		else // DMG
-			window->buffWrite(x, ly, getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
-		rx++;
+			window->buffWrite(x, nScanline, getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
+		nPosX++;
 	}
-	
-	// Return the number of pixel clock ticks to delay HBlank interval
-	return nPauseTicks;
 }
 
 void GPU::render(){	
@@ -489,11 +506,12 @@ void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRG
 		cgbPaletteColor[indices[i]][1] = c1;
 		cgbPaletteColor[indices[i]][2] = c2;
 		cgbPaletteColor[indices[i]][3] = c3;
-		//for(int j = 0; j < 4; j++){
-		//	cgbPaletteColor[i][j].toGrayscale();
-		//}
 	}
 	bUserSelectedPalette = true;
+}
+
+void GPU::setOperationMode(const PPUMODE& newMode){
+	mode = newMode;
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
@@ -691,6 +709,18 @@ bool GPU::checkWindowVisible(){
 	return (winDisplayEnable = rLCDC->bit5() && (rWX->getValue() < 167) && (rWY->getValue() < 144));
 }
 
+void GPU::writeImageBuffer(const unsigned short& x, const unsigned short& y, const ColorRGB& color){
+	buffLock.lock();
+	window->buffWrite(x, y, color);
+	buffLock.unlock();
+}
+
+void GPU::writeImageBuffer(const unsigned short& y, const ColorRGB& color){
+	buffLock.lock();
+	window->buffWriteLine(y, color);
+	buffLock.unlock();
+}
+
 void GPU::userAddSavestateValues(){
 	// Bools
 	addSavestateValue(&winDisplayEnable, sizeof(bool));
@@ -744,5 +774,19 @@ void GPU::onUserReset(){
 
 	// Clear all sprite updates
 	sprites.clear();
+}
+
+void GPU::mainLoop(){
+	buffLock.lock();
+	if(mode == PPUMODE::SCANLINE){
+		renderScanline(); // Push pixel data into the image buffer
+	}
+	else if(mode == PPUMODE::DRAWBUFFER){
+		window->setCurrent();
+		window->renderBuffer();
+		mode = PPUMODE::SCANLINE; // Automatically switch back to rendering scanlines
+	}
+	parent->notify(1); // Notify the main thread operation completed successfully
+	buffLock.unlock();
 }
 

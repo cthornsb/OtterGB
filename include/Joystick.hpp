@@ -3,14 +3,14 @@
 
 #include "SystemComponent.hpp"
 
-class Window;
+class OTTWindow;
 class ConfigFile;
 
 class JoystickController : public SystemComponent {
 public:
 	JoystickController();
 	
-	void setWindow(Window *win){ window = win; }
+	void setWindow(OTTWindow *win){ window = win; }
 	
 	void setButtonMap(ConfigFile* config=0x0);
 
@@ -35,15 +35,19 @@ public:
 	void defineRegisters() override ;
 
 private:
-	bool selectButtonKeys;
-	bool selectDirectionKeys;
+	bool selectButtonKeys; ///< Set when buttons are selected
 	
-	bool P13; // Down or Start
-	bool P12; // Up or Select
-	bool P11; // Left or B
-	bool P10; // Right or A
+	bool selectDirectionKeys; ///< Set when directions are selected
 	
-	Window *window; ///< Pointer to the main LCD driver
+	bool P13; ///< Down or Start
+	
+	bool P12; ///< Up or Select
+	
+	bool P11; ///< Left or B
+	
+	bool P10; ///< Right or A
+	
+	OTTWindow *window; ///< Pointer to the main LCD driver
 
 	unsigned char keyMapArray[8]; ///< Array which maps the 8 gb buttons to keyboard keys
 };

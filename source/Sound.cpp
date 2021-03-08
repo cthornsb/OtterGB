@@ -72,7 +72,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF14: // NR14 ([TONE] Channel 1 frequency high)
 			ch1.setFrequency((rNR14->getBits(0,2) << 8) + rNR13->getValue());
-			if(ch1.powerOn(rNR14, nSequencerTicks))
+			if(ch1.powerOn(rNR14->getValue(), nSequencerTicks))
 				handleTriggerEnable(1);
 			break;
 		/////////////////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF19: // NR24 ([TONE] Channel 2 frequency high)
 			ch2.setFrequency((rNR24->getBits(0,2) << 8) + rNR23->getValue());
-			if(ch2.powerOn(rNR24, nSequencerTicks))
+			if(ch2.powerOn(rNR24->getValue(), nSequencerTicks))
 				handleTriggerEnable(2);
 			break;
 		/////////////////////////////////////////////////////////////////////
@@ -127,7 +127,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			break;
 		case 0xFF1E: // NR34 ([WAVE] Channel 3 frequency high)
 			ch3.setFrequency((rNR34->getBits(0,2) << 8) + rNR33->getValue());
-			if(ch3.powerOn(rNR34, nSequencerTicks))
+			if(ch3.powerOn(rNR34->getValue(), nSequencerTicks))
 				handleTriggerEnable(3);
 			break;		
 		/////////////////////////////////////////////////////////////////////
@@ -156,7 +156,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch4.setDivisor(rNR43->getBits(0,2));    // Dividing ratio of frequency (r)
 			break;
 		case 0xFF23: // NR44 ([NOISE] Channel 4 counter / consecutive, initial)
-			if(ch4.powerOn(rNR44, nSequencerTicks))
+			if(ch4.powerOn(rNR44->getValue(), nSequencerTicks))
 				handleTriggerEnable(4);
 			break;
 		/////////////////////////////////////////////////////////////////////

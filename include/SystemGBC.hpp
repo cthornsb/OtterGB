@@ -7,6 +7,7 @@
 
 #include "SystemComponent.hpp"
 #include "SystemRegisters.hpp"
+#include "ComponentThread.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	class MainWindow;
@@ -24,7 +25,7 @@ class WorkRam;
 class SystemClock;
 class SystemTimer;
 class LR35902;
-class Window;
+class OTTWindow;
 
 class ComponentList{
 public:
@@ -134,7 +135,7 @@ private:
 	                         */
 };
 
-class SystemGBC{
+class SystemGBC : public ThreadObject {
 	friend class ComponentList;
 	
 public:
@@ -740,9 +741,9 @@ private:
 	
 	std::unique_ptr<LR35902> cpu; ///< Pointer to LR35902 emulator
 	
-	std::unique_ptr<Window> tileViewer; ///< Pointer to tile viewer window
+	std::unique_ptr<OTTWindow> tileViewer; ///< Pointer to tile viewer window
 	
-	std::unique_ptr<Window> layerViewer; ///< Pointer to layer viewer window
+	std::unique_ptr<OTTWindow> layerViewer; ///< Pointer to layer viewer window
 	
 #ifdef USE_QT_DEBUGGER
 	MainWindow* gui; ///< Pointer to Qt gui debugger (if available)

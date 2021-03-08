@@ -1,5 +1,22 @@
 # Core components
-set(CORE_SOURCES 
+if(NOT WIN32)
+add_library(
+	CORE_OBJECTS 
+	OBJECT
+	ComponentTimer.cpp
+	ConfigFile.cpp
+	HighResTimer.cpp
+	Opcode.cpp
+	optionHandler.cpp
+	Support.cpp
+	SystemComponent.cpp
+	Register.cpp
+	TextParser.cpp
+)
+else() # Windows
+add_library(
+	CORE_OBJECTS 
+	OBJECT
 	ComponentTimer.cpp
 	ConfigFile.cpp
 	HighResTimer.cpp
@@ -9,12 +26,10 @@ set(CORE_SOURCES
 	Register.cpp
 	TextParser.cpp
 )
+endif()
 
-if(NOT WIN32)
-	set(CORE_SOURCES ${CORE_SOURCES} optionHandler.cpp)
-endif(NOT WIN32)
+target_include_directories(CORE_OBJECTS PRIVATE ../include)
 
 # Generate the core library
-add_library(CORE_OBJECTS OBJECT ${CORE_SOURCES})
 add_library(CORE_LIB STATIC $<TARGET_OBJECTS:CORE_OBJECTS>)
 

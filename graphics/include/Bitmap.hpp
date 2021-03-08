@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "colors.hpp"
+#include "ColorRGB.hpp"
 
-class Window;
+class OTTWindow;
 
 class Bitmap{
 public:
@@ -55,7 +55,7 @@ public:
 
 	/** Set the graphical window to draw to
 	  */
-	void setWindow(Window *win){ 
+	void setWindow(OTTWindow *win){ 
 		window = win; 
 	}
 
@@ -93,7 +93,7 @@ public:
 	void putString(const std::string &str, const unsigned short &x, const unsigned short &y, bool wrap=true);
 
 protected:
-	Window *window; ///< Pointer to graphical display window
+	OTTWindow *window; ///< Pointer to graphical display window
 	
 	bool transparency; ///< Set if text background transparency is enabled
 	

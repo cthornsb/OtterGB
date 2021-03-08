@@ -1,5 +1,4 @@
 #include "AudioUnit.hpp"
-#include "SystemRegisters.hpp"
 
 bool AudioUnit::pollDisable(){
 	if(bDisableThisChannel){
@@ -17,9 +16,9 @@ bool AudioUnit::pollEnable(){
 	return false;
 }
 
-bool AudioUnit::powerOn(const Register* nrx4, const unsigned int& nSequencerTicks){
-	bool bLengthEnable = nrx4->getBit(6);
-	bool bTrigger = nrx4->getBit(7);
+bool AudioUnit::powerOn(const unsigned char& nrx4, const unsigned int& nSequencerTicks){
+	bool bLengthEnable = ((nrx4 & 0x40) == 0x40); // bit 6
+	bool bTrigger = ((nrx4 & 0x80) == 0x80); // bit 7
 	if(bLengthEnable){ // Enable length counter
 		if(length.extraClock(nSequencerTicks, bTrigger)){ // Extra clock rolled over the length counter
 			bDisableThisChannel = true; // Disable channel

@@ -2,10 +2,11 @@
 #include <string>
 #include <string.h>
 
+#include "OTTWindow.hpp"
+
 #include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "SystemRegisters.hpp"
-#include "Graphics.hpp"
 #include "ColorGBC.hpp"
 #include "ConfigFile.hpp"
 #ifndef _WIN32
@@ -82,6 +83,7 @@ ComponentList::ComponentList(SystemGBC *sys){
 }
 	
 SystemGBC::SystemGBC(int& argc, char* argv[]) :
+	ThreadObject(),
 	dummyComponent("System"),
 	nFrames(0),
 	frameSkip(1),
@@ -382,7 +384,12 @@ bool SystemGBC::execute(){
 				if(nFrames++ % frameSkip == 0 && !cpuStopped){
 					if(displayFramerate)
 						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 17);
-					gpu->render();
+					if(rLCDC->bit7() && gpu->getWindowStatus()){ // Draw frame
+						gpu->render();
+						//gpu->setOperationMode(PPUMODE::DRAWBUFFER);
+						//parent->notify(0);
+						//this->sync(1);
+					}
 				}
 				if(debugMode){
 					updateDebuggers();
@@ -422,6 +429,7 @@ bool SystemGBC::execute(){
 	if(debugMode)
 		gui->quit();
 #endif
+	//parent->quit(); // Quit all threads
 	if(audioInterface) // Terminate audio stream
 		audioInterface->quit();
 	if(autoLoadExtRam) // Save save data (if available)
@@ -434,6 +442,9 @@ void SystemGBC::handleHBlankPeriod(){
 		if(nFrames % frameSkip == 0){
 			// We multiply the pixel clock pause period by two if in double-speed mode
 			sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
+			// Done reading VRAM, notify PPU to push pixel data to the image buffer
+			//parent->notify(0); 
+			//this->sync(1);
 		}
 		dma->onHBlank();
 	}
@@ -760,7 +771,7 @@ void SystemGBC::setQtDebugger(MainWindow* ptr){
 void SystemGBC::openTileViewer(){
 	if(bUseTileViewer) // Already open
 		return;
-	tileViewer.reset(new Window(160, 160));
+	tileViewer.reset(new OTTWindow(160, 160));
 	tileViewer->initialize();
 	bUseTileViewer = true;
 	debugMode = true;
@@ -769,7 +780,7 @@ void SystemGBC::openTileViewer(){
 void SystemGBC::openLayerViewer(){
 	if(bUseLayerViewer) // Already open
 		return;
-	layerViewer.reset(new Window(256, 256));
+	layerViewer.reset(new OTTWindow(256, 256));
 	layerViewer->initialize();
 	bUseLayerViewer = true;
 	debugMode = true;
@@ -1417,7 +1428,7 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 }
 
 void SystemGBC::checkSystemKeys(){
-	KeyStates *keys = gpu->getWindow()->getKeypress();
+	OTTKeyboard *keys = gpu->getWindow()->getKeypress();
 	if(keys->empty()) 
 		return;
 	// Function keys

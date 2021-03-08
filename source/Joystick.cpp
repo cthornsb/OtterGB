@@ -1,8 +1,10 @@
+#include "OTTWindow.hpp"
+#include "OTTKeyboard.hpp"
+
 #include "Support.hpp"
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Joystick.hpp"
-#include "Graphics.hpp"
 #include "ConfigFile.hpp"
 
 // Default button map
@@ -116,7 +118,7 @@ bool JoystickController::onClockUpdate(){
 		return false;
 
 	// Poll the screen controller to check for button presses.
-	KeyStates *keys = window->getKeypress();
+	OTTKeyboard *keys = window->getKeypress();
 	if(keys->empty()){ // No buttons pressed.
 		clearInput();
 		return false; 

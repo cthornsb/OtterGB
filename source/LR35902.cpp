@@ -30,10 +30,10 @@ unsigned short LR35902::evaluate(){
 		std::cout << " Opcode read failed! PC=" << getHex((unsigned short)(PC-1)) << std::endl;
 	
 	if(op != 0xCB) // Normal opcodes
-		lastOpcode.set(opcodes.getOpcodes(), op, PC-1);
+		opcodes()->set(opcodes.getOpcodes(), op, PC-1);
 	else{ // CB prefix opcodes
 		sys->read(PC++, &op);
-		lastOpcode.set(opcodes.getOpcodesCB(), op, PC-2);
+		opcodes()->set(opcodes.getOpcodesCB(), op, PC-2);
 	}
 
 	d8 = 0x0;
@@ -41,29 +41,29 @@ unsigned short LR35902::evaluate(){
 	d16l = 0x0;
 
 	// Read the opcode's accompanying value (if any)
-	if(lastOpcode()->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
+	if(opcodes.getCurrentOpcode()->nBytes == 2){ // Read 8 bits (valid targets: d8, d8, d8)
 		sys->read(PC++, d8);
-		lastOpcode.setImmediateData(d8);
+		opcodes()->setImmediateData(d8);
 	}
-	else if(lastOpcode()->nBytes == 3){ // Read 16 bits (valid targets: d16, d16)
+	else if(opcodes.getCurrentOpcode()->nBytes == 3){ // Read 16 bits (valid targets: d16, d16)
 		// Low byte read first!
 		sys->read(PC++, d16l);
 		sys->read(PC++, d16h);
-		lastOpcode.setImmediateData(getUShort(d16h, d16l));
+		opcodes()->setImmediateData(getUShort(d16h, d16l));
 	}
 	
 	// Set the memory read/write address (if any)
-	if(lastOpcode()->addrptr) // Set memory address
-		memoryAddress = (this->*lastOpcode()->addrptr)();
+	if(opcodes.getCurrentOpcode()->addrptr) // Set memory address
+		memoryAddress = (this->*opcodes.getCurrentOpcode()->addrptr)();
 
-	return lastOpcode.nCycles;
+	return opcodes()->nCycles;
 }
 
 /** Perform one CPU (machine) cycle of the current instruction.
   * @return True if the current instruction has completed execution (i.e. nCyclesRemaining==0).
   */
 bool LR35902::onClockUpdate(){
-	if(!lastOpcode.executing()){ // Previous instruction finished executing, read the next one.
+	if(!opcodes()->executing()){ // Previous instruction finished executing, read the next one.
 		// Check for pending interrupts.
 		if(!rIME->zero() && ((*rIE) & (*rIF))){
 			if(rIF->getBit(0)) // VBlank
@@ -79,7 +79,7 @@ bool LR35902::onClockUpdate(){
 		}
 		evaluate();
 	}
-	return lastOpcode.clock(this); // Execute the instruction on the last cycle
+	return opcodes.clock(this); // Execute the instruction on the last cycle
 }
 
 void LR35902::acknowledgeVBlankInterrupt(){
@@ -134,16 +134,26 @@ void LR35902::setFlags(bool zflag, bool sflag, bool hflag, bool cflag){
 	setFlag(FLAG_C_BIT, cflag);
 }
 
-unsigned short LR35902::getd16() const { return getUShort(d16h, d16l); }
-
-unsigned short LR35902::getAF() const { return getUShort(A, F); }
-
-unsigned short LR35902::getBC() const { return getUShort(B, C); }
-
-unsigned short LR35902::getDE() const { return getUShort(D, E); }
-
-unsigned short LR35902::getHL() const { return getUShort(H, L); }
-
+unsigned short LR35902::getd16() const {
+		return getUShort(d16h, d16l);
+	}
+	
+unsigned short LR35902::getAF() const {
+		return getUShort(A, F);
+	}
+	
+unsigned short LR35902::getBC() const {
+		return getUShort(B, C);
+	}
+	
+unsigned short LR35902::getDE() const {
+		return getUShort(D, E);
+	}
+	
+unsigned short LR35902::getHL() const {
+		return getUShort(H, L);
+	}
+	
 void LR35902::setd16(const unsigned short &val){
 	d16h = (0xFF00 & val) >> 8;
 	d16l = 0x00FF & val;
@@ -370,7 +380,7 @@ void LR35902::jr_n(const unsigned char &n){
 }
 
 void LR35902::jr_cc_n(const unsigned char &n){
-	lastOpcode.addCycles(1); // Conditional JR takes 4 additional cycles if true (8->12)
+	opcodes()->addCycles(1); // Conditional JR takes 4 additional cycles if true (8->12)
 	jr_n(n);
 }
 
@@ -494,7 +504,7 @@ void LR35902::jp_d16(const unsigned char &addrH, const unsigned char &addrL){
 }
 
 void LR35902::jp_cc_d16(const unsigned char &addrH, const unsigned char &addrL){
-	lastOpcode.addCycles(1); // Conditional JP takes 4 additional cycles if true (12->16)
+	opcodes()->addCycles(1); // Conditional JP takes 4 additional cycles if true (12->16)
 	jp_d16(addrH, addrL);
 }
 
@@ -504,7 +514,7 @@ void LR35902::call_a16(const unsigned char &addrH, const unsigned char &addrL){
 }
 
 void LR35902::call_cc_a16(const unsigned char &addrH, const unsigned char &addrL){
-	lastOpcode.addCycles(3); // Conditional CALL takes 12 additional cycles if true (12->24)
+	opcodes()->addCycles(3); // Conditional CALL takes 12 additional cycles if true (12->24)
 	call_a16(addrH, addrL);
 }
 
@@ -518,7 +528,7 @@ void LR35902::ret(){
 }
 
 void LR35902::ret_cc(){
-	lastOpcode.addCycles(3); // Conditional RET takes 12 additional cycles if true (8->20)
+	opcodes()->addCycles(3); // Conditional RET takes 12 additional cycles if true (8->20)
 	ret();
 }
 
@@ -1387,6 +1397,6 @@ void LR35902::onUserReset(){
 	PC = 0x0100;   // 0x0100
 	halfCarry = false;
 	fullCarry = false;
-	lastOpcode = OpcodeData(); // Reset currently executing opcode
+	opcodes.resetOpcode(); // Reset currently executing opcode
 }
 

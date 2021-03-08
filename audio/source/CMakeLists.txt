@@ -1,27 +1,20 @@
-# Audio components
-set(AUDIO_SOURCES 
+# Compile audio source files
+add_library(
+	AUDIO_OBJECTS 
+	OBJECT
 	AudioUnit.cpp
 	FrequencySweep.cpp
 	LengthCounter.cpp
-	MidiFile.cpp
-	PianoKeys.cpp
 	ShiftRegister.cpp
-	SoundBuffer.cpp
-	SoundManager.cpp
-	SoundMixer.cpp
 	SquareWave.cpp
-	UnitTimer.cpp
 	VolumeEnvelope.cpp
 	WaveTable.cpp
 )
 
-# Unused source files
-#  AudioData.cpp
-#  AudioMixer.cpp
-#  AudioSampler.cpp
-#  Synthesizers.cpp
-#  WavFile.cpp
-	
+if(ENABLE_AUDIO)
+	target_include_directories(AUDIO_OBJECTS PRIVATE ../include ${OTTER_INCLUDE_AUDIO})
+	target_compile_definitions(AUDIO_OBJECTS PRIVATE AUDIO_ENABLED)
+endif()
+
 # Generate the audio library
-add_library(AUDIO_OBJECTS OBJECT ${AUDIO_SOURCES})
 add_library(AUDIO_LIB STATIC $<TARGET_OBJECTS:AUDIO_OBJECTS>)

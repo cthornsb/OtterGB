@@ -4,6 +4,8 @@
 #include "SystemGBC.hpp"
 #include "SoundManager.hpp"
 #include "SoundBuffer.hpp"
+#include "GPU.hpp"
+#include "ComponentThread.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
@@ -20,7 +22,6 @@ int main(int argc, char *argv[]){
 	}
 	
 	// System audio interface
-	//audio = std::unique_ptr<SoundManager>(new SoundManager());
 	SoundManager* audio = &SoundManager::getInstance();
 	
 	// Set audio sample rate
@@ -40,6 +41,26 @@ int main(int argc, char *argv[]){
 		gbc->setQtDebugger(debugger.get()); // Link the debugger to the emulator
 	}
 #endif // ifdef USE_QT_DEBUGGER
+
+	// Graphical window
+	/*GPU* gpu = gbc->getGPU();
+	
+	// Setup the thread manager to synchronize emulator and graphics
+	ThreadManager manager;
+	
+	manager.addThread(gbc.get());
+	manager.addThread(gpu);
+	
+	// Lock threads so that they will be able to sync with eachother
+	manager.lock();
+	
+	// Define threads
+	std::thread threadMainloop( [&](){ gbc->execute(); } );
+	std::thread threadGraphics( [&](){ gpu->execute(); } );
+	
+	// Start threads
+	threadMainloop.join();
+	threadGraphics.join();*/
 	
 	// Start main emulator loop
 	gbc->execute();

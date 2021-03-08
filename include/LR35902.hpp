@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 
-#include "Opcode.hpp"
+#include "OpcodeLR35902.hpp"
 #include "SystemComponent.hpp"
 
 extern const unsigned char FLAG_Z_BIT;
@@ -64,15 +64,15 @@ public:
 	
 	Opcode *getOpcodesCB(){ return opcodes.getOpcodesCB(); }
 
-	OpcodeData *getLastOpcode(){ return &lastOpcode; }
+	OpcodeData *getLastOpcode(){ return opcodes(); }
 
-	std::string getInstruction() const { return lastOpcode.getInstruction(); }
+	std::string getInstruction() const { return opcodes()->getInstruction(); }
 
 	unsigned short getAddress_C() const { return (0xFF00 + C); }
 
 	unsigned short getAddress_d8() const { return (0xFF00 + d8); }
 
-	unsigned short getCyclesRemaining() const { return lastOpcode.nCycles; }
+	unsigned short getCyclesRemaining() const { return opcodes()->nCycles; }
 	
 	unsigned short getMemoryAddress() const { return memoryAddress; }
 	
@@ -162,9 +162,9 @@ protected:
 	unsigned short SP; ///< Stack Pointer (16-bit)
 	unsigned short PC; ///< Program Counter (16-bit)
 	
-	OpcodeData lastOpcode; ///< Pointer to the last read opcode.
+	//OpcodeData lastOpcode; ///< Pointer to the last read opcode.
 
-	OpcodeHandler opcodes;
+	OpcodeHandlerLR35902 opcodes;
 
 	std::map<std::string, regGet8bit> rget8; ///< Map of 8-bit register getters
 	std::map<std::string, regSet8bit> rset8; ///< Map of 8-bit register setters

@@ -3,17 +3,25 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
 
-#include "colors.hpp"
+#include "ColorRGB.hpp"
 #include "ColorGBC.hpp"
 #include "SystemComponent.hpp"
 #include "SpriteAttributes.hpp"
+#include "ComponentThread.hpp"
 
 class Register;
-class Window;
+class OTTWindow;
 class ConsoleGBC;
 
-class GPU : public SystemComponent {
+enum class PPUMODE{
+	NONE, // Do nothing
+	SCANLINE, // Render the next scanline
+	DRAWBUFFER // Draw the image buffer to the screen
+};
+
+class GPU : public SystemComponent, public WorkerThread {
 public:
 	/** Default constructor
 	  */
@@ -33,12 +41,12 @@ public:
 
 	/** Draw both VRAM tilemaps (0x8000 and 0x9800) in an external window
 	  */
-	void drawTileMaps(Window *win);
+	void drawTileMaps(OTTWindow *win);
 
 	/** Draw one of the drawing layers in an external window
 	  * @param mapSelect If set to true, selects VRAM tile map at address 0x9C00, else selects map at 0x9800
 	  */
-	void drawLayer(Window *win, bool mapSelect=true);
+	void drawLayer(OTTWindow *win, bool mapSelect=true);
 
 	/** Disable one of the three drawing layers
 	  * Layers are still rendered internally, but they are not drawn to the screen
@@ -78,7 +86,7 @@ public:
 
 	/** Get pointer to the graphical output window
 	  */
-	Window *getWindow(){ 
+	OTTWindow *getWindow(){ 
 		return window.get(); 
 	}
 
@@ -133,6 +141,11 @@ public:
 		bUserSelectedPalette = false;
 	}
 
+	/** Set current PPU operation mode
+	  * The new operation will be performed the next time PPU is notified by thread handler.
+	  */
+	void setOperationMode(const PPUMODE& newMode);
+	
 	/** Print a string to the interpreter console
 	  */
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
@@ -152,7 +165,15 @@ public:
 private:
 	bool bUserSelectedPalette; ///< Set if user has specified a DMG color palette to use for DMG games
 
+	bool bWindowVisible; ///< Set if window is present on current scanline
+
 	bool winDisplayEnable; ///< Set if the window layer is enabled and is on screen
+
+	unsigned char nScanline; ///< Current LCD scanline
+	
+	unsigned char nPosX; ///< Real horizontal position of current pixel on the background layer
+	
+	unsigned char nPosY; ///< Real vertical position of current pixel on the background layer
 
 	unsigned char nSpritesDrawn; ///< Number of sprites drawn on the most recent scanline
 
@@ -168,7 +189,7 @@ private:
 
 	ColorRGB cgbPaletteColor[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
 
-	std::unique_ptr<Window> window; ///< Pointer to the main renderer window
+	std::unique_ptr<OTTWindow> window; ///< Pointer to the main renderer window
 	
 	std::unique_ptr<ConsoleGBC> console; ///< Pointer to the console object used for printing text.
 	
@@ -181,6 +202,10 @@ private:
 	bool userLayerEnable[3]; ///< Flags for the three render layers.
 
 	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
+
+	std::mutex buffLock; ///< Image buffer mutex lock
+
+	PPUMODE mode;
 
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The start address of the tile in VRAM [0x0000,0x1800].
@@ -207,6 +232,10 @@ private:
 	  * @return Returns true if the current scanline passes through the sprite and return false otherwise.
 	  */	
 	bool drawSprite(const unsigned char &y, const SpriteAttributes &oam);
+
+	/** Render the current scanline, pushing pixel data into the window image buffer
+	  */
+	void renderScanline();
 	
 	/** Get the real RGB values for a 15-bit GBC format color.
 	  * @param low The low byte (RED and lower 3 bits of GREEN) of the GBC color.
@@ -233,6 +262,16 @@ private:
 	  */
 	bool checkWindowVisible();
 	
+	/** Write pixel color data directly to output image buffer
+	  * Mutex lock protected.
+	  */
+	void writeImageBuffer(const unsigned short& x, const unsigned short& y, const ColorRGB& color);
+	
+	/** Write a line of pixels directly to output image buffer
+	  * Mutex lock protected.
+	  */
+	void writeImageBuffer(const unsigned short& y, const ColorRGB& color);
+	
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
 	  */
 	void userAddSavestateValues() override;
@@ -240,6 +279,10 @@ private:
 	/** Reset all color palettes to startup values
 	  */
 	void onUserReset() override;
+	
+	/** Main graphical loop
+	  */
+	void mainLoop() override;
 };
 
 #endif

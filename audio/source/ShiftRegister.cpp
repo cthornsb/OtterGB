@@ -1,4 +1,3 @@
-#include "Support.hpp"
 #include <cmath>
 
 #include "ShiftRegister.hpp"

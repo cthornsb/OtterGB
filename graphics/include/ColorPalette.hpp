@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-#include "colors.hpp"
+#include "ColorRGB.hpp"
 
 class ColorPalette{
 public:

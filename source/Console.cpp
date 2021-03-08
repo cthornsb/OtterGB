@@ -1,7 +1,9 @@
+#include "OTTWindow.hpp"
+#include "OTTKeyboard.hpp"
+
 #include "SystemGBC.hpp"
 #include "LR35902.hpp"
 #include "Console.hpp"
-#include "Graphics.hpp"
 #include "Support.hpp"
 
 ConsoleGBC::ConsoleGBC() :
@@ -102,7 +104,7 @@ void ConsoleGBC::unput(){
 
 void ConsoleGBC::update(){
 	// Poll the screen controller to check for button presses.
-	KeyStates *keys = window->getKeypress();
+	OTTKeyboard *keys = window->getKeypress();
 	char keypress;
 	while(keys->get(keypress)){
 		handle(keypress);
@@ -175,7 +177,7 @@ void ConsoleGBC::handleInput(){
 		if(cpu->findOpcode(line, data)){ // Valid LR35902 opcode found
 			(*this) << data.getShortInstruction() << "\n";
 			while(data.executing()){
-				data.clock(cpu);
+				//data.clock(cpu); // TEMP
 			}
 			return;
 		}

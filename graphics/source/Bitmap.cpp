@@ -3,8 +3,9 @@
 #include <fstream>
 #include <string>
 
+#include "OTTWindow.hpp"
+
 #include "Bitmap.hpp"
-#include "Graphics.hpp"
 
 unsigned char getBitmapPixel(const unsigned char &dx, const unsigned char &high, const unsigned char &low){
 	unsigned char pixelColor = (high & (0x1 << dx)) >> dx; // LS bit of the color

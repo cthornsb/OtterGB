@@ -1,6 +1,5 @@
 #include "SquareWave.hpp"
 #include "FrequencySweep.hpp"
-#include "SystemRegisters.hpp"
 
 SquareWave::SquareWave(FrequencySweep* sweep) :
 	AudioUnit(),

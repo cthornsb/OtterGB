@@ -4,8 +4,6 @@
 #include "UnitTimer.hpp"
 #include "LengthCounter.hpp"
 
-class Register;
-
 class AudioUnit : public UnitTimer {
 public:
 	/** Default constructor (maximum audio length of 64)
@@ -68,7 +66,7 @@ public:
 	  * Enable length counter if nrx4 bit 6 is set and trigger DAC if bit 7 is set
 	  * @return True if this channel should now be disabled OR enabled and return false otherwise
 	  */
-	bool powerOn(const Register* nrx4, const unsigned int& nSequencerTicks);
+	bool powerOn(const unsigned char& nrx4, const unsigned int& nSequencerTicks);
 
 	/** Return a 4-bit sample from the current state of the audio waveform
 	  */
