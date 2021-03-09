@@ -59,35 +59,30 @@ target_include_directories(
 	${OTTER_INCLUDE_AUDIO}
 )
 
-if(NOT ENABLE_DEBUGGER)
+target_link_libraries(
+	gbc 
+	COMPONENT_LIB 
+	AUDIO_LIB 
+	GRAPHICS_LIB 
+	CORE_LIB 
+	Threads::Threads
+	${OTTER_LIBRARIES}
+	${GLFW3_LIBRARY}
+	OpenGL::GL
+	OpenGL::GLU
+)
+if(ENABLE_AUDIO)
 	target_link_libraries(
-		gbc 
-		COMPONENT_LIB 
-		AUDIO_LIB 
-		GRAPHICS_LIB 
-		CORE_LIB 
-		Threads::Threads
-		${OTTER_LIBRARIES}
-		${GLFW3_LIBRARY}
-		OpenGL::GL
-		OpenGL::GLU
+		gbc
+		${PORT_AUDIO_LIBRARY}
 	)
-else()
+endif()
+if(ENABLE_DEBUGGER)
 	target_link_libraries(
 		gbc 
-		COMPONENT_LIB 
-		AUDIO_LIB 
-		GRAPHICS_LIB 
-		CORE_LIB 
-		QTDEBUG_LIB 
 		Qt4::QtGui 
 		Qt4::QtCore 
 		Qt4::QtOpenGL 
-		Threads::Threads
-		${OTTER_LIBRARIES}
-		${GLFW3_LIBRARY}
-		OpenGL::GL
-		OpenGL::GLU
 	)
 endif()
 install(TARGETS gbc DESTINATION bin)

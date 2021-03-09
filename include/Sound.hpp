@@ -12,8 +12,6 @@
 #include "WaveTable.hpp"
 #include "ShiftRegister.hpp"
 
-#include "SystemRegisters.hpp"
-
 class SoundManager;
 
 class SoundBuffer;
