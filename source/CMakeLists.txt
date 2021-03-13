@@ -14,7 +14,6 @@ add_library(
 	Sound.cpp
 	SpriteAttributes.cpp
 	SystemClock.cpp	
-	SystemGBC.cpp
 	SystemRegisters.cpp
 	SystemTimer.cpp
 	WorkRam.cpp
@@ -30,6 +29,14 @@ target_include_directories(
 	${OTTER_INCLUDE_CORE}
 	${OTTER_INCLUDE_AUDIO}
 )
+
+if(ENABLE_DEBUGGER)
+	target_include_directories(
+	COMPONENT_OBJECTS 
+	PRIVATE 
+	../qtfiles 
+	)
+endif()
 
 # Bootstrap rom paths (optional)
 if(NOT ${GB_BOOT_ROM} STREQUAL "")
@@ -47,18 +54,49 @@ add_library(
 )
 
 #Build renderer executable.
-add_executable(gbc gbc.cpp)
+if(NOT ENABLE_DEBUGGER)
+	add_executable(gbc gbc.cpp SystemGBC.cpp)
+else()
+	# Create moc code
+	QT4_WRAP_CPP(
+		MOC_FILENAME
+		${TOP_DIRECTORY}/qtfiles/mainwindow.h
+		TARGET
+		gbc
+	)
 
+	# Create uic file
+	QT4_WRAP_UI(
+		UIC_FILENAME
+		${TOP_DIRECTORY}/qtfiles/mainwindow.ui
+		TARGET
+		gbc
+	)
+	
+	add_executable(gbc gbc.cpp SystemGBC.cpp ${TOP_DIRECTORY}/qtfiles/mainwindow.cpp ${UIC_FILENAME} ${MOC_FILENAME})
+endif()
+
+# Add include directories
 target_include_directories(
 	gbc
 	PRIVATE
 	../include
 	../core/include
 	../graphics/include
+	../audio/include
 	${OTTER_INCLUDE_CORE}
 	${OTTER_INCLUDE_AUDIO}
 )
+if(ENABLE_DEBUGGER)
+	target_include_directories(
+		gbc
+		PRIVATE
+		../qtfiles
+		${CMAKE_CURRENT_BINARY_DIR}
+	)
+endif()
 
+# Add linker libraries
 target_link_libraries(
 	gbc 
 	COMPONENT_LIB 
@@ -85,6 +123,8 @@ if(ENABLE_DEBUGGER)
 		Qt4::QtOpenGL 
 	)
 endif()
+
+# Install executable
 install(TARGETS gbc DESTINATION bin)
 
 # Copy default configuration file (if it doesn't already exist)

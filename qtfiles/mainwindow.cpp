@@ -5,10 +5,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include "GraphicsOpenGL.hpp"
-#include "ColorGBC.hpp"
+#include "OTTWindow.hpp"
 #include "Support.hpp"
-#include "colors.hpp"
 #include "SystemClock.hpp"
 #include "LR35902.hpp"
 #include "GPU.hpp"
@@ -594,7 +592,6 @@ void MainWindow::on_spinBox_Frameskip_valueChanged(int arg1)
 
 void MainWindow::on_spinBox_ScreenScale_valueChanged(int arg1)
 {
-	components->gpu->getWindow()->setScalingFactor(arg1);
 }
 
 void MainWindow::on_doubleSpinBox_Clock_Multiplier_editingFinished()

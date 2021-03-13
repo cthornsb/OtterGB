@@ -92,6 +92,9 @@ if(ENABLE_DEBUGGER)
 	#(Ubuntu) sudo apt-get install libqt4-dev
 	#(Windows) Precompiled Qt4 libs from https://www.npcglib.org/~stathis/blog/precompiled-qt4-qt5/
 	find_package(Qt4 REQUIRED) # Requires Qt4::QtCore Qt4::QtGui Qt4::QtOpenGL
+	if(QT_USE_FILE)
+		include(${QT_USE_FILE})
+	endif()
 endif()
 
 #Set the DMG bootstrap ROM
