@@ -1,4 +1,3 @@
-#include <iostream> // TEMP
 #include <algorithm>
 
 #include "OTTWindow.hpp"

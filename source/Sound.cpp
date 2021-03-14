@@ -1,4 +1,3 @@
-
 #include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "SoundManager.hpp"
@@ -47,8 +46,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch1.getFrequencySweep()->setBitShift(rNR10->getBits(0,2));
 			if(!ch1.getFrequencySweep()->setNegate(rNR10->getBit(3))){
 				// Switching from negative to positive disables the channel
-				disableChannel(1);
-				ch1.disable();
+				disableChannel(1); // Disable channel and DAC
 			}
 			break;
 		case 0xFF11: // NR11 ([TONE] Channel 1 sound length / wave pattern duty)
@@ -56,12 +54,9 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch1.setLength(rNR11->getBits(0,5));
 			break;
 		case 0xFF12: // NR12 ([TONE] Channel 1 volume envelope)
-			ch1.getVolumeEnvelope()->setVolume(rNR12->getBits(4,7));
-			ch1.getVolumeEnvelope()->setAddMode(rNR12->getBit(3));
-			ch1.getVolumeEnvelope()->setPeriod(rNR12->getBits(0,2));
+			ch1.getVolumeEnvelope()->update(rNR12->getValue());
 			if(rNR12->getBits(3,7) == 0){ // Disable DAC
-				disableChannel(1); // Disable channel
-				ch1.disable(); // Disable DAC
+				disableChannel(1); // Disable channel and DAC
 			}
 			else{ // Enable DAC (but do not enable channel)
 				ch1.enable(); // Enable DAC
@@ -85,12 +80,9 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch2.setLength(rNR21->getBits(0,5));
 			break;
 		case 0xFF17: // NR22 ([TONE] Channel 2 volume envelope
-			ch2.getVolumeEnvelope()->setVolume(rNR22->getBits(4,7));
-			ch2.getVolumeEnvelope()->setAddMode(rNR22->getBit(3));
-			ch2.getVolumeEnvelope()->setPeriod(rNR22->getBits(0,2));
+			ch2.getVolumeEnvelope()->update(rNR22->getValue());
 			if(rNR22->getBits(3,7) == 0){ // Disable DAC
-				disableChannel(2); // Disable channel
-				ch2.disable(); // Disable DAC
+				disableChannel(2); // Disable channel and DAC
 			}
 			else{ // Enable DAC (but do not enable channel)
 				ch2.enable(); // Enable DAC
@@ -109,10 +101,10 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		/////////////////////////////////////////////////////////////////////
 		case 0xFF1A: // NR30 ([TONE] Channel 3 sound on/off)
 			if(!rNR30->getBit(7)){ // Disable channel and power off DAC
-				disableChannel(3); 
-				ch3.disable();
+				disableChannel(3); // Disable channel and DAC
 			}
 			else{ // Enable DAC but do not enable channel
+				ch3.clearBuffer(); // Reset WAVE index and buffer sample
 				ch3.enable();
 			}
 			break;
@@ -129,7 +121,7 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch3.setFrequency((rNR34->getBits(0,2) << 8) + rNR33->getValue());
 			if(ch3.powerOn(rNR34->getValue(), nSequencerTicks))
 				handleTriggerEnable(3);
-			break;		
+			break;
 		/////////////////////////////////////////////////////////////////////
 		// NR40-44 CHANNEL 4 (noise)
 		/////////////////////////////////////////////////////////////////////
@@ -139,12 +131,9 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			ch4.setLength(rNR41->getBits(0,5));
 			break;
 		case 0xFF21: // NR42 ([NOISE] Channel 4 volume envelope)
-			ch4.getVolumeEnvelope()->setVolume(rNR42->getBits(4,7));
-			ch4.getVolumeEnvelope()->setAddMode(rNR42->getBit(3));
-			ch4.getVolumeEnvelope()->setPeriod(rNR42->getBits(0,2));
+			ch4.getVolumeEnvelope()->update(rNR42->getValue());
 			if(rNR42->getBits(3,7) == 0){ // Disable DAC
-				disableChannel(4); // Disable channel
-				ch4.disable(); // Disable DAC
+				disableChannel(4); // Disable channel and DAC
 			}
 			else{ // Enable DAC (but do not enable channel)
 				ch4.enable(); // Enable DAC
@@ -195,7 +184,10 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 			}
 			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
 				// Contains 32 4-bit samples played back upper 4 bits first
-				wavePatternRAM[reg - 0xFF30] = rWAVE[reg - 0xFF30]->getValue();
+				if(isChannelEnabled(3)) // WAVE enabled (write to current WAVE index)
+					ch3.writeBufferIndex(val);
+				else
+					wavePatternRAM[reg - 0xFF30] = val; //rWAVE[reg - 0xFF30]->getValue();
 			}
 			else {
 				return false;
@@ -281,11 +273,11 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 				dest |= 0xFF;
 			}
 			else if (reg >= 0xFF30 && reg <= 0xFF3F) { // [Wave] pattern RAM
-				if(ch3.isEnabled()){ // DAC powered (read back from current WAVE index)
+				if(isChannelEnabled(3)) // WAVE enabled (read back from current WAVE index)
 					dest = ch3.getBuffer();
-				}
 				else
 					dest = wavePatternRAM[reg - 0xFF30];
+
 			}
 			else {
 				return false;
@@ -365,7 +357,8 @@ float SoundProcessor::getChannelFrequency(const int& ch) const {
 void SoundProcessor::disableChannel(const int& ch){
 	if(ch < 1 || ch > 4) // Invalid channel
 		return;
-	rNR52->resetBit(ch - 1);
+	rNR52->resetBit(ch - 1); // Disable channel audio output
+	getAudioUnit(ch)->disable(); // Disable DAC
 }
 
 void SoundProcessor::disableChannel(const Channels& ch){
@@ -390,22 +383,22 @@ void SoundProcessor::disableChannel(const Channels& ch){
 void SoundProcessor::enableChannel(const int& ch){
 	if(ch < 1 || ch > 4) // Invalid channel
 		return;
-	rNR52->setBit(ch - 1);
+	rNR52->setBit(ch - 1); // Enable channel audio output
 }
 
 void SoundProcessor::enableChannel(const Channels& ch){
 	switch(ch){
 	case Channels::CH1:
-		enableChannel(1);
+		disableChannel(1);
 		break;
 	case Channels::CH2:
-		enableChannel(2);
+		disableChannel(2);
 		break;
 	case Channels::CH3:
-		enableChannel(3);
+		disableChannel(3);
 		break;
 	case Channels::CH4:
-		enableChannel(4);
+		disableChannel(4);
 		break;
 	default:
 		break;	

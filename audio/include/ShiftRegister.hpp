@@ -29,27 +29,17 @@ public:
 	
 	/** Set current clock shift such that noise frequency is equal to F = 524288 / divisor / 2^(shift + 1) Hz
 	  */
-	void setClockShift(const unsigned char& shift) { 
-		nClockShift = shift; 
-		updatePhase(); // Update timer phase
-	}
+	void setClockShift(const unsigned char& shift);
 	
 	/** Set current divisor value such that noise frequency is equal to F = 524288 / divisor / 2^(shift + 1) Hz
 	  */
-	void setDivisor(const unsigned char& divisor) { 
-		nDivisor = divisor; 
-		updatePhase(); // Update timer phase
-	}
+	void setDivisor(const unsigned char& divisor);
 
 	/** Get pointer to this channel's volume envelope
 	  */
 	VolumeEnvelope* getVolumeEnvelope() { 
 		return &volume; 
 	}
-
-	/** Get the actual unit frequency (in Hz)
-	  */
-	float getRealFrequency() const override ;
 
 	/** Return a sample from the current state of the audio waveform
 	  */
@@ -63,7 +53,7 @@ public:
 	
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	void trigger() override ;
+	void trigger(const unsigned int& nTicks) override ;
 
 private:
 	bool bWidthMode; ///< Shift register width mode (0: 15-bit, 1: 7-bit)
@@ -80,17 +70,15 @@ private:
 	  */
 	void updatePhase();
 	
-	/** Enable the length counter and volume envelope
+	/** Enable volume envelope
 	  */
 	void userEnable() override {
-		length.enable();
 		volume.enable();
 	}
 	
-	/** Disable the length counter and volume envelope
+	/** Disable volume envelope
 	  */
 	void userDisable() override {
-		length.disable();
 		volume.disable();
 	}
 

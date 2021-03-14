@@ -20,7 +20,9 @@ bool AudioUnit::powerOn(const unsigned char& nrx4, const unsigned int& nSequence
 	bool bLengthEnable = ((nrx4 & 0x40) == 0x40); // bit 6
 	bool bTrigger = ((nrx4 & 0x80) == 0x80); // bit 7
 	if(bLengthEnable){ // Enable length counter
+		bEnableThisChannel = true;
 		if(length.extraClock(nSequencerTicks, bTrigger)){ // Extra clock rolled over the length counter
+			bEnableThisChannel = false;
 			bDisableThisChannel = true; // Disable channel
 			this->disable(); // Disable DAC
 		}
@@ -30,7 +32,7 @@ bool AudioUnit::powerOn(const unsigned char& nrx4, const unsigned int& nSequence
 		length.disable();
 	}
 	if(bTrigger){ // Trigger
-		this->trigger();
+		this->trigger(nSequencerTicks);
 		if(bLengthEnable && length.isEnabled() && length.getLength()){
 			// Triggering with a length counter of non-zero length.
 			// Ensure that the DAC is powered up.

@@ -2,21 +2,47 @@
 
 #include "ShiftRegister.hpp"
 
-void ShiftRegister::updatePhase(){
-	if(nDivisor != 0)
-		nPeriod = std::pow(2, nClockShift + 1) / nDivisor;
-	else // For divisor=0, assume divisor=0.5
-		nPeriod = 2 * std::pow(2, nClockShift + 1);
+void ShiftRegister::setClockShift(const unsigned char& shift) { 
+	nClockShift = shift; 
 }
 
-float ShiftRegister::getRealFrequency() const {
-	if(nDivisor == 0) // If divisor=0, use divisor=0.5
-		return (1048576.f / std::pow(2.f, nClockShift + 1)); // in Hz
-	return (524288.f / nDivisor / std::pow(2.f, nClockShift + 1)); // in Hz
+void ShiftRegister::setDivisor(const unsigned char& divisor) { 
+	switch(divisor){
+	case 0:
+		nDivisor = 8;
+		break;
+	case 1:
+		nDivisor = 16;
+		break;
+	case 2:
+		nDivisor = 32;
+		break;
+	case 3:
+		nDivisor = 48;
+		break;
+	case 4:
+		nDivisor = 64;
+		break;
+	case 5:
+		nDivisor = 80;
+		break;
+	case 6:
+		nDivisor = 96;
+		break;
+	case 7:
+		nDivisor = 112;
+		break;
+	default:
+		break;
+	}
+}
+
+void ShiftRegister::updatePhase(){
+	nPeriod = (nClockShift < 14 ? nDivisor << nClockShift : 0);
 }
 
 unsigned char ShiftRegister::sample(){
-	return (((reg & 0x1) == 0x1 ? 0x0 : 0xf) & volume()); // Inverted
+	return ((reg & 0x1) == 0x1 ? 0x0 : volume()); // Inverted
 }
 
 void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
@@ -30,17 +56,15 @@ void ShiftRegister::clockSequencer(const unsigned int& sequencerTicks){
 		}
 	}
 	if(sequencerTicks % 8 == 7){ // Clock the volume envelope (64 Hz)
-		if(volume.clock()){
-			// If volume envelope counter rolls over, do nothing 
-			// since the volume unit will simply output 0 volume
-		}
+		volume.clock();
 	}
 }
 
 void ShiftRegister::rollover(){
 	// Xor the two lowest bits
+	updatePhase();
 	reload(); // Reset period counter
-	if(((reg & 0x1) != 0) ^ ((reg & 0x2) != 0)){ // 1
+	if(((reg & 0x1) == 0x1) ^ ((reg & 0x2) == 0x2)){ // 1
 		reg = reg >> 1; // Right shift all bits
 		reg |= 0x4000; // Set the high bit (14)
 		if(bWidthMode)
@@ -54,12 +78,14 @@ void ShiftRegister::rollover(){
 	}
 }
 
-void ShiftRegister::trigger(){
-	if(!nCounter)
-		this->reload(); // Reload the main timer with its phase
+void ShiftRegister::trigger(const unsigned int& nTicks){
+	updatePhase();
+	this->reload(); // Reload the main timer with its phase
 	reg = 0x7fff; // Set all 15 bits to 1
 	length.trigger();
 	volume.trigger();
+	if((nTicks % 8) == 6) // If the next sequencer tick will clock the volume envelope, its timer counter is increased by one.
+		volume.addExtraClock();
 }
 
 void ShiftRegister::userReset(){

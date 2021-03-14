@@ -31,16 +31,28 @@ public:
 		nWavelengthPeriod = 32; // 32 samples per wavelength period
 	}
 	
-	/** Get the current wave sample index
+	/** Get the current WAVE sample index
 	  */
 	unsigned char getIndex() const { 
 		return nIndex; 
 	}
 	
-	/** Get the current wave sample
+	/** Write to WAVE memory at current buffer index
+	  */
+	void writeBufferIndex(const unsigned char& val){
+		data[nIndex / 2] = val;
+	}
+	
+	/** Get the current WAVE sample
 	  */
 	unsigned char getBuffer() const { 
 		return nBuffer; 
+	}
+	
+	/** Reset current WAVE index and buffer the first sample
+	  */
+	void clearBuffer() {
+		nBuffer = data[(nIndex = 0)];
 	}
 	
 	/** Set wave table volume level
@@ -65,7 +77,7 @@ public:
 
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	void trigger() override ;
+	void trigger(const unsigned int& nTicks) override ;
 
 private:
 	unsigned char* data; ///< Pointer to audio sample data
@@ -80,13 +92,13 @@ private:
 	  */	
 	void rollover() override ;
 	
-	/** Enable length counter
+	/** Do not enable length counter, it must be enabled via writing to APU registers
 	  */
-	void userEnable() override ;
+	void userEnable() override { }
 	
-	/** Disable length counter
+	/** Do not disable length counter, as it is still clocked when DAC is disabled
 	  */
-	void userDisable() override ;
+	void userDisable() override { }
 	
 	/** Upon powering down, reset the WAVE index and sample buffer
 	  */

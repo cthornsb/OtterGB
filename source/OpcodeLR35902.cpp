@@ -1,4 +1,3 @@
-#include <iostream> // TEMP
 #include <stdlib.h>
 #include <algorithm>
 

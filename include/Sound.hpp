@@ -74,11 +74,11 @@ public:
 	  */
 	float getChannelFrequency(const int& ch) const ;
 	
-	/** Disable audio channel (indexed from 1)
+	/** Disable audio channel output and DAC (indexed from 1)
 	  */
 	void disableChannel(const int& ch);
 	
-	/** Disable audio channel
+	/** Disable audio channel output and DAC
 	  */
 	void disableChannel(const Channels& ch);
 

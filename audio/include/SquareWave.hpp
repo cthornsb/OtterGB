@@ -62,7 +62,7 @@ public:
 	
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	void trigger() override ;
+	void trigger(const unsigned int& nTicks) override ;
 
 private:
 	bool bSweepEnabled; ///< Flag indicating frequency sweep is enabled on this channel
@@ -76,12 +76,16 @@ private:
 	VolumeEnvelope volume; ///< Channel's volume envelope
 	
 	std::unique_ptr<FrequencySweep> frequency; ///< Channel's frequency sweep (if enabled, otherwise null)
-	
-	/** Enable the length counter, volume envelope, and frequency sweep (if in use)
+
+	/** Enable volume envelope
+	  * Do not automatically enable the length counter or frequency sweep as
+	  * they must be enabled independently by writing to APU registers.
 	  */
 	void userEnable() override ;
 	
-	/** Disable the length counter, volume envelope, and frequency sweep (if in use)
+	/** Disable volume envelope.
+	  * Do not disable length counter or frequency sweep as they may still be clocked
+	  * while the DAC is disabled.
 	  */
 	void userDisable() override ;
 	

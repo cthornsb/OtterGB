@@ -247,31 +247,46 @@ void MainWindow::updateSoundTab(){
 	ui->checkBox_APU_Mute->setChecked(mixer->isMuted());
 	ui->dial_APU_MasterVolume->setValue((int)(mixer->getVolume() * 100));
 	//ui->dial_APU_Balance->setValue(mixer->getBalance());
-	
-	// Audio output channels
-	/*ui->checkBox_APU_MasterEnable->setChecked(sound->isEnabled());
-	ui->checkBox_APU_Ch1Enable->setChecked(sound->isChannelEnabled(1));
-	ui->checkBox_APU_Ch2Enable->setChecked(sound->isChannelEnabled(2));
-	ui->checkBox_APU_Ch3Enable->setChecked(sound->isChannelEnabled(3));
-	ui->checkBox_APU_Ch4Enable->setChecked(sound->isChannelEnabled(4));*/
-	
-	// Audio DACs
-	setRadioButtonState(ui->radioButton_APU_Ch1, sound->isDacEnabled(1));
-	setRadioButtonState(ui->radioButton_APU_Ch2, sound->isDacEnabled(2));
-	setRadioButtonState(ui->radioButton_APU_Ch3, sound->isDacEnabled(3));
-	setRadioButtonState(ui->radioButton_APU_Ch4, sound->isDacEnabled(4));
-	
-	// Length values
-	setLineEditText(ui->lineEdit_APU_Ch1Length, sound->getChannelTime(1));
-	setLineEditText(ui->lineEdit_APU_Ch2Length, sound->getChannelTime(2));
-	setLineEditText(ui->lineEdit_APU_Ch3Length, sound->getChannelTime(3));
-	setLineEditText(ui->lineEdit_APU_Ch4Length, sound->getChannelTime(4));
 
-	// Frequencies	
-	setLineEditText(ui->lineEdit_APU_Ch1Frequency, sound->getChannelFrequency(1));
-	setLineEditText(ui->lineEdit_APU_Ch2Frequency, sound->getChannelFrequency(2));
-	setLineEditText(ui->lineEdit_APU_Ch3Frequency, sound->getChannelFrequency(3));
-	setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelFrequency(4));
+	// Ch1
+	if(sound->isChannelEnabled(1) && sound->isDacEnabled(1)){
+		setRadioButtonState(ui->radioButton_APU_Ch1, true);
+		setLineEditText(ui->lineEdit_APU_Ch1Length, sound->getChannelTime(1));
+		setLineEditText(ui->lineEdit_APU_Ch1Frequency, sound->getChannelFrequency(1));
+	}
+	else{
+		setRadioButtonState(ui->radioButton_APU_Ch1, false);
+	}
+
+	// Ch2
+	if(sound->isChannelEnabled(2) && sound->isDacEnabled(2)){
+		setRadioButtonState(ui->radioButton_APU_Ch2, true);
+		setLineEditText(ui->lineEdit_APU_Ch2Length, sound->getChannelTime(2));
+		setLineEditText(ui->lineEdit_APU_Ch2Frequency, sound->getChannelFrequency(2));
+	}
+	else{
+		setRadioButtonState(ui->radioButton_APU_Ch2, false);
+	}
+
+	// Ch3
+	if(sound->isChannelEnabled(3) && sound->isDacEnabled(3)){
+		setRadioButtonState(ui->radioButton_APU_Ch3, true);
+		setLineEditText(ui->lineEdit_APU_Ch3Length, sound->getChannelTime(3));
+		setLineEditText(ui->lineEdit_APU_Ch3Frequency, sound->getChannelFrequency(3));
+	}
+	else{
+		setRadioButtonState(ui->radioButton_APU_Ch3, false);
+	}
+
+	// Ch4
+	if(sound->isChannelEnabled(4) && sound->isDacEnabled(4)){
+		setRadioButtonState(ui->radioButton_APU_Ch4, true);
+		setLineEditText(ui->lineEdit_APU_Ch4Length, sound->getChannelTime(4));
+		setLineEditText(ui->lineEdit_APU_Ch4Frequency, sound->getChannelFrequency(4));
+	}
+	else{
+		setRadioButtonState(ui->radioButton_APU_Ch4, false);
+	}
 }
 
 void MainWindow::updateCartridgeTab(){

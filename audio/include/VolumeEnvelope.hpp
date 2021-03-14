@@ -10,6 +10,7 @@ public:
 	VolumeEnvelope() :
 		UnitTimer(),
 		bAdd(true),
+		bUpdating(false),
 		nVolume(0),
 		nInitialVolume(0)
 	{ 
@@ -19,6 +20,12 @@ public:
 	  */
 	unsigned char operator () () const {
 		return nVolume;
+	}
+	
+	/** Scale an input volume by the current envelope volume
+	  */
+	unsigned char operator () (const unsigned char& input) const {
+		return (unsigned char)(input * (nVolume / 15.f));
 	}
 
 	/** Return true if the current output volume is zero and return false otherwise
@@ -37,7 +44,7 @@ public:
 	  */
 	void setVolume(const unsigned char& volume) { 
 		nInitialVolume = volume & 0xf;
-		nVolume = volume & 0xf; 
+		nVolume = nInitialVolume; 
 	}
 	
 	/** Enable additive volume mode (louder)
@@ -46,14 +53,35 @@ public:
 		bAdd = add; 
 	}
 
+	/** Add an extra sequencer clock to the volume envelope timer
+	  */
+	void addExtraClock() {
+		nCounter++;
+	}
+
+	/** Update volume envelope initial volume, add mode, and sequencer period.
+	  * Writing to NRx2 while sound playing:
+	  * -if Envelope period was 0 (and still updating) -> volume incremented by 1
+	  * else if envelope was in subtract mode -> volume incremented by 2
+	  * -if mode changed (+ -> - or - -> +) -> volume set to 16
+	  * -nVolume &= 0xf;
+	  */
+	void update(const unsigned char& nrx2);
+
 	/** Trigger the volume envelope, 
 	  * Timer is reloaded with period.
 	  * Channel volume is reloaded from NRx2.
 	  */
 	void trigger();
 
+	/** Reload the unit timer with its period (or with 8 in the event that the period is zero)
+	  */
+	void reload() override ;
+
 private:
 	bool bAdd; ///< Increase volume on timer rollover
+
+	bool bUpdating; ///< Set when volume is still being automatically updated
 
 	unsigned char nVolume; ///< Current 4-bit volume
 	

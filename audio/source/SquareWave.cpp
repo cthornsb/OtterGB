@@ -34,7 +34,7 @@ void SquareWave::setWaveDuty(const unsigned char& duty){
 }
 
 unsigned char SquareWave::sample(){
-	return (((nWaveform & 0x1) == 0x1 ? 0xf : 0x0) & volume());
+	return ((nWaveform & 0x1) == 0x1 ? volume() : 0x0);
 }
 
 void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
@@ -81,9 +81,8 @@ void SquareWave::rollover(){
 		nWaveform &= 0x7f;
 }
 
-void SquareWave::trigger(){
-	if(!nCounter)
-		this->reload(); // Reload the main timer with its phase
+void SquareWave::trigger(const unsigned int& nTicks){
+	this->reload(); // Reload the main timer with its phase
 	if(bSweepEnabled)
 		frequency->trigger();
 	length.trigger();
@@ -91,16 +90,11 @@ void SquareWave::trigger(){
 }
 
 void SquareWave::userEnable(){
-	// Do not automatically enable the length counter or frequency sweep,
-	// they must be enabled independently by writing to APU registers.
 	volume.enable();
 }
 
 void SquareWave::userDisable(){
-	length.disable();
 	volume.disable();
-	if(bSweepEnabled)
-		frequency->disable();
 }
 
 void SquareWave::userReset(){

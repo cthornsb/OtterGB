@@ -26,6 +26,10 @@ public:
 	{ 
 	}
 
+	unsigned short getCounter() const {
+		return nCounter;
+	}
+
 	/** Get pointer to channel's length counter
 	  */
 	LengthCounter* getLengthCounter() { 
@@ -41,7 +45,7 @@ public:
 	/** Get remaining audio length
 	  */
 	unsigned short getLength() const {
-		return length.getLength();
+		return (length.isEnabled() ? length.getLength() : 0);
 	}
 
 	/** Set audio length
@@ -82,7 +86,7 @@ public:
 
 	/** Handle timer trigger events whenever register NRx4 is written to
 	  */	
-	virtual void trigger() { 
+	virtual void trigger(const unsigned int&) { 
 		length.trigger();
 	}
 
