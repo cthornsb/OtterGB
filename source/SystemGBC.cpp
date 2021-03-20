@@ -910,6 +910,7 @@ void SystemGBC::resumeCPU(){
 	if(rKEY1->getBit(0)){ // Prepare speed switch
 		if(!bCPUSPEED){ // Normal speed
 			sclk->setDoubleSpeedMode();
+			sclk->resetScanline();
 			sound->getMixer()->setDoubleSpeedMode();
 			bCPUSPEED = true;
 			rKEY1->clear();
@@ -917,6 +918,7 @@ void SystemGBC::resumeCPU(){
 		}
 		else{ // Double speed
 			sclk->setNormalSpeedMode();
+			sclk->resetScanline();
 			sound->getMixer()->setNormalSpeedMode();
 			bCPUSPEED = false;
 			rKEY1->clear();
