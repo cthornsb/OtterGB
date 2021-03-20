@@ -359,6 +359,11 @@ void SoundProcessor::disableChannel(const int& ch){
 		return;
 	rNR52->resetBit(ch - 1); // Disable channel audio output
 	getAudioUnit(ch)->disable(); // Disable DAC
+	if (bRecordMidi) { // Add a note to the output midi file
+		// Disable the note, if one is currently playing
+		// Note that midi ch 10 (index = 9) is typically used for percussion
+		midiFile->release((ch < 4 ? ch - 1 : 9), nMidiClockTicks);
+	}
 }
 
 void SoundProcessor::disableChannel(const Channels& ch){
@@ -470,7 +475,8 @@ bool SoundProcessor::handleTriggerEnable(const int& ch){
 	if(rNR52->getBit(ch - 1)){ // Trigger has enabled channel
 		if (bRecordMidi) { // Add a note to the output midi file
 			// If a note is currently pressed on this channel, the midi handler will automatically release it.
-			midiFile->press((ch < 4 ? ch : 10), nMidiClockTicks, unit->getRealFrequency());
+			// Note that midi ch 10 (index = 9) is typically used for percussion
+			midiFile->press((ch < 4 ? ch - 1 : 9), nMidiClockTicks, unit->getRealFrequency());
 		}
 		return true;
 	}
