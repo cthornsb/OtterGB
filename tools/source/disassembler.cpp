@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -116,8 +115,9 @@ int main(int argc, char *argv[]){
 	
 	// Set the initial value of the program counter (PC)
 	unsigned short pc = 0x0000; // program counter
-	if(pc != 0);
+	if(pc != 0){
 		rom.seekg(pc);
+	}
 
 	// Start disassembling the rom
 	unsigned char op;
