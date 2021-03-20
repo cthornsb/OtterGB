@@ -93,10 +93,6 @@ bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank
 }
 
 void SystemComponent::readFast(const unsigned short &loc, unsigned char &dest){ 
-	if((loc-offset) >= nBytes || bs >= nBanks){
-		std::cout << " ERROR: loc=" << getHex(loc) << ", bs=" << getHex(bs) << ", nBytes=" << nBytes << ", nBanks=" << nBanks << std::endl;
-		return;
-	}
 	dest = mem[bs][loc-offset];
 }
 
