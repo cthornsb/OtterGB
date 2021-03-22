@@ -170,8 +170,6 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			bMasterSoundEnable = rNR52->getBit(7);
 			if(bMasterSoundEnable){ // Power on the frame sequencer
-				// Resume audio output
-				resume(); 
 				// Reset frame sequencer (the 512 Hz clock is always running, even while APU is powered down)
 				nSequencerTicks = 0;
 			}
@@ -443,9 +441,6 @@ void SoundProcessor::stopMidiFile(){
 }
 
 void SoundProcessor::powerDown(){
-	// Pause audio output
-	pause();
-	
 	// Disable channels
 	disableChannel(4); // Ch 4 OFF
 	disableChannel(3); // Ch 3 OFF

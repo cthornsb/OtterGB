@@ -328,6 +328,10 @@ void SystemGBC::initialize(){
 bool SystemGBC::execute(){
 	if(!initSuccessful)
 		return false;
+		
+	// Start audio output
+	sound->resume();
+	
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
