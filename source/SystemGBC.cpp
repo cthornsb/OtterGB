@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "OTTWindow.hpp"
+#include "OTTKeyboard.hpp"
+#include "OTTJoypad.hpp"
 
 #include "Support.hpp"
 #include "SystemGBC.hpp"
@@ -1319,6 +1321,19 @@ void SystemGBC::help(){
 	std::cout << "   Left = a (left)" << std::endl;
 	std::cout << "  Right = d (right)" << std::endl << std::endl;
 
+	if(gpu->getWindow()->getJoypad()->isConnected()){
+		std::cout << " Gamepad Controls-" << std::endl;
+		std::cout << "  Start = Start" << std::endl;
+		std::cout << " Select = Back" << std::endl;
+		std::cout << "      B = A (or X)" << std::endl;
+		std::cout << "      A = B (or O)" << std::endl;
+		std::cout << "     Up = DPad up" << std::endl;
+		std::cout << "   Down = DPad down" << std::endl;
+		std::cout << "   Left = DPad left" << std::endl;
+		std::cout << "  Right = DPad right" << std::endl;
+		std::cout << " Press [HOME] to pause emulation" << std::endl << std::endl;
+	}
+
 	std::cout << " System Keys-" << std::endl;
 	std::cout << "  F1 : Display this help screen" << std::endl;
 	std::cout << "  F2 : Pause emulation" << std::endl;
@@ -1334,6 +1349,7 @@ void SystemGBC::help(){
 	std::cout << "   ` : Open interpreter console" << std::endl;
 	std::cout << "   - : Decrease volume" << std::endl;
 	std::cout << "   + : Increase volume" << std::endl;
+	std::cout << "   c : Change currently active gamepad" << std::endl;
 	std::cout << "   f : Show/hide FPS counter on screen" << std::endl;
 	std::cout << "   m : Mute output audio" << std::endl;
 }
@@ -1430,9 +1446,19 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 }
 
 void SystemGBC::checkSystemKeys(){
+	OTTJoypad* gamepad = gpu->getWindow()->getJoypad();
 	OTTKeyboard *keys = gpu->getWindow()->getKeypress();
-	if(keys->empty()) 
+	if(gamepad->isReady()){ // Check for gamepad button presses
+		if(gamepad->poll(GamepadInput::GUIDE)){
+			if(!emulationPaused)
+				pause();
+			else
+				unpause();
+		}
+	}
+	else if(keys->empty()){ // No keyboard keys pressed
 		return;
+	}
 	// Function keys
 	if (keys->poll(0xF1))      // F1  Help
 		help();
@@ -1470,10 +1496,12 @@ void SystemGBC::checkSystemKeys(){
 		sound->getMixer()->decreaseVolume();
 	else if (keys->poll(0x3D)) // '=(+)' Increase volume
 		sound->getMixer()->increaseVolume();
-	else if (keys->poll(0x60)) // '`'   Open debugging console
+	else if (keys->poll(0x60)) // '`' Open debugging console
 		openDebugConsole();
-	else if (keys->poll(0x66)) // 'f'    Display framerate
+	else if (keys->poll(0x63)) // 'c' Change current controller (gamepad)
+		gpu->getWindow()->getJoypad()->changeActiveGamepad();
+	else if (keys->poll(0x66)) // 'f' Display framerate
 		displayFramerate = !displayFramerate;
-	else if (keys->poll(0x6D)) // 'm'    Mute
+	else if (keys->poll(0x6D)) // 'm' Mute
 		sound->getMixer()->mute();
 }

@@ -69,6 +69,7 @@ void GPU::initialize(){
 	// Setup the window
 	window->initialize("ottergb");
 	window->enableKeyboard();
+	window->enableGamepad();
 	window->clear();
 
 	// Set default color palettes

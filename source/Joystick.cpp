@@ -1,5 +1,6 @@
 #include "OTTWindow.hpp"
 #include "OTTKeyboard.hpp"
+#include "OTTJoypad.hpp"
 
 #include "Support.hpp"
 #include "SystemRegisters.hpp"
@@ -117,39 +118,63 @@ bool JoystickController::onClockUpdate(){
 	if(!selectButtonKeys && !selectDirectionKeys)
 		return false;
 
-	// Poll the screen controller to check for button presses.
-	OTTKeyboard *keys = window->getKeypress();
-	if(keys->empty()){ // No buttons pressed.
-		clearInput();
-		return false; 
-	}
-	
 	// Get the initial state of the input lines.
 	unsigned char initialState = rJOYP->getValue() & 0xF;
-	
+
+	// Poll the gamepad handler to check for button presses.
+	OTTJoypad* gamepad = window->getJoypad();
+	OTTKeyboard* keys = window->getKeypress();
+	if(gamepad->isReady()){
+		if(selectButtonKeys){
+			if(gamepad->check(GamepadInput::START)) //  START - Enter (P13 - bit3)
+				(*rJOYP) &= JOYPAD_P13_MASK;
+			if(gamepad->check(GamepadInput::BACK))  // SELECT - Tab   (P12 - bit2)
+				(*rJOYP) &= JOYPAD_P12_MASK;
+			if(gamepad->check(GamepadInput::A))     //      B - j     (P11 - bit1)
+				(*rJOYP) &= JOYPAD_P11_MASK;
+			if(gamepad->check(GamepadInput::B))     //      A - k     (P10 - bit0)
+				(*rJOYP) &= JOYPAD_P10_MASK;
+		}
+		else if(selectDirectionKeys){
+			if(gamepad->check(GamepadInput::DOWN))  // P13 - s (down)  (P13 - bit3)
+				(*rJOYP) &= JOYPAD_P13_MASK;
+			if(gamepad->check(GamepadInput::UP))    // P12 - w (up)    (P12 - bit2)
+				(*rJOYP) &= JOYPAD_P12_MASK;
+			if(gamepad->check(GamepadInput::LEFT))  // P11 - a (left)  (P11 - bit1)
+				(*rJOYP) &= JOYPAD_P11_MASK;
+			if(gamepad->check(GamepadInput::RIGHT)) // P10 - d (right) (P10 - bit0)
+				(*rJOYP) &= JOYPAD_P10_MASK;
+		}
+	}
+	else if(keys->empty()){ // No buttons pressed.
+		clearInput();
+		return false; 
+	}	
+
+	// Poll the keyboard handler to check for key presses.
 	// Check which key is down.
 	// P13 - Down or Start
 	// P12 - Up or Select
 	// P11 - Left or B
 	// P10 - Right or A
 	if(selectButtonKeys){
-		if(keys->check(keyMapArray[0])) //  START - Enter (P13 - bit3)
+		if(keys->check(keyMapArray[0]) || gamepad->check(GamepadInput::START)) //  START - Enter (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(keyMapArray[1]))   // SELECT - Tab   (P12 - bit2)
+		if(keys->check(keyMapArray[1]) || gamepad->check(GamepadInput::BACK))  // SELECT - Tab   (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(keyMapArray[2]))     //      B - j     (P11 - bit1)
+		if(keys->check(keyMapArray[2]) || gamepad->check(GamepadInput::A))     //      B - j     (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(keyMapArray[3]))     //      A - k     (P10 - bit0)
+		if(keys->check(keyMapArray[3]) || gamepad->check(GamepadInput::B))     //      A - k     (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	else if(selectDirectionKeys){
-		if(keys->check(keyMapArray[4]) || keys->check(KEYBOARD_DOWN))  // P13 - s (down)  (P13 - bit3)
+		if(keys->check(keyMapArray[4]) || keys->check(KEYBOARD_DOWN) || gamepad->check(GamepadInput::DOWN))   // P13 - s (down)  (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(keyMapArray[5]) || keys->check(KEYBOARD_UP))    // P12 - w (up)    (P12 - bit2)
+		if(keys->check(keyMapArray[5]) || keys->check(KEYBOARD_UP) || gamepad->check(GamepadInput::UP))       // P12 - w (up)    (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(keyMapArray[6]) || keys->check(KEYBOARD_LEFT))  // P11 - a (left)  (P11 - bit1)
+		if(keys->check(keyMapArray[6]) || keys->check(KEYBOARD_LEFT) || gamepad->check(GamepadInput::LEFT))   // P11 - a (left)  (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(keyMapArray[7]) || keys->check(KEYBOARD_RIGHT)) // P10 - d (right) (P10 - bit0)
+		if(keys->check(keyMapArray[7]) || keys->check(KEYBOARD_RIGHT) || gamepad->check(GamepadInput::RIGHT)) // P10 - d (right) (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	
