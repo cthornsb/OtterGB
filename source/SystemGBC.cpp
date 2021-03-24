@@ -1492,8 +1492,8 @@ void SystemGBC::checkSystemKeys(){
 			sound->startMidiFile("out.mid");
 		}
 	}
-	else if (keys->poll(0xFB)) // F11 (No function)
-		return;
+	else if (keys->poll(0xFB)) // F11 Toggle fullscreen mode
+		gpu->getWindow()->toggleFullScreenMode();
 	else if (keys->poll(0xFC)) // F12 Screenshot
 		screenshot();
 	else if (keys->poll(0x2D)) // '-'    Decrease volume

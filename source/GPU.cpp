@@ -70,6 +70,7 @@ void GPU::initialize(){
 	window->initialize("ottergb");
 	window->enableKeyboard();
 	window->enableGamepad();
+	window->lockWindowAspectRatio(true);
 	window->clear();
 
 	// Set default color palettes
@@ -440,6 +441,7 @@ void GPU::render(){
 	// Update the screen
 	window->setCurrent();
 	if(rLCDC->bit7() && window->status()){ // Check for events
+		window->clear();
 		window->renderBuffer();
 	}
 }
