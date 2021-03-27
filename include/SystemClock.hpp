@@ -1,23 +1,16 @@
 #ifndef SYSTEM_CLOCK_HPP
 #define SYSTEM_CLOCK_HPP
 
-#include <deque>
+#include <OTTFrameTimer.hpp>
 
 #include "SystemComponent.hpp"
-#include "HighResTimer.hpp" // typedef hrclock
 
-class SystemClock : public SystemComponent {
+class SystemClock : public OTTFrameTimer, public SystemComponent {
 public:
 	/** Default constructor
 	  */
 	SystemClock();
 
-	/** Get the instantaneous framerate (in frames per second) computed once per second
-	  */
-	double getFramerate() const { 
-		return framerate; 
-	}
-	
 	/** Set the target framerate multiplier
 	  * @param freq Framerate multiplier where a multiplier of 1.0 corresponds to normal output framerate of 59.7 fps
 	  */
@@ -116,20 +109,6 @@ private:
 	unsigned int cyclesPerHSync; ///< Current number of pixel clock ticks per horizontal sync
 
 	unsigned char lcdDriverMode; ///< Current LCD driver mode (0-3)
-
-	double framerate; ///< Instantaneous framerate computed once per second
-	
-	double framePeriod; ///< Wall clock time between successive frames (microseconds)
-
-	double dDeltaFramePeriod; ///< Running average difference between target frame period and actual frame period
-
-	std::deque<double> dRunningAverage;
-
-	hrclock::time_point timeOfInitialization; ///< Time that the system clock was initialized
-	
-	hrclock::time_point timeOfLastVSync; ///< Time at which the screen was last refreshed
-	
-	hrclock::time_point cycleTimer; ///< The time taken to execute ten times the current clock speed of cycles
 
 	unsigned int cycleCounter; ///< System clock cycle counter
 

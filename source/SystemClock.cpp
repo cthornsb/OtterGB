@@ -1,4 +1,3 @@
-#include <thread>
 #include <iostream>
 
 #include "SystemClock.hpp"
@@ -17,6 +16,7 @@ constexpr unsigned int VERTICAL_SYNC_CYCLES   = 70224; // CPU cycles per VSYNC (
 constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 456;   // CPU cycles per HSYNC (per 154 scanlines)
 
 SystemClock::SystemClock() : 
+	OTTFrameTimer(),
 	SystemComponent("Clock", 0x204b4c43), // "CLK "
 	vsync(false), 
 	cyclesSinceLastVSync(0), 
@@ -25,13 +25,6 @@ SystemClock::SystemClock() :
 	cyclesPerVSync(0),
 	cyclesPerHSync(0),
 	lcdDriverMode(2), 
-	framerate(0),
-	framePeriod(0),
-	dDeltaFramePeriod(0),
-	dRunningAverage(),
-	timeOfInitialization(hrclock::now()),
-	timeOfLastVSync(hrclock::now()),
-	cycleTimer(hrclock::now()),
 	cycleCounter(0),
 	cyclesPerSecond(0),
 	nClockPause(0),
@@ -41,7 +34,7 @@ SystemClock::SystemClock() :
 }
 
 void SystemClock::setFramerateMultiplier(const float &freq){
-	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / SYSTEM_CLOCK_FREQUENCY / freq; // in microseconds
+	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / SYSTEM_CLOCK_FREQUENCY / freq); // in microseconds
 }
 
 void SystemClock::setDoubleSpeedMode(){
@@ -55,7 +48,7 @@ void SystemClock::setDoubleSpeedMode(){
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES * 2;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
+	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY)); // in microseconds
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to double-speed mode." << std::endl;
 	}
@@ -72,7 +65,7 @@ void SystemClock::setNormalSpeedMode(){
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	framePeriod = 1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY); // in microseconds
+	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY)); // in microseconds
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to normal." << std::endl;
 	}
@@ -80,7 +73,7 @@ void SystemClock::setNormalSpeedMode(){
 
 // Tick the system clock.
 bool SystemClock::onClockUpdate(){
-	if(++cycleCounter % (currentClockSpeed*10) == 0){ // Every 10 seconds
+	/*if(++cycleCounter % (currentClockSpeed*10) == 0){ // Every 10 seconds
 		std::chrono::duration<double> wallTime = hrclock::now() - cycleTimer;
 		cycleTimer = hrclock::now();
 		cyclesPerSecond = currentClockSpeed*10/wallTime.count();
@@ -92,7 +85,7 @@ bool SystemClock::onClockUpdate(){
 			else
 				std::cout << "% [fast])\n"; 
 		}
-	}
+	}*/
 
 	// Check if the display is enabled. If it's not, set STAT to mode 1
 	if(!rLCDC->bit7()){
@@ -190,24 +183,7 @@ bool SystemClock::compareScanline(){
 }
 
 void SystemClock::waitUntilNextVSync(){
-	static unsigned int frameCount = 0;
-	std::chrono::duration<double, std::micro> wallTime = hrclock::now() - timeOfLastVSync;
-	double timeToSleep = (framePeriod + dDeltaFramePeriod) - wallTime.count(); // microseconds
-	if(timeToSleep > 0)
-		std::this_thread::sleep_for(std::chrono::microseconds((long long)timeToSleep));
-	if((++frameCount % 60) == 0){
-		double totalRenderTime = std::chrono::duration_cast<std::chrono::duration<double>>(hrclock::now() - timeOfLastVSync).count();
-		dRunningAverage.push_back(framePeriod - 1E6 * totalRenderTime);
-		if(dRunningAverage.size() > 20)
-			dRunningAverage.pop_front();
-		double averageDelta = 0;
-		for(auto d : dRunningAverage)
-			averageDelta += d;
-		averageDelta /= 20;
-		framerate = 1 / totalRenderTime;
-		frameCount = 0;
-	}
-	timeOfLastVSync = hrclock::now();
+	this->sync();
 }
 
 void SystemClock::startMode0(){
@@ -259,8 +235,8 @@ void SystemClock::userAddSavestateValues(){
 	addSavestateValue(&lcdDriverMode, sizeof(unsigned char));
 	addSavestateValue(&vsync,         sizeof(bool));
 	// Doubles
-	addSavestateValue(&framerate, sizeDouble);
-	addSavestateValue(&framePeriod, sizeDouble);
+	addSavestateValue(&dFramerate, sizeDouble);
+	addSavestateValue(&dFramePeriod, sizeDouble);
 	addSavestateValue(&cyclesPerSecond, sizeDouble);
 	//hrclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
 	//hrclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
@@ -270,9 +246,10 @@ void SystemClock::userAddSavestateValues(){
 void SystemClock::onUserReset(){
 	vsync = false;
 	setNormalSpeedMode();
-	timeOfInitialization = hrclock::now();
-	timeOfLastVSync = hrclock::now();
-	cycleTimer = hrclock::now();
+	this->resetTimer();
+	//timeOfInitialization = hrclock::now();
+	//timeOfLastVSync = hrclock::now();
+	//cycleTimer = hrclock::now();
 	cycleCounter = 0;
 	nClockPause = 0;
 	lcdDriverMode = 2;
