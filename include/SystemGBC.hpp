@@ -655,6 +655,8 @@ private:
 	
 	unsigned short frameSkip; ///< The value N for drawing every 1 out of N frames (or the number of frames to skip between rendered frames plus 1)
 
+	unsigned short bootLength; ///< Size of the boot ROM (bytes)
+
 	bool verboseMode; ///< Verbosity flag
 	
 	bool debugMode; ///< Debug flag
@@ -762,8 +764,6 @@ private:
 	unsigned short memoryAccessRead[2]; ///< Memory address read access region
 
 	std::vector<Register> registers; ///< System control registers
-	
-	unsigned short bootLength; ///< Size of the boot ROM (bytes)
 	
 	std::vector<unsigned char> bootROM; ///< Variable length DMG / CGB boot ROM
 

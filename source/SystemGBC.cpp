@@ -89,6 +89,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	dummyComponent("System"),
 	nFrames(0),
 	frameSkip(1),
+	bootLength(0),
 	verboseMode(false),
 	debugMode(false),
 	cpuStopped(false),
@@ -1349,6 +1350,7 @@ void SystemGBC::help(){
 	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"" << std::endl;
 	std::cout << "  F9 : Quickload state" << std::endl;
 	std::cout << "  F10: Start/stop midi recording" << std::endl;
+	std::cout << "  F11: Enable/disable full screen mode" << std::endl;
 	std::cout << "  F12: Take screenshot" << std::endl;
 	std::cout << "   ` : Open interpreter console" << std::endl;
 	std::cout << "   - : Decrease volume" << std::endl;
