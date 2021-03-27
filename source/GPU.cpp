@@ -2,6 +2,10 @@
 
 #include "OTTWindow.hpp"
 
+#ifdef WIN32
+#undef min // "min" is a macro defined in Windows.h
+#endif // ifdef WIN32
+
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
 #include "Support.hpp"
@@ -71,6 +75,7 @@ void GPU::initialize(){
 	window->enableKeyboard();
 	window->enableGamepad();
 	window->lockWindowAspectRatio(true);
+	window->enableVSync();
 	window->clear();
 
 	// Set default color palettes
