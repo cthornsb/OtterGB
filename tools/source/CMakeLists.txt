@@ -1,19 +1,8 @@
-#add_executable(disassembler disassembler.cpp)
-#install(TARGETS disassembler DESTINATION bin)
-
 add_executable(disassembler disassembler.cpp)
 target_include_directories(
 	disassembler
 	PRIVATE
 	../../include
-#	${OTTER_INCLUDE_CORE}
-)
-target_link_libraries(
-	disassembler 
-#	GRAPHICS_LIB
-#	${OTTER_LIBRARIES}
-#	${GLFW3_LIBRARY}
-#	OpenGL::GL
 )
 install(TARGETS disassembler DESTINATION bin)
 
@@ -22,7 +11,7 @@ target_include_directories(
 	dmgpalettes
 	PRIVATE
 	../../graphics/include
-	${OTTER_INCLUDE_CORE}
+	${OTTER_INCLUDE_DIRS}
 )
 target_link_libraries(
 	dmgpalettes 
@@ -39,8 +28,7 @@ add_executable(gbimage gbimage.cpp)
 target_include_directories(
 	gbimage
 	PRIVATE
-	${OTTER_INCLUDE_CORE}
-	${OTTER_INCLUDE_3D}
+	${OTTER_INCLUDE_DIRS}
 )
 target_link_libraries(
 	gbimage

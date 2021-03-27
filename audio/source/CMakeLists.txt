@@ -11,10 +11,21 @@ add_library(
 	WaveTable.cpp
 )
 
+target_include_directories(AUDIO_OBJECTS 
+	PRIVATE 
+	../include 
+	${OTTER_INCLUDE_DIRS}
+)
+
 if(ENABLE_AUDIO)
-	target_include_directories(AUDIO_OBJECTS PRIVATE ../include ${OTTER_INCLUDE_AUDIO})
-	target_compile_definitions(AUDIO_OBJECTS PRIVATE AUDIO_ENABLED)
+	target_compile_definitions(AUDIO_OBJECTS 
+		PRIVATE 
+		AUDIO_ENABLED
+	)
 endif()
 
 # Generate the audio library
-add_library(AUDIO_LIB STATIC $<TARGET_OBJECTS:AUDIO_OBJECTS>)
+add_library(AUDIO_LIB 
+	STATIC 
+	$<TARGET_OBJECTS:AUDIO_OBJECTS>
+)

@@ -8,8 +8,17 @@ add_library(
 )
 
 # Set OtterEngine include directories
-target_include_directories(GRAPHICS_OBJECTS PRIVATE ../include ${OTTER_DIRECTORY}/graphics/include)
+target_include_directories(
+	GRAPHICS_OBJECTS 
+	PRIVATE 
+	../include 
+	${OTTER_INCLUDE_DIRS}
+	${GLEW_INCLUDE_DIRS}
+	${GLFW3_INCLUDE_DIRS}
+)
 
 # Generate the graphics library
-add_library(GRAPHICS_LIB STATIC $<TARGET_OBJECTS:GRAPHICS_OBJECTS>)
-
+add_library(GRAPHICS_LIB 
+	STATIC 
+	$<TARGET_OBJECTS:GRAPHICS_OBJECTS>
+)

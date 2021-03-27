@@ -60,13 +60,14 @@ if(NOT OTTER_DIRECTORY)
 endif(NOT OTTER_DIRECTORY)
 
 #Find required packages (sourced from OtterEngine)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${OTTER_DIRECTORY}/cmake/modules/")
+include("${OTTER_DIRECTORY}/OtterConfig.cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${OTTER_MODULE_PATH})
 
 #Include pre-requisite finder module
 include(PreRequisites)
 
 #Find all required packages
-#OtterEngine 2d library
+# Use OtterEngine 2d library
 ott_use_core()
 
 #Find threads
@@ -123,6 +124,3 @@ if(BUILD_TOOLS)
 	#Add the tools directory.
 	add_subdirectory(tools)
 endif(BUILD_TOOLS)
-
-#Build/install the miscellaneous stuff
-#add_subdirectory(share)

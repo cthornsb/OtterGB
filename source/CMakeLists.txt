@@ -26,8 +26,10 @@ target_include_directories(
 	../core/include
 	../graphics/include
 	../audio/include
-	${OTTER_INCLUDE_CORE}
-	${OTTER_INCLUDE_AUDIO}
+	${GLEW_INCLUDE_DIRS}
+	${GLFW3_INCLUDE_DIRS}
+	${OTTER_INCLUDE_DIRS}
+	${PORT_AUDIO_INCLUDE_DIRS}
 )
 
 if(ENABLE_DEBUGGER)
@@ -84,8 +86,10 @@ target_include_directories(
 	../core/include
 	../graphics/include
 	../audio/include
-	${OTTER_INCLUDE_CORE}
-	${OTTER_INCLUDE_AUDIO}
+	${GLEW_INCLUDE_DIRS}
+	${GLFW3_INCLUDE_DIRS}
+	${OTTER_INCLUDE_DIRS}
+	${PORT_AUDIO_INCLUDE_DIRS}
 )
 if(ENABLE_DEBUGGER)
 	target_include_directories(
@@ -104,11 +108,19 @@ target_link_libraries(
 	GRAPHICS_LIB 
 	CORE_LIB 
 	Threads::Threads
-	${OTTER_LIBRARIES}
+	Ott::OtterCore
+	Ott::OtterAudio
 	${GLFW3_LIBRARY}
+	GLEW::glew
 	OpenGL::GL
 	OpenGL::GLU
 )
+if(WIN32)
+	target_link_libraries(
+		gbc
+		Winmm
+	)
+endif()
 if(ENABLE_AUDIO)
 	target_link_libraries(
 		gbc
