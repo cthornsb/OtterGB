@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <time.h>
 
 #include "OTTWindow.hpp"
 #include "OTTKeyboard.hpp"
@@ -1184,7 +1185,36 @@ bool SystemGBC::reset() {
 }
 
 bool SystemGBC::screenshot(){
-	std::cout << sysMessage << "Not implemented" << std::endl;
+	std::time_t raw;
+	std::time(&raw);
+	struct tm* currentTime = std::localtime(&raw);
+	std::stringstream stream;
+	stream << cart->getTitleString();
+	const std::string months[12] = {
+		"Jan", "Feb", "Mar", "Apr", 
+		"May", "Jun", "Jul", "Aug", 
+		"Sep", "Oct", "Nov", "Dec"
+	};
+	stream << "_" << months[currentTime->tm_mon]; // Month
+	if(currentTime->tm_mday < 10) // Day
+		stream << "-0" << currentTime->tm_mday;
+	else
+		stream << "-" << currentTime->tm_mday;
+	stream << "-" << currentTime->tm_year + 1900; // Year
+	if(currentTime->tm_hour < 10)
+		stream << "_0" << currentTime->tm_hour; // Hours
+	else
+		stream << "_" << currentTime->tm_hour; // Hours
+	if(currentTime->tm_min < 10)
+		stream << "-0" << currentTime->tm_min; // Minutes
+	else
+		stream << "-" << currentTime->tm_min; // Minutes
+	if(currentTime->tm_sec < 10)
+		stream << "-0" << currentTime->tm_sec; // Seconds
+	else
+		stream << "-" << currentTime->tm_sec; // Seconds
+	gpu->getWindow()->saveImageBufferToBitmap(stream.str());
+	std::cout << sysMessage << "Saved screenshot " << stream.str() << std::endl;
 	return false;
 }
 
