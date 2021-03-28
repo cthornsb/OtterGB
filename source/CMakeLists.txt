@@ -110,8 +110,10 @@ target_link_libraries(
 	Threads::Threads
 	Ott::OtterCore
 	Ott::OtterAudio
+	Ott::OtterMath
 	${GLFW3_LIBRARY}
-	GLEW::glew
+	${SOIL_LIBRARY}
+	GLEW::GLEW
 	OpenGL::GL
 	OpenGL::GLU
 )
