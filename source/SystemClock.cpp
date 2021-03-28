@@ -145,10 +145,6 @@ bool SystemClock::onClockUpdate(){
 	return vsync;
 }
 
-void SystemClock::wait(){
-	waitUntilNextVSync();
-}
-
 void SystemClock::resetScanline(){
 	vsync = false;
 	cyclesSinceLastVSync = 0;

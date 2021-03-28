@@ -426,7 +426,7 @@ bool SystemGBC::execute(){
 				gpu->drawConsole();			
 
 			// Maintain framerate but do not advance the system clock
-			sclk->wait();
+			sclk->waitUntilNextVSync();
 
 			if(debugMode)// Process debugger events
 				updateDebuggers();
@@ -1478,7 +1478,7 @@ void SystemGBC::checkSystemKeys(){
 		quicksave();
 	else if (keys->poll(0xF6)) // F6  Decrease frame-skip (slower)
 		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
-	else if (keys->poll(0xF7)) // F7  Increase freme-skip (faster)
+	else if (keys->poll(0xF7)) // F7  Increase frame-skip (faster)
 		frameSkip++;
 	else if (keys->poll(0xF8)) // F8  Save cartridge RAM to file
 		writeExternalRam();
