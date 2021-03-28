@@ -16,8 +16,10 @@ target_include_directories(
 target_link_libraries(
 	dmgpalettes 
 	GRAPHICS_LIB
-	${OTTER_LIBRARIES}
+	Ott::OtterCore
+	Ott::OtterMath
 	${GLFW3_LIBRARY}
+	${SOIL_LIBRARY}
 	OpenGL::GL
 )
 install(TARGETS dmgpalettes DESTINATION bin)
@@ -33,11 +35,11 @@ target_include_directories(
 target_link_libraries(
 	gbimage
 	GRAPHICS_LIB
-	${OTTER_LIBRARIES}
+	Ott::OtterCore
+	Ott::OtterMath
 	${GLFW3_LIBRARY}
 	${SOIL_LIBRARY}
 	OpenGL::GL
 	OpenGL::GLU
-	GLEW::GLEW
 )
 install(TARGETS gbimage DESTINATION bin)

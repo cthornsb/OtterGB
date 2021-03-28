@@ -26,7 +26,6 @@ target_include_directories(
 	../core/include
 	../graphics/include
 	../audio/include
-	${GLEW_INCLUDE_DIRS}
 	${GLFW3_INCLUDE_DIRS}
 	${OTTER_INCLUDE_DIRS}
 	${PORT_AUDIO_INCLUDE_DIRS}
@@ -86,7 +85,6 @@ target_include_directories(
 	../core/include
 	../graphics/include
 	../audio/include
-	${GLEW_INCLUDE_DIRS}
 	${GLFW3_INCLUDE_DIRS}
 	${OTTER_INCLUDE_DIRS}
 	${PORT_AUDIO_INCLUDE_DIRS}
@@ -113,7 +111,6 @@ target_link_libraries(
 	Ott::OtterMath
 	${GLFW3_LIBRARY}
 	${SOIL_LIBRARY}
-	GLEW::GLEW
 	OpenGL::GL
 	OpenGL::GLU
 )

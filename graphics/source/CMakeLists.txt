@@ -13,7 +13,6 @@ target_include_directories(
 	PRIVATE 
 	../include 
 	${OTTER_INCLUDE_DIRS}
-	${GLEW_INCLUDE_DIRS}
 	${GLFW3_INCLUDE_DIRS}
 )
 
