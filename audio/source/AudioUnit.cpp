@@ -19,6 +19,8 @@ bool AudioUnit::pollEnable(){
 bool AudioUnit::powerOn(const unsigned char& nrx4, const unsigned int& nSequencerTicks){
 	bool bLengthEnable = ((nrx4 & 0x40) == 0x40); // bit 6
 	bool bTrigger = ((nrx4 & 0x80) == 0x80); // bit 7
+	bEnableThisChannel = false;
+	bDisableThisChannel = false;
 	if(bLengthEnable){ // Enable length counter
 		bEnableThisChannel = true;
 		if(length.extraClock(nSequencerTicks, bTrigger)){ // Extra clock rolled over the length counter

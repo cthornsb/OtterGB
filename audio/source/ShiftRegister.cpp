@@ -92,8 +92,9 @@ void ShiftRegister::userReset(){
 	//length.reset(); // Length is reset by AudioUnit::reset()
 	volume.reset();
 	bWidthMode = false;
-	nClockShift = 0;
-	nDivisor = 0;
+	setClockShift(0);
+	setDivisor(0);
+	updatePhase();
 	reg = 0x7fff;
 }
 

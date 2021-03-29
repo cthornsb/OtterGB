@@ -40,6 +40,12 @@ public:
 		return (nVolume / 15.f); 
 	}
 
+	/** Return true if volume envelope is in add mode (increasing volume)
+	  */
+	bool getAddMode() const {
+		return bAdd;
+	}
+
 	/** Set the initial 4-bit volume
 	  */
 	void setVolume(const unsigned char& volume) { 

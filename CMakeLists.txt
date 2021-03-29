@@ -83,9 +83,9 @@ if(ENABLE_DEBUGGER)
 endif(ENABLE_DEBUGGER)
 
 #Audio output (Port Audio)
-if(ENABLE_AUDIO)
+#if(ENABLE_AUDIO)
 	ott_use_audio()
-endif()
+#endif()
 
 #Gui debugger (Qt4)
 if(ENABLE_DEBUGGER)
