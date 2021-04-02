@@ -32,7 +32,8 @@ enum class cmdType{
 	QSAVE,     ///< Quick-save
 	QLOAD,     ///< Quick-load
 	DIRECTORY, ///< ROM directory
-	FILENAME   ///< ROM filename
+	FILENAME,  ///< ROM filename
+	VSYNC      ////< Toggle VSync on/off
 };
 
 class ConsoleCommand{

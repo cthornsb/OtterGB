@@ -75,7 +75,7 @@ void GPU::initialize(){
 	window->enableKeyboard();
 	window->enableGamepad();
 	window->lockWindowAspectRatio(true);
-	window->enableVSync();
+	window->disableVSync();
 	window->clear();
 
 	// Set default color palettes

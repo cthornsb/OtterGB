@@ -1185,9 +1185,16 @@ bool SystemGBC::reset() {
 }
 
 bool SystemGBC::screenshot(){
-	std::time_t raw;
-	std::time(&raw);
-	struct tm* currentTime = std::localtime(&raw);
+	time_t raw;
+	time(&raw);
+#ifndef WIN32
+	struct tm* currentTime = localtime(&raw);
+#else
+	// Windows marks localtime as unsafe, so we use the windows version
+	struct tm currentTime_o = { 0 };
+	struct tm* currentTime = &currentTime_o;
+	localtime_s(currentTime, &raw);
+#endif // ifndef WIN32
 	std::stringstream stream;
 	stream << cart->getTitleString();
 	const std::string months[12] = {

@@ -51,6 +51,7 @@ ConsoleGBC::ConsoleGBC() :
 	addConsoleCommand("qload",0, cmdType::QLOAD, "[fname]", "Quickload");
 	addConsoleCommand("dir"  ,0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
 	addConsoleCommand("file" ,0, cmdType::FILENAME, "[fname]", "Print ROM filename");
+	addConsoleCommand("vsync",0, cmdType::VSYNC, "", "Toggle VSync on or off");
 	put('>');
 }
 
@@ -355,6 +356,16 @@ void ConsoleGBC::handleInput(){
 			}
 			else{
 				(*this) << sys->getRomFilename() + "." + sys->getRomExtension() << "\n";
+			}
+			break;
+		case cmdType::VSYNC: // Toggle VSync on/off
+			if (!window->getVSync()) {
+				window->enableVSync();
+				(*this) << "vsync enabled\n";
+			}
+			else {
+				window->disableVSync();
+				(*this) << "vsync disabled\n";
 			}
 			break;
 		default:
