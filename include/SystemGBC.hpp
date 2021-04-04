@@ -648,6 +648,15 @@ public:
 	  */
 	void lockMemory(bool lockVRAM, bool lockOAM);
 	
+	/** Enable vertical syncronization (VSync).
+	  * VSync may not be available on all platforms and hardware.
+	  */
+	void enableVSync();
+
+	/** Disable vertical syncronization (VSync)
+	  */
+	void disableVSync();
+
 private:
 	SystemComponent dummyComponent; ///< Dummy system component used to organize system registers
 

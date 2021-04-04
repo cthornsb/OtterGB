@@ -322,6 +322,7 @@ void SystemGBC::initialize(){
 	// Initialize the window and link it to the joystick controller	
 	gpu->initialize();
 	joy->setWindow(gpu->getWindow());
+	//enableVSync();
 
 	// Initialization was successful
 	initSuccessful = true;
@@ -1432,6 +1433,16 @@ void SystemGBC::resumeUntilNextVBlank(){
 void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
 	//bLockedVRAM = lockVRAM;
 	//bLockedOAM = lockOAM;
+}
+
+void SystemGBC::enableVSync() {
+	gpu->getWindow()->enableVSync();
+	sclk->disableFramerateCap();
+}
+
+void SystemGBC::disableVSync() {
+	sclk->setFramerateCap(60.f);
+	gpu->getWindow()->disableVSync();	
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){

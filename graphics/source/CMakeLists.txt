@@ -14,6 +14,7 @@ target_include_directories(
 	../include 
 	${OTTER_INCLUDE_DIRS}
 	${GLFW3_INCLUDE_DIRS}
+	${GLEW_INCLUDE_DIRS}
 )
 
 # Generate the graphics library

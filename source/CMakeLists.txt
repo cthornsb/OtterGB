@@ -27,6 +27,7 @@ target_include_directories(
 	../graphics/include
 	../audio/include
 	${GLFW3_INCLUDE_DIRS}
+	${GLEW_INCLUDE_DIRS}
 	${OTTER_INCLUDE_DIRS}
 	${PORT_AUDIO_INCLUDE_DIRS}
 )
@@ -74,7 +75,12 @@ else()
 		gbc
 	)
 	
-	add_executable(gbc gbc.cpp SystemGBC.cpp ${TOP_DIRECTORY}/qtfiles/mainwindow.cpp ${UIC_FILENAME} ${MOC_FILENAME})
+	add_executable(gbc 
+		gbc.cpp SystemGBC.cpp 
+		${TOP_DIRECTORY}/qtfiles/mainwindow.cpp 
+		${UIC_FILENAME} 
+		${MOC_FILENAME}
+	)
 endif()
 
 # Add include directories
@@ -86,6 +92,7 @@ target_include_directories(
 	../graphics/include
 	../audio/include
 	${GLFW3_INCLUDE_DIRS}
+	${GLEW_INCLUDE_DIRS}
 	${OTTER_INCLUDE_DIRS}
 	${PORT_AUDIO_INCLUDE_DIRS}
 )
@@ -113,6 +120,7 @@ target_link_libraries(
 	${SOIL_LIBRARY}
 	OpenGL::GL
 	OpenGL::GLU
+	GLEW::glew
 )
 if(WIN32)
 	target_link_libraries(

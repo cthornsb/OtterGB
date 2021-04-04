@@ -360,11 +360,11 @@ void ConsoleGBC::handleInput(){
 			break;
 		case cmdType::VSYNC: // Toggle VSync on/off
 			if (!window->getVSync()) {
-				window->enableVSync();
+				sys->enableVSync();
 				(*this) << "vsync enabled\n";
 			}
 			else {
-				window->disableVSync();
+				sys->disableVSync();
 				(*this) << "vsync disabled\n";
 			}
 			break;
