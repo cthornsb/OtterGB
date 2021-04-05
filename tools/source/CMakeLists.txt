@@ -21,6 +21,7 @@ target_link_libraries(
 	${GLFW3_LIBRARY}
 	${SOIL_LIBRARY}
 	OpenGL::GL
+	GLEW::GLEW
 )
 install(TARGETS dmgpalettes DESTINATION bin)
 
@@ -41,5 +42,6 @@ target_link_libraries(
 	${SOIL_LIBRARY}
 	OpenGL::GL
 	OpenGL::GLU
+	GLEW::GLEW
 )
 install(TARGETS gbimage DESTINATION bin)

@@ -120,7 +120,7 @@ target_link_libraries(
 	${SOIL_LIBRARY}
 	OpenGL::GL
 	OpenGL::GLU
-	GLEW::glew
+	GLEW::GLEW
 )
 if(WIN32)
 	target_link_libraries(
