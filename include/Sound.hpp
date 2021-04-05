@@ -35,7 +35,7 @@ public:
 
 	/** Initialize the audio output interface
 	  */
-	void initialize(bool audioOutputEnabled = true);
+	void initialize(bool audioOutputEnabled, const double& clockSpeed);
 
 	/** Get pointer to output audio mixer
 	  */

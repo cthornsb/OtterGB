@@ -31,10 +31,11 @@ SystemClock::SystemClock() :
 	modeStart()
 {
 	setNormalSpeedMode();
+	setFramerateCap(4.0 * SYSTEM_CLOCK_FREQUENCY / VERTICAL_SYNC_CYCLES); // Set default framerate cap (59.73 fps)
 }
 
 void SystemClock::setFramerateMultiplier(const float &freq){
-	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / SYSTEM_CLOCK_FREQUENCY / freq); // in microseconds
+	setFramerateCap(freq * 4.0 * SYSTEM_CLOCK_FREQUENCY / VERTICAL_SYNC_CYCLES);
 }
 
 void SystemClock::setDoubleSpeedMode(){
@@ -48,7 +49,6 @@ void SystemClock::setDoubleSpeedMode(){
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES * 2;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY)); // in microseconds
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to double-speed mode." << std::endl;
 	}
@@ -65,10 +65,13 @@ void SystemClock::setNormalSpeedMode(){
 	cyclesPerHSync = HORIZONTAL_SYNC_CYCLES;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;
-	this->setFrameratePeriod(1E6 * VERTICAL_SYNC_CYCLES / (4 * SYSTEM_CLOCK_FREQUENCY)); // in microseconds
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to normal." << std::endl;
 	}
+}
+
+double SystemClock::getCyclesPerSecond() const {
+	return (VERTICAL_SYNC_CYCLES * dFramerateCap / 4.0);
 }
 
 // Tick the system clock.

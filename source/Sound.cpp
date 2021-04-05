@@ -29,7 +29,7 @@ SoundProcessor::SoundProcessor() :
 { 
 }
 
-void SoundProcessor::initialize(bool audioOutputEnabled/*=true*/){
+void SoundProcessor::initialize(bool audioOutputEnabled, const double& clockSpeed/*=1*/){
 	if(bInitialized)
 		return;
 
@@ -38,7 +38,7 @@ void SoundProcessor::initialize(bool audioOutputEnabled/*=true*/){
 		setNormalSpeedMode();
 
 		// Set audio sample rate
-		audio->setSampleRate(1048576.0 / nMixerClockPeriod);
+		audio->setSampleRate(clockSpeed / nMixerClockPeriod);
 
 		// Initialize interface
 		audio->init();

@@ -138,7 +138,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	optionHandler handler;
 	handler.add(optionExt("config", required_argument, NULL, 'c', "<filename>", "Specify an input configuration file."));
 	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
-	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<multiplier>", "Set target framerate multiplier (default=1)."));
+	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<fps>", "Set target framerate (default=59.73)."));
 	handler.add(optionExt("volume", required_argument, NULL, 'V', "<volume>", "Set initial output volume (in range 0 to 1)."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose output mode."));
 	handler.add(optionExt("palette", required_argument, NULL, 'p', "<palette>", "Set palette number for DMG games (base 16)."));
@@ -224,12 +224,14 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			sound->getMixer()->setVolume(cfgFile.getFloat());
 		if(cfgFile.search("COLOR_PALETTE", true)) // Set DMG game color palette
 			gpu->setColorPaletteDMG(getUserInputUShort(cfgFile.getCurrentParameterString()));
-		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
-			sclk->setFramerateMultiplier(cfgFile.getFloat());
-		if (cfgFile.search("FRAME_TIME_OFFSET", true))
+		if (cfgFile.search("TARGET_FRAMERATE", true)) // Set framerate target (fps)
+			sclk->setFramerateCap((double)cfgFile.getFloat());
+		if (cfgFile.search("FRAME_TIME_OFFSET", true)) // Set frame timer offset (in microseconds)
 			sclk->setFramePeriodOffset(cfgFile.getDouble());
 		if (cfgFile.search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
 			sound->setSampleRate(cfgFile.getFloat());
+		if (cfgFile.searchBoolFlag("VSYNC_ENABLED")) // Set the default VSync state
+			enableVSync();
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
 			setVerboseMode(true);
 		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
@@ -253,8 +255,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 
 #ifndef _WIN32
 	if(handler.good()){ // Handle user command line arguments
-		if(handler.getOption(2)->active) // Set framerate multiplier
-			sclk->setFramerateMultiplier(std::stod(handler.getOption(2)->argument, NULL));
+		if(handler.getOption(2)->active) // Set target framerate (fps)
+			sclk->setFramerateCap(std::stod(handler.getOption(2)->argument, NULL));
 		if(handler.getOption(3)->active) // Set master output volume
 			sound->getMixer()->setVolume(std::stod(handler.getOption(3)->argument, NULL));
 		if(handler.getOption(4)->active) // Toggle verbose flag
@@ -277,7 +279,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 #endif // ifndef _WIN32
 
 	// Initialize the audio output interface
-	sound->initialize(bAudioOutputEnabled);
+	sound->initialize(bAudioOutputEnabled, sclk->getCyclesPerSecond());
 
 	pauseAfterNextInstruction = false;
 	pauseAfterNextClock = false;

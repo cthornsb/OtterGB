@@ -34,11 +34,9 @@ public:
 		return currentClockSpeed; 
 	}
 
-	/** Get the average number of clock cycles per second over a ten second period
+	/** Get the current number of clock cycles per second
 	  */
-	double getCyclesPerSecond() const { 
-		return cyclesPerSecond; 
-	}
+	double getCyclesPerSecond() const;
 	
 	/** Get the number of clock cycles since the previous vertical blanking (VBlank) interval ended
 	  */
