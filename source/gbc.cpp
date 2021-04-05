@@ -1,14 +1,31 @@
 #include <memory>
-#include <thread>
+#include <string>
+
+#include "OTTWindow.hpp"
 
 #include "SystemGBC.hpp"
 #include "GPU.hpp"
-#include "ComponentThread.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include <QApplication>
 	#include "mainwindow.h"
 #endif // ifdef USE_QT_DEBUGGER
+
+SystemGBC* ottergb = 0x0;
+
+void handlePathDrop(const std::string& path) {
+	ottergb->setRomPath(path);
+	ottergb->reset();
+}
+
+void handleWindowFocus(const bool& focused) {
+	if (focused) {
+		ottergb->unpause();
+	}
+	else {
+		ottergb->pause();
+	}
+}
 
 int main(int argc, char *argv[]){
 	// Main emulator object
@@ -19,6 +36,11 @@ int main(int argc, char *argv[]){
 		return 1;
 	}
 	
+	ottergb = gbc.get();
+	OTTWindow* window = gbc->getGPU()->getWindow();
+	window->setPathDropCallback(handlePathDrop);
+	window->setWindowFocusCallback(handleWindowFocus);
+
 #ifdef USE_QT_DEBUGGER
 	std::unique_ptr<QApplication> application;
 	std::unique_ptr<MainWindow> debugger;
