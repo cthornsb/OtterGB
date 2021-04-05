@@ -6,6 +6,8 @@
 
 class SystemGBC;
 
+class ConfigFile;
+
 class SystemComponent{
 public:
 	/** Default constructor
@@ -336,6 +338,10 @@ public:
 	virtual const unsigned char *getConstPtr(const unsigned short &loc){ 
 		return (const unsigned char *)&mem[bs][loc-offset]; 
 	}
+
+	/** Read settings from an input user configuration file
+	  */
+	virtual void readConfigFile(ConfigFile*) { }
 
 	/** Get pointer to a location in component RAM
 	  * No validity checks are performed, undefined behavior may result.

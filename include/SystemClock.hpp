@@ -82,6 +82,10 @@ public:
 	  * @return True if the system has entered vertical blank (VBlank) interval, and false otherwise
 	  */
 	bool onClockUpdate() override ;
+
+	/** Read settings from an input user configuration file
+	  */
+	void readConfigFile(ConfigFile* config) override;
 	
 	/** Sleep until the start of the next VSync cycle (i.e. wait until the start of the next frame)
 	  * Useful for maintaining desired framerate without advancing the system clock.

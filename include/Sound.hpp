@@ -168,6 +168,10 @@ public:
 	  */
 	void defineRegisters() override;
 
+	/** Read settings from an input user configuration file
+	  */
+	void readConfigFile(ConfigFile* config) override;
+
 private:
 	bool bInitialized; ///< Set if audio interface has been initialized
 

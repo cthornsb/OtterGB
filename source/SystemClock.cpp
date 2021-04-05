@@ -3,6 +3,7 @@
 #include "SystemClock.hpp"
 #include "SystemRegisters.hpp"
 #include "SystemGBC.hpp"
+#include "ConfigFile.hpp"
 
 // System clock
 constexpr unsigned int SYSTEM_CLOCK_FREQUENCY = 1048576; // Hz
@@ -146,6 +147,13 @@ bool SystemClock::onClockUpdate(){
 	}
 	
 	return vsync;
+}
+
+void SystemClock::readConfigFile(ConfigFile* config) {
+	if (config->search("TARGET_FRAMERATE", true)) // Set framerate target (fps)
+		setFramerateCap(config->getDouble());
+	if (config->search("FRAME_TIME_OFFSET", true)) // Set frame timer offset (in microseconds)
+		setFramePeriodOffset(config->getDouble());
 }
 
 void SystemClock::resetScanline(){

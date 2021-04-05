@@ -6,7 +6,6 @@
 #include "SystemComponent.hpp"
 
 class OTTWindow;
-class ConfigFile;
 
 class JoystickController : public SystemComponent {
 public:
@@ -14,8 +13,6 @@ public:
 	
 	void setWindow(OTTWindow *win){ window = win; }
 	
-	void setButtonMap(ConfigFile* config=0x0);
-
 	void clearInput();
 	
 	// The joystick controller has no associated RAM, so return false to avoid trying to access it.
@@ -35,6 +32,10 @@ public:
 	bool onClockUpdate() override ;
 
 	void defineRegisters() override ;
+
+	/** Read settings from an input user configuration file
+	  */
+	void readConfigFile(ConfigFile* config) override;
 
 private:
 	bool selectButtonKeys; ///< Set when buttons are selected

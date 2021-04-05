@@ -122,7 +122,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	pauseAfterNextClock(false),
 	pauseAfterNextHBlank(false),
 	pauseAfterNextVBlank(false),
-	audioInterface(&SoundManager::getInstance())
+	audioInterface(&SoundManager::getInstance()),
+	window(0x0)
 { 
 	// Disable memory region monitor
 	memoryAccessWrite[0] = 1; 
@@ -220,22 +221,10 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	this->initialize();
 
 	if(cfgFile.good()){ // Handle user input from config file
-		if (cfgFile.search("MASTER_VOLUME", true)) // Set master output volume
-			sound->getMixer()->setVolume(cfgFile.getFloat());
-		if(cfgFile.search("COLOR_PALETTE", true)) // Set DMG game color palette
-			gpu->setColorPaletteDMG(getUserInputUShort(cfgFile.getCurrentParameterString()));
-		if (cfgFile.search("TARGET_FRAMERATE", true)) // Set framerate target (fps)
-			sclk->setFramerateCap((double)cfgFile.getFloat());
-		if (cfgFile.search("FRAME_TIME_OFFSET", true)) // Set frame timer offset (in microseconds)
-			sclk->setFramePeriodOffset(cfgFile.getDouble());
-		if (cfgFile.search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
-			sound->setSampleRate(cfgFile.getFloat());
 		if (cfgFile.searchBoolFlag("VSYNC_ENABLED")) // Set the default VSync state
 			enableVSync();
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
 			setVerboseMode(true);
-		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
-			gpu->setPixelScale(cfgFile.getUInt());
 		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use CGB mode for original DMG games
 			forceColor = true;
 		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
@@ -248,9 +237,11 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			openTileViewer();
 		if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
 			openLayerViewer();
-			
-		// Setup key mapping
-		joy->setButtonMap(&cfgFile);
+
+		// Read component settings from config file
+		for (auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++) {
+			comp->second->readConfigFile(&cfgFile);
+		}
 	}
 
 #ifndef _WIN32
@@ -334,7 +325,8 @@ void SystemGBC::initialize(){
 
 	// Initialize the window and link it to the joystick controller	
 	gpu->initialize();
-	joy->setWindow(gpu->getWindow());
+	window = gpu->getWindow();
+	joy->setWindow(window);
 	
 	// Initialization was successful
 	initSuccessful = true;
@@ -1031,9 +1023,6 @@ bool SystemGBC::reset() {
 	// Read the ROM into memory if it is not currently loaded
 	bool stateBeforeReset = bGBCMODE;
 	if(bNeedsReloaded){
-		if(cart->isLoaded()) // Unload previously loaded ROM
-			cart->unload();
-	
 		// Read new ROM file
 		if(verboseMode){
 			std::cout << sysMessage << "Reading input ROM file \"" << romPath << "\"" << std::endl;
@@ -1233,7 +1222,7 @@ bool SystemGBC::screenshot(){
 		stream << "-0" << currentTime->tm_sec; // Seconds
 	else
 		stream << "-" << currentTime->tm_sec; // Seconds
-	gpu->getWindow()->saveImageBufferToBitmap(stream.str());
+	window->saveImageBufferToBitmap(stream.str());
 	std::cout << sysMessage << "Saved screenshot " << stream.str() << std::endl;
 	return false;
 }
@@ -1376,7 +1365,7 @@ void SystemGBC::help(){
 	std::cout << "   Left = a (left)" << std::endl;
 	std::cout << "  Right = d (right)" << std::endl << std::endl;
 
-	if(gpu->getWindow()->getJoypad()->isConnected()){
+	if(window->getJoypad()->isConnected()){
 		std::cout << " Gamepad Controls-" << std::endl;
 		std::cout << "  Start = Start" << std::endl;
 		std::cout << " Select = Back" << std::endl;
@@ -1411,13 +1400,13 @@ void SystemGBC::help(){
 }
 
 void SystemGBC::openDebugConsole(){
-	gpu->getWindow()->setKeyboardStreamMode();
+	window->setKeyboardStreamMode();
 	consoleIsOpen = true;
 	pause();
 }
 
 void SystemGBC::closeDebugConsole(){
-	gpu->getWindow()->setKeyboardToggleMode();
+	window->setKeyboardToggleMode();
 	consoleIsOpen = false;
 	unpause();
 }
@@ -1448,13 +1437,13 @@ void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
 }
 
 void SystemGBC::enableVSync() {
-	gpu->getWindow()->enableVSync();
+	window->enableVSync();
 	sclk->disableFramerateCap();
 }
 
 void SystemGBC::disableVSync() {
 	sclk->setFramerateCap(60.f);
-	gpu->getWindow()->disableVSync();	
+	window->disableVSync();	
 }
 
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){
@@ -1512,8 +1501,8 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 }
 
 void SystemGBC::checkSystemKeys(){
-	OTTJoypad* gamepad = gpu->getWindow()->getJoypad();
-	OTTKeyboard *keys = gpu->getWindow()->getKeypress();
+	OTTJoypad* gamepad = window->getJoypad();
+	OTTKeyboard *keys = window->getKeypress();
 	if(gamepad->isReady()){ // Check for gamepad button presses
 		if(gamepad->poll(GamepadInput::GUIDE)){
 			if(!emulationPaused)
@@ -1555,7 +1544,7 @@ void SystemGBC::checkSystemKeys(){
 		}
 	}
 	else if (keys->poll(0xFB)) // F11 Toggle fullscreen mode
-		gpu->getWindow()->toggleFullScreenMode();
+		window->toggleFullScreenMode();
 	else if (keys->poll(0xFC)) // F12 Screenshot
 		screenshot();
 	else if (keys->poll(0x2D)) // '-'    Decrease volume
@@ -1565,7 +1554,7 @@ void SystemGBC::checkSystemKeys(){
 	else if (keys->poll(0x60)) // '`' Open debugging console
 		openDebugConsole();
 	else if (keys->poll(0x63)) // 'c' Change current controller (gamepad)
-		gpu->getWindow()->getJoypad()->changeActiveGamepad();
+		window->getJoypad()->changeActiveGamepad();
 	else if (keys->poll(0x66)) // 'f' Display framerate
 		displayFramerate = !displayFramerate;
 	else if (keys->poll(0x6D)) // 'm' Mute

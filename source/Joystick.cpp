@@ -61,10 +61,10 @@ JoystickController::JoystickController() :
 	P10(false),
 	window(0x0) 
 { 
-	setButtonMap(); // Set default key mapping
+	readConfigFile(0x0); // Set default key mapping
 }
 
-void JoystickController::setButtonMap(ConfigFile* config/*=0x0*/) {
+void JoystickController::readConfigFile(ConfigFile* config) {
 	if (config) { // Read the configuration file
 		// Keyboard map
 		if (config->search("KEY_START", true))

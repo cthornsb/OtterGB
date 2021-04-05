@@ -388,6 +388,7 @@ public:
 	  */
 	void setRomPath(const std::string &path){
 		romPath = path;
+		bNeedsReloaded = true;
 	}
 	
 	/** Set the system path directory to use for loading ROM files
@@ -396,7 +397,7 @@ public:
 		romDirectory = path;
 	}
 	
-	/** Set the filename of input ROM
+	/** Set the input ROM filename (excluding the ROM directory)
 	  * Not to be confused with setRomPath() which explicitly sets the ROM path.
 	  */
 	void setRomFilename(const std::string& fname);
@@ -730,6 +731,8 @@ private:
 
 	SoundManager* audioInterface; ///< Pointer to sound output interface
 
+	OTTWindow* window; ///< Pointer to output graphical window
+
 	std::unique_ptr<SerialController> serial; ///< Pointer to serial I/O controller
 	
 	std::unique_ptr<DmaController> dma; ///< Pointer to Direct Memory Access (DMA) controller
@@ -757,7 +760,7 @@ private:
 	std::unique_ptr<OTTWindow> tileViewer; ///< Pointer to tile viewer window
 	
 	std::unique_ptr<OTTWindow> layerViewer; ///< Pointer to layer viewer window
-	
+
 #ifdef USE_QT_DEBUGGER
 	MainWindow* gui; ///< Pointer to Qt gui debugger (if available)
 #endif

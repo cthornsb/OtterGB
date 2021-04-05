@@ -171,6 +171,10 @@ bool Cartridge::readRom(const std::string &fname, bool verbose/*=false*/){
 	if(!rom.good())
 		return false;
 
+	// Unload previously loaded ROM
+	if (isLoaded()) 
+		unload();
+
 	// Read the rom header
 	readHeader(rom);
 	

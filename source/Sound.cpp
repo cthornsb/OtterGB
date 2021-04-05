@@ -4,6 +4,7 @@
 #include "Sound.hpp"
 #include "FrequencySweep.hpp"
 #include "MidiFile.hpp"
+#include "ConfigFile.hpp"
 
 /////////////////////////////////////////////////////////////////////
 // class SoundProcessor
@@ -623,6 +624,32 @@ void SoundProcessor::defineRegisters(){
 	// Wave RAM
 	for(unsigned char i = 0x0; i <= 0xF; i++)
 		sys->addSystemRegister(this, i+0x30, rWAVE[i], "WAVE", "33333333");
+}
+
+void SoundProcessor::readConfigFile(ConfigFile* config) {
+	float fLeftVolume = 1.f;
+	float fRightVolume = 1.f;
+	if (config->search("MASTER_VOLUME", true)) // Set master output volume
+		mixer->setVolume(config->getFloat());
+	if (config->search("AUDIO_BALANCE", true)) // Set L-R audio balance
+		mixer->setBalance(config->getFloat());
+	if (config->search("AUDIO_VOLUME_LEFT", true)) // Set left output channel volume
+		fLeftVolume = config->getFloat();
+	if (config->search("AUDIO_VOLUME_RIGHT", true)) // Set right output channel volume
+		fRightVolume = config->getFloat();
+	if (config->search("AUDIO_VOLUME_CH1", true)) // Set Ch1 (square) output volume
+		mixer->setChannelVolume(0, config->getFloat());
+	if (config->search("AUDIO_VOLUME_CH2", true)) // Set Ch2 (square) output volume
+		mixer->setChannelVolume(1, config->getFloat());
+	if (config->search("AUDIO_VOLUME_CH3", true)) // Set Ch3 (wave) output volume
+		mixer->setChannelVolume(2, config->getFloat());
+	if (config->search("AUDIO_VOLUME_CH4", true)) // Set Ch4 (noise) output volume
+		mixer->setChannelVolume(3, config->getFloat());
+	if (config->search("AUDIO_DC_OFFSET", true)) // Set audio output DC offset
+		mixer->setOffsetDC(config->getFloat());
+	if (config->search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
+		setSampleRate(config->getFloat());
+	mixer->setOutputLevels(fLeftVolume, fRightVolume);
 }
 
 void SoundProcessor::userAddSavestateValues(){

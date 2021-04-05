@@ -13,6 +13,7 @@
 #include "GPU.hpp"
 #include "SystemClock.hpp"
 #include "ColorPalette.hpp"
+#include "ConfigFile.hpp"
 
 constexpr unsigned short VRAM_LOW  = 0x8000;
 constexpr unsigned short VRAM_HIGH = 0xA000;
@@ -708,6 +709,17 @@ void GPU::defineRegisters(){
 	sys->addSystemRegister(this, 0x69, rBGPD, "BGPD", "33333333");
 	sys->addSystemRegister(this, 0x6A, rOBPI, "OBPI", "33333303");
 	sys->addSystemRegister(this, 0x6B, rOBPD, "OBPD", "33333333");
+}
+
+void GPU::readConfigFile(ConfigFile* config) {
+	if (config->search("COLOR_PALETTE", true)) // Set DMG color palette
+		setColorPaletteDMG(getUserInputUShort(config->getCurrentParameterString()));
+	if (config->search("PIXEL_SCALE", true)) // Set graphical window pixel scaling factor
+		setPixelScale(config->getUInt());
+	if (config->searchBoolFlag("START_FULLSCREEN")) // Start in fullscreen mode
+		window->setFullScreenMode(true);
+	if (config->searchBoolFlag("UNLOCK_ASPECT_RATIO")) // Lock window aspect ratio
+		window->lockWindowAspectRatio(false);
 }
 
 bool GPU::checkWindowVisible(){	

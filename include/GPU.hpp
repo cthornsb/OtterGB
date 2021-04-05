@@ -162,6 +162,10 @@ public:
 	  */
 	void defineRegisters() override ;
 
+	/** Read settings from an input user configuration file
+	  */
+	void readConfigFile(ConfigFile* config) override;
+
 private:
 	bool bUserSelectedPalette; ///< Set if user has specified a DMG color palette to use for DMG games
 
