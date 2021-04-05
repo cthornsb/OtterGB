@@ -1,6 +1,8 @@
 #ifndef JOYSTICK_HPP
 #define JOYSTICK_HPP
 
+#include "OTTJoypad.hpp"
+
 #include "SystemComponent.hpp"
 
 class OTTWindow;
@@ -49,7 +51,9 @@ private:
 	
 	OTTWindow *window; ///< Pointer to the main LCD driver
 
-	unsigned char keyMapArray[8]; ///< Array which maps the 8 gb buttons to keyboard keys
+	unsigned char keyMapArray[8]; ///< Array which maps the 8 DMG buttons to keyboard keys
+	
+	GamepadInput gamepadMapArray[8]; ///< Array which maps the 8 DMG buttons to a 360-style controller
 };
 
 #endif

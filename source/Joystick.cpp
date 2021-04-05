@@ -1,6 +1,5 @@
 #include "OTTWindow.hpp"
 #include "OTTKeyboard.hpp"
-#include "OTTJoypad.hpp"
 
 #include "Support.hpp"
 #include "SystemRegisters.hpp"
@@ -43,6 +42,11 @@ void getKeyFromString(ConfigFile* config, unsigned char& key) {
 		key = 0x7F;
 }
 
+void getButtonFromString(OTTJoypad* gamepad, ConfigFile* config, GamepadInput& button) {
+	std::string str = toLowercase(config->getCurrentParameterString());
+	gamepad->findNamedButton(str, button);
+}
+
 /////////////////////////////////////////////////////////////////////
 // class JoystickController
 /////////////////////////////////////////////////////////////////////
@@ -62,6 +66,7 @@ JoystickController::JoystickController() :
 
 void JoystickController::setButtonMap(ConfigFile* config/*=0x0*/) {
 	if (config) { // Read the configuration file
+		// Keyboard map
 		if (config->search("KEY_START", true))
 			getKeyFromString(config, keyMapArray[0]);
 		if (config->search("KEY_SELECT", true))
@@ -78,8 +83,29 @@ void JoystickController::setButtonMap(ConfigFile* config/*=0x0*/) {
 			getKeyFromString(config, keyMapArray[6]);
 		if (config->search("KEY_RIGHT", true))
 			getKeyFromString(config, keyMapArray[7]);
+
+		// Gamepad map
+		OTTJoypad* gamepad = window->getJoypad();
+		if(gamepad){
+			if (config->search("GAMEPAD_START", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[0]);
+			if (config->search("GAMEPAD_SELECT", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[1]);
+			if (config->search("GAMEPAD_B", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[2]);
+			if (config->search("GAMEPAD_A", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[3]);
+			if (config->search("GAMEPAD_DOWN", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[4]);
+			if (config->search("GAMEPAD_UP", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[5]);
+			if (config->search("GAMEPAD_LEFT", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[6]);
+			if (config->search("GAMEPAD_RIGHT", true))
+				getButtonFromString(gamepad, config, gamepadMapArray[7]);
+		}
 	}
-	else { // Set default keys
+	else { // Set default key/button mapping
 		keyMapArray[0] = KEYBOARD_ENTER; // Start
 		keyMapArray[1] = KEYBOARD_TAB;   // Select
 		keyMapArray[2] = KEYBOARD_J;     // B
@@ -88,6 +114,15 @@ void JoystickController::setButtonMap(ConfigFile* config/*=0x0*/) {
 		keyMapArray[5] = KEYBOARD_W;     // Up
 		keyMapArray[6] = KEYBOARD_A;     // Left
 		keyMapArray[7] = KEYBOARD_D;     // Right
+		
+		gamepadMapArray[0] = GamepadInput::START; // Start
+		gamepadMapArray[1] = GamepadInput::BACK;  // Select
+		gamepadMapArray[2] = GamepadInput::A;     // B
+		gamepadMapArray[3] = GamepadInput::B;     // A
+		gamepadMapArray[4] = GamepadInput::DOWN;  // Down
+		gamepadMapArray[5] = GamepadInput::UP;    // Up
+		gamepadMapArray[6] = GamepadInput::LEFT;  // Left
+		gamepadMapArray[7] = GamepadInput::RIGHT; // Right
 	}
 }
 
@@ -158,23 +193,23 @@ bool JoystickController::onClockUpdate(){
 	// P11 - Left or B
 	// P10 - Right or A
 	if(selectButtonKeys){
-		if(keys->check(keyMapArray[0]) || gamepad->check(GamepadInput::START)) //  START - Enter (P13 - bit3)
+		if(keys->check(keyMapArray[0]) || gamepad->check(gamepadMapArray[0])) //  START - Enter (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(keyMapArray[1]) || gamepad->check(GamepadInput::BACK))  // SELECT - Tab   (P12 - bit2)
+		if(keys->check(keyMapArray[1]) || gamepad->check(gamepadMapArray[1])) // SELECT - Tab   (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(keyMapArray[2]) || gamepad->check(GamepadInput::A))     //      B - j     (P11 - bit1)
+		if(keys->check(keyMapArray[2]) || gamepad->check(gamepadMapArray[2])) //      B - j     (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(keyMapArray[3]) || gamepad->check(GamepadInput::B))     //      A - k     (P10 - bit0)
+		if(keys->check(keyMapArray[3]) || gamepad->check(gamepadMapArray[3])) //      A - k     (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	else if(selectDirectionKeys){
-		if(keys->check(keyMapArray[4]) || keys->check(KEYBOARD_DOWN) || gamepad->check(GamepadInput::DOWN))   // P13 - s (down)  (P13 - bit3)
+		if(keys->check(keyMapArray[4]) || keys->check(KEYBOARD_DOWN) || gamepad->check(gamepadMapArray[4]))  // P13 - s (down)  (P13 - bit3)
 			(*rJOYP) &= JOYPAD_P13_MASK;
-		if(keys->check(keyMapArray[5]) || keys->check(KEYBOARD_UP) || gamepad->check(GamepadInput::UP))       // P12 - w (up)    (P12 - bit2)
+		if(keys->check(keyMapArray[5]) || keys->check(KEYBOARD_UP) || gamepad->check(gamepadMapArray[5]))    // P12 - w (up)    (P12 - bit2)
 			(*rJOYP) &= JOYPAD_P12_MASK;
-		if(keys->check(keyMapArray[6]) || keys->check(KEYBOARD_LEFT) || gamepad->check(GamepadInput::LEFT))   // P11 - a (left)  (P11 - bit1)
+		if(keys->check(keyMapArray[6]) || keys->check(KEYBOARD_LEFT) || gamepad->check(gamepadMapArray[6]))  // P11 - a (left)  (P11 - bit1)
 			(*rJOYP) &= JOYPAD_P11_MASK;
-		if(keys->check(keyMapArray[7]) || keys->check(KEYBOARD_RIGHT) || gamepad->check(GamepadInput::RIGHT)) // P10 - d (right) (P10 - bit0)
+		if(keys->check(keyMapArray[7]) || keys->check(KEYBOARD_RIGHT) || gamepad->check(gamepadMapArray[7])) // P10 - d (right) (P10 - bit0)
 			(*rJOYP) &= JOYPAD_P10_MASK;
 	}
 	
