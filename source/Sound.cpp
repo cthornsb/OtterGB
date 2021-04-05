@@ -12,6 +12,7 @@
 SoundProcessor::SoundProcessor() : 
 	SystemComponent("APU", 0x20555041), // "APU "
 	ComponentTimer(2048), // 512 Hz sequencer
+	bInitialized(false),
 	bMasterSoundEnable(false),
 	bRecordMidi(false),
 	audio(&SoundManager::getInstance()),
@@ -23,8 +24,34 @@ SoundProcessor::SoundProcessor() :
 	wavePatternRAM(),
 	nSequencerTicks(0),
 	nMidiClockTicks(0),
+	nMixerClockPeriod(32),
 	midiFile()
 { 
+}
+
+void SoundProcessor::initialize(bool audioOutputEnabled/*=true*/){
+	if(bInitialized)
+		return;
+
+	if(audioOutputEnabled){
+		// Set mixer clock period (in 1048576 Hz sys clock ticks)
+		setNormalSpeedMode();
+
+		// Set audio sample rate
+		audio->setSampleRate(1048576.0 / nMixerClockPeriod);
+
+		// Initialize interface
+		audio->init();
+		
+		// Enable output mixer clock
+		mixer->enable();
+		
+		bInitialized = true;
+	}
+	else{
+		// Disable output mixer clock
+		mixer->disable();
+	}
 }
 
 bool SoundProcessor::checkRegister(const unsigned short &reg){
@@ -350,6 +377,29 @@ float SoundProcessor::getChannelFrequency(const int& ch) const {
 	if(!unit)
 		return false;
 	return unit->getRealFrequency();
+}
+
+void SoundProcessor::setSampleRate(const float& rate){
+	if(bInitialized) // Audio interface already initialized
+		return;
+	if(rate < 16.0002f) // Minimum sample rate (16 Hz)
+		nMixerClockPeriod = 65535;
+	else if(rate > 1048576.f) // Maximum sample rate (1 MHz)
+		nMixerClockPeriod = 1;
+	else
+		nMixerClockPeriod = (unsigned short)(1048576.f / rate);
+}
+
+void SoundProcessor::setSampleRateMultiplier(const float &mult){
+	mixer->setPeriod((unsigned short)(nMixerClockPeriod * mult));
+}
+
+void SoundProcessor::setDoubleSpeedMode(){
+	mixer->setPeriod(nMixerClockPeriod * 2);
+}
+
+void SoundProcessor::setNormalSpeedMode(){
+	mixer->setPeriod(nMixerClockPeriod);
 }
 
 void SoundProcessor::disableChannel(const int& ch){

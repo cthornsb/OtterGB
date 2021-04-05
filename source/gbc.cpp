@@ -2,8 +2,6 @@
 #include <thread>
 
 #include "SystemGBC.hpp"
-#include "SoundManager.hpp"
-#include "SoundBuffer.hpp"
 #include "GPU.hpp"
 #include "ComponentThread.hpp"
 
@@ -21,15 +19,6 @@ int main(int argc, char *argv[]){
 		return 1;
 	}
 	
-	// System audio interface
-	SoundManager* audio = &SoundManager::getInstance();
-	
-	// Set audio sample rate
-	audio->setSampleRate(16384);
-	
-	// Initialize interface
-	audio->init();
-
 #ifdef USE_QT_DEBUGGER
 	std::unique_ptr<QApplication> application;
 	std::unique_ptr<MainWindow> debugger;

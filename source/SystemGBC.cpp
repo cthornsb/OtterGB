@@ -109,6 +109,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	bNeedsReloaded(true),
 	bUseTileViewer(false),
 	bUseLayerViewer(false),
+	bAudioOutputEnabled(true),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -225,6 +226,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			gpu->setColorPaletteDMG(getUserInputUShort(cfgFile.getCurrentParameterString()));
 		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
 			sclk->setFramerateMultiplier(cfgFile.getFloat());
+		if (cfgFile.search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
+			sound->setSampleRate(cfgFile.getFloat());
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
 			setVerboseMode(true);
 		if (cfgFile.search("PIXEL_SCALE", true)) // Set pixel scaling factor
@@ -233,6 +236,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			forceColor = true;
 		if (cfgFile.searchBoolFlag("DISABLE_AUTO_SAVE")) // Do not automatically save/load external cartridge RAM (SRAM)
 			autoLoadExtRam = false;
+		if (cfgFile.searchBoolFlag("DISABLE_AUDIO")) // Disable audio output interface
+			bAudioOutputEnabled = false;
 		if (cfgFile.searchBoolFlag("DEBUG_MODE")) // Toggle debug flag
 			setDebugMode(true);
 		if (cfgFile.searchBoolFlag("OPEN_TILE_VIEWER")) // Open tile viewer window
@@ -268,6 +273,10 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			openLayerViewer();
 	}
 #endif // ifndef _WIN32
+
+	// Initialize the audio output interface
+	sound->initialize(bAudioOutputEnabled);
+
 	pauseAfterNextInstruction = false;
 	pauseAfterNextClock = false;
 	pauseAfterNextHBlank = false;
@@ -322,8 +331,7 @@ void SystemGBC::initialize(){
 	// Initialize the window and link it to the joystick controller	
 	gpu->initialize();
 	joy->setWindow(gpu->getWindow());
-	//enableVSync();
-
+	
 	// Initialization was successful
 	initSuccessful = true;
 }
@@ -797,7 +805,7 @@ void SystemGBC::openLayerViewer(){
 
 void SystemGBC::setFramerateMultiplier(const float& freq){
 	sclk->setFramerateMultiplier(freq);
-	sound->getMixer()->setSampleRateMultiplier(freq);
+	sound->setSampleRateMultiplier(freq);
 }
 
 void SystemGBC::clearBreakpoint(){
@@ -920,7 +928,7 @@ void SystemGBC::resumeCPU(){
 		if(!bCPUSPEED){ // Normal speed
 			sclk->setDoubleSpeedMode();
 			sclk->resetScanline();
-			sound->getMixer()->setDoubleSpeedMode();
+			sound->setDoubleSpeedMode();
 			bCPUSPEED = true;
 			rKEY1->clear();
 			rKEY1->setBit(7);
@@ -928,7 +936,7 @@ void SystemGBC::resumeCPU(){
 		else{ // Double speed
 			sclk->setNormalSpeedMode();
 			sclk->resetScanline();
-			sound->getMixer()->setNormalSpeedMode();
+			sound->setNormalSpeedMode();
 			bCPUSPEED = false;
 			rKEY1->clear();
 		}

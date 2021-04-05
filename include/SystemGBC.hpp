@@ -702,6 +702,8 @@ private:
 	
 	bool bUseLayerViewer; ///< Set if user has requested render layer viewer window
 
+	bool bAudioOutputEnabled; ///< Set if audio output interface is enabled
+
 	unsigned char dmaSourceH; ///< DMA source MSB
 	
 	unsigned char dmaSourceL; ///< DMA source LSB

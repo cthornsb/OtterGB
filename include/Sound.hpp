@@ -33,6 +33,10 @@ public:
 	  */
 	SoundProcessor();
 
+	/** Initialize the audio output interface
+	  */
+	void initialize(bool audioOutputEnabled = true);
+
 	/** Get pointer to output audio mixer
 	  */
 	SoundMixer* getMixer(){
@@ -73,6 +77,24 @@ public:
 	/** Get the current frequency for an audio channel in Hz
 	  */
 	float getChannelFrequency(const int& ch) const ;
+	
+	/** Set the mixer sample rate (in Hz). The default sample rate is 32768 Hz.
+	  * Note that setting the sample rate after initializing the audio interface will have no effect. 
+	  * @param rate Mixer sample rate (in the range 16 to 1,048,576 Hz)
+	  */
+	void setSampleRate(const float& rate);
+	
+	/** Set the mixer timer period multiplier to account for non-standard clock speed
+	  */
+	void setSampleRateMultiplier(const float &mult);
+	
+	/** Modify mixer timer period for CGB double speed mode (2 MHz)
+	  */
+	void setDoubleSpeedMode();
+
+	/** Modify mixer timer period for CGB normal speed mode (1 MHz)
+	  */
+	void setNormalSpeedMode();
 	
 	/** Disable audio channel output and DAC (indexed from 1)
 	  */
@@ -147,6 +169,8 @@ public:
 	void defineRegisters() override;
 
 private:
+	bool bInitialized; ///< Set if audio interface has been initialized
+
 	bool bMasterSoundEnable; ///< Master sound enabled flag
 
 	bool bRecordMidi; ///< Midi recording in progress
@@ -168,6 +192,8 @@ private:
 	unsigned int nSequencerTicks; ///< Frame sequencer tick counter
 	
 	unsigned int nMidiClockTicks; ///< Midi clock tick counter (if midi recording in progress)
+
+	unsigned short nMixerClockPeriod; ///< The period of the audio output mixer (in 1 MHz sys clock ticks)
 
 	std::unique_ptr<MidiFile::MidiFileReader> midiFile; ///< Midi file recorder
 	
