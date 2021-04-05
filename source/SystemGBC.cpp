@@ -226,6 +226,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			gpu->setColorPaletteDMG(getUserInputUShort(cfgFile.getCurrentParameterString()));
 		if (cfgFile.search("FRAMERATE_MULTIPLIER", true)) // Set framerate multiplier
 			sclk->setFramerateMultiplier(cfgFile.getFloat());
+		if (cfgFile.search("FRAME_TIME_OFFSET", true))
+			sclk->setFramePeriodOffset(cfgFile.getDouble());
 		if (cfgFile.search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
 			sound->setSampleRate(cfgFile.getFloat());
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
