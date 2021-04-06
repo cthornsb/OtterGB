@@ -5,6 +5,7 @@
 #include "LR35902.hpp"
 #include "Console.hpp"
 #include "Support.hpp"
+#include "Cartridge.hpp"
 
 ConsoleGBC::ConsoleGBC() :
 	CharacterMap(),
@@ -212,7 +213,10 @@ void ConsoleGBC::handleInput(){
 			sys->quit();
 			break;
 		case cmdType::CLOSE:
-			sys->closeDebugConsole();
+			if(sys->getCartridge()->isLoaded())
+				sys->closeDebugConsole();
+			else
+				(*this) << "No ROM loaded\n";
 			break;
 		case cmdType::HELP:
 			if(nArgs >= 2){ // User specified command to print syntax for
@@ -321,8 +325,10 @@ void ConsoleGBC::handleInput(){
 			clear();
 			break;
 		case cmdType::RESET: // Reset
-			sys->reset();
-			sys->closeDebugConsole();
+			if (sys->reset())
+				sys->closeDebugConsole();
+			else
+				(*this) << "Reset failed\n";
 			break;
 		case cmdType::QSAVE: // Quicksave
 			if(nArgs >= 2){ // User specified filename
@@ -351,8 +357,10 @@ void ConsoleGBC::handleInput(){
 		case cmdType::FILENAME: // Display / set ROM filename
 			if(nArgs >= 2){ // User specified filename
 				sys->setRomFilename(args.at(1));
-				sys->reset();
-				sys->closeDebugConsole();
+				if(sys->reset())
+					sys->closeDebugConsole();
+				else
+					(*this) << "Failed to load ROM\n";
 			}
 			else{
 				(*this) << sys->getRomFilename() + "." + sys->getRomExtension() << "\n";

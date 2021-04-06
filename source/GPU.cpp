@@ -204,7 +204,6 @@ bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
 void GPU::drawConsole(){
 	console->update();
 	console->draw();
-	render();
 }
 
 void GPU::drawTileMaps(OTTWindow *win){
@@ -445,9 +444,8 @@ void GPU::renderScanline(){
 
 void GPU::render(){	
 	// Update the screen
-	window->setCurrent();
-	if(rLCDC->bit7() && window->status()){ // Check for events
-		window->clear();
+	if(window->status()){ // Check window status
+		window->setCurrent();
 		window->renderBuffer();
 	}
 }

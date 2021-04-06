@@ -327,7 +327,7 @@ void SystemGBC::initialize(){
 	gpu->initialize();
 	window = gpu->getWindow();
 	joy->setWindow(window);
-	
+
 	// Initialization was successful
 	initSuccessful = true;
 }
@@ -337,7 +337,8 @@ bool SystemGBC::execute(){
 		return false;
 		
 	// Start audio output
-	sound->resume();
+	if(!emulationPaused)
+		sound->resume();
 	
 	// Run the ROM. Main loop.
 	while(true){
@@ -397,12 +398,7 @@ bool SystemGBC::execute(){
 				if(nFrames++ % frameSkip == 0 && !cpuStopped){
 					if(displayFramerate)
 						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 17);
-					if(rLCDC->bit7() && gpu->getWindowStatus()){ // Draw frame
-						gpu->render();
-						//gpu->setOperationMode(PPUMODE::DRAWBUFFER);
-						//parent->notify(0);
-						//this->sync(1);
-					}
+					gpu->render(); // Draw frame
 				}
 				if(debugMode){
 					updateDebuggers();
@@ -417,6 +413,8 @@ bool SystemGBC::execute(){
 		}
 		else{
 			if(cpuStopped){ // STOP
+				// The documentation on the behavior of the CPU stopped state is vague. Just ignoring
+				// it and resuming immediately seems to work for most cases.
 				std::cout << sysMessage << "Stopped! " << getHex(rIE->getValue()) << " " << getHex(rIF->getValue()) << std::endl;
 				//if((*rIF) == 0x10)
 					resumeCPU();
@@ -425,24 +423,29 @@ bool SystemGBC::execute(){
 			// Process window events
 			gpu->processEvents();
 
-			// 
-			if(!consoleIsOpen)
+			if (!consoleIsOpen) { // Check for system key presses
 				checkSystemKeys();
-			else
-				gpu->drawConsole();			
-
-			// Maintain framerate but do not advance the system clock
-			sclk->waitUntilNextVSync();
+				if (displayFramerate)
+					gpu->print(doubleToStr(sclk->getFramerate(), 1) + " fps", 0, 17);
+			}
+			else { // Update the interpreter console
+				gpu->drawConsole();
+			}
 
 			if(debugMode)// Process debugger events
 				updateDebuggers();
+
+			// Draw the screen
+			gpu->render();
+
+			// Maintain framerate but do not advance the system clock
+			sclk->waitUntilNextVSync();
 		}
 	}
 #ifdef USE_QT_DEBUGGER
 	if(debugMode)
 		gui->quit();
 #endif
-	//parent->quit(); // Quit all threads
 	if(audioInterface) // Terminate audio stream
 		audioInterface->quit();
 	if(autoLoadExtRam) // Save save data (if available)
@@ -455,9 +458,6 @@ void SystemGBC::handleHBlankPeriod(){
 		if(nFrames % frameSkip == 0){
 			// We multiply the pixel clock pause period by two if in double-speed mode
 			sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
-			// Done reading VRAM, notify PPU to push pixel data to the image buffer
-			//parent->notify(0); 
-			//this->sync(1);
 		}
 		dma->onHBlank();
 	}
@@ -1004,6 +1004,7 @@ void SystemGBC::pause(){
 		updateDebuggers();
 	}
 	sound->pause(); // Stop audio output
+	window->setWindowTitle("ottergb (paused)");
 }
 
 void SystemGBC::unpause(bool resumeAudio/*=true*/){ 
@@ -1014,6 +1015,7 @@ void SystemGBC::unpause(bool resumeAudio/*=true*/){
 #endif
 	if(resumeAudio)
 		sound->resume(); // Restart audio output
+	window->setWindowTitle("ottergb");
 }
 
 bool SystemGBC::reset() {
@@ -1406,6 +1408,8 @@ void SystemGBC::openDebugConsole(){
 }
 
 void SystemGBC::closeDebugConsole(){
+	if (!cart->isLoaded()) // Do not exit the console if no ROM is loaded
+		return;
 	window->setKeyboardToggleMode();
 	consoleIsOpen = false;
 	unpause();
