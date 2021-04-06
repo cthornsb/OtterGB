@@ -77,8 +77,6 @@ find_package(Threads REQUIRED)
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
-set(INSTALL_BIN_DIR "${CMAKE_INSTALL_PREFIX}/bin/default.cfg")
-
 #Compiler definitions
 if(ENABLE_DEBUGGER)
 	add_definitions(-DUSE_QT_DEBUGGER)
