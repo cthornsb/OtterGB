@@ -1,30 +1,63 @@
 # OtterGB
 
-README for OtterGB by CRT
-Last updated April 5th, 2021
+README for OtterGB
+Last updated April 6th, 2021
 
-## 0 - Compiling From Source
+## About
 
-OtterGB relies on the graphical/audio wrapper library OtterEngine. OtterEngine will 
-find all required packages and will set up the scripts which OtterGB needs in order 
-to compile. See *[OtterEngine](https://github.com/cthornsb/Render3d)* for instructions
-on how to install OtterEngine and required pre-requisites.
+OtterGB is a cross-platform Gameboy and Gameboy Color emulator written entirely
+in C++. It is completely open source. Feel free to distribute, fork, and modify
+the code in any way you want. All I ask that you include a link back here.
 
-Ensure that you build OtterEngine with the *-INSTALL_LIBRARIES=ON* CMake option
-because we will be using classes from that project.
+Author: [Cory Thornsberry](https://github.com/cthornsb)
 
-### 0a - Linux (Ubuntu)
+Email: <desertedotter@gmail.com>
 
-Once OtterEngine is installed, build OtterGB using:
+Repository: <https://github.com/cthornsb/OtterGB>
+
+## Acknowledgements
+
+OtterGB would not be possible without the following resources:
+
+### Graphics and Audio Libraries
+
+[OpenGL](https://www.opengl.org/)
+
+[OpenGL Extension Wrangler (GLEW)](http://glew.sourceforge.net) or on [github](https://github.com/nigels-com/glew)
+
+[Graphics Library Framework (GLFW)](https://www.glfw.org) or on [github](https://github.com/glfw/glfw)
+
+[Simple OpenGL Image Library (SOIL)](https://github.com/paralin/soil)
+
+[PortAudio](http://www.portaudio.com) or on [github](https://github.com/PortAudio/portaudio)
+
+### Documentation
+
+[Pan Docs](https://gbdev.io/pandocs/)
+
+[The GBDev Wiki](https://gbdev.gg8.se/wiki/articles/Main_Page)
+
+[Gameboy CPU (LR35902) instruction set](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
+
+[Blargg's test ROMs](https://gbdev.gg8.se/wiki/articles/Test_ROMs)
+
+## Building and Installing
+
+OtterGB requires audio and graphical classes from *[OtterEngine](https://github.com/cthornsb/OtterEngine)*.
+Follow the instructions in the OtterEngine README to install the headers and libraries
+we will need for OtterGB.
+
+### Linux (Ubuntu)
+
+Compiling on Linux is relatively easy. Once you have installed all the pre-requisite
+packages, build OtterGB using:
 
 ```bash
-{
-    git clone https://github.com/cthornsb/gbcemu
-    cd gbcemu
+    git clone https://github.com/cthornsb/OtterGB
+    cd OtterGB
     mkdir build
     cd build
-    cmake -DOTTER_DIRECTORY="/path/to/Render3d" ..
-}
+    cmake -DOTTER_DIRECTORY="/path/to/OtterEngine" ..
 ```
 
 We set the CMake variable **OTTER_DIRECTORY** which allows CMake to load the required
@@ -32,21 +65,21 @@ environment scripts OtterGB needs in order to build. And that should be all we
 need. If all goes well and CMake completes successfully, type:
 
 ```bash
-{
     make install
-}
 ```
 
-To build and install OtterGB. The default binary install directory is *gbcemu/install/bin*, 
+To build and install OtterGB. The default binary install directory is *OtterGB/install/bin*, 
 this is where the *ottergb* executable is located.
 
-### 0b - Windows
+### Windows
 
-Using Visual Studio, clone the *[OtterGB](https://github.com/cthornsb/gbcemu)* repository
+Using Visual Studio, clone the *[OtterGB](https://github.com/cthornsb/OtterGB)* repository
 and open it. Generate the default CMakeCache and open the CMake settings. In the field
 *CMake command arguments:*, input the following:
 
--OTTER_DIRECTORY="/path/to/Render3d"
+```bash
+    -DOTTER_DIRECTORY="/path/to/OtterEngine"
+```
 
 We set the CMake variable **OTTER_DIRECTORY** which allows CMake to load the required
 environment scripts OtterGB needs in order to build. And that should be all we
@@ -54,67 +87,76 @@ need.
 
 Save the CMake settings and hopefully CMake will complete successfully. Once this is
 done, build the project by clicking *Build->Build All* followed by *Build->Install OtterEngine* 
-to install the *ottergb* executable to the install directory (*Render3d/out/install/* 
+to install the *ottergb* executable to the install directory (*OtterEngine/out/install/* 
 by default).
 
-### 0c - Additional Build Options
+### Additional Build Options
 
-| Option          | Default | Description |
-|-----------------|---------|-------------|
-| BUILD_TOOLS     | OFF     | Build and install emulator tools |
-| ENABLE_AUDIO    | ON      | Build with support for audio output (Requires PortAudio) |
-| ENABLE_DEBUGGER | OFF     | Build with support for gui debugger (Requires QT4) |
-| INSTALL_DLLS    | ON      | (Windows only) Copy required DLLs when installing executable |
+| Option           | Default | Description |
+|------------------|---------|-------------|
+| CMAKE_BUILD_TYPE | Release | CMake build type: None Debug Release RelWithDebInfo MinSizeRel |
+| INSTALL_DIR      | ""      | Install Prefix                                                 |
+| BUILD_TOOLS      | OFF     | Build and install emulator tools                               |
+| ENABLE_AUDIO     | ON      | Build with support for audio output (Requires PortAudio)       |
+| ENABLE_DEBUGGER  | OFF     | Build with support for gui debugger (Requires QT4)             |
+| INSTALL_DLLS     | ON      | (Windows only) Copy required DLLs when installing executable   |
 
-## 1 - Getting started
+Emulation of the LR35902 CPU is fairly CPU intensive. Unless you have a beefy
+PC, using a build type of *Debug* will probably result in emulation framerates
+that are too slow to use. If you absolutely need debug symbols, *RelWithDebInfo*
+typically works at the same speed as *Release*.
+
+## Getting started
 
 To run OtterGB simply run the executable. The Windows version does not support 
 command line options but will instead load a config file named *default.cfg* which
-should be placed in the same directory as the executable. The config file contains
-many different emulator options that you can use to tweak performance. 
+must be placed in the same directory as the executable. The config file contains
+many different emulator options that you can use to tweak performance. Linux builds
+may also use config files, but they are not loaded unless you specify the *-c* flag
+from the command line.
 
 The most important variables in the config file are **ROM_DIRECTORY** and **ROM_FILENAME**.
 
 **ROM_DIRECTORY** is used to specify the directory where your ROM files are placed. It may
 be a relative path or an absolute path but it is required. If the ROMs are in the 
-same directory as the executable just leave it as *./*
+same directory as the executable just leave it as *.* or *./*
 
 **ROM_FILENAME** specifies the file to load on boot, but you can switch it in the emulator 
-console (press ` and then type *file <filename>*) or drag and drop a DMG or CGB file 
+console (press *`* and then type *file <filename>*) or drag and drop a DMG or CGB file 
 onto the emulator window to load it. If **ROM_FILENAME** is not specified or if OtterGB
-fails to load the file, the program will exit.
+fails to load the file, the program will exit with a fatal error.
 
-All the possible emulator options are listed in *default.cfg*, but more may be added
+All possible emulator options are listed in *default.cfg*, but more may be added
 in the future.
 
-### 1a - Windows builds
+### Windows builds
 
-I get very inconsistent framerates on Windows, it seems a lot harder to do high-res
+I get very inconsistent framerates on Windows. It seems a lot harder to do high-res
 frame timing on Windows than it is on Linux (for C++ at least), although this probably
-varies by machine. The framerate is even more unstable when using VSync when in window
+varies by machine. The framerate is even more unstable when using VSync in windowed
 mode, although it works perfectly in fullscreen mode *F11* and on Linux.
 
 I think the reason for this is that high-res timing system calls take much longer on
 Windows than they do on Linux for whatever reason. To alleviate this somewhat, The 
 config file option **FRAME_TIME_OFFSET** may be used to tweak fps performance by modifying 
 the frame timing on the microsecond level. I find an offset of around 900 us works well 
-on my PC, but you can try adjusting the offset to get more consistent fps. Positive
-offset values will INCREASE the framerate while negative values will DECREASE it if
+on my PC, but you can try adjusting the offset to get framerates closer to 60. Positive
+offset values will **INCREASE** the framerate while negative values will **DECREASE** it if
 the emulator is running too fast.
 
-VSync is off by default *(for the reasons above), but you may enable it by changing
+VSync is off by default (for the reasons above), but you may enable it by changing
 **VSYNC_ENABLED** to *true* in the config file or by using the emulator console (press 
-the ` key and type *vsync*) while the emulator is running. See the "OtterGB console"
+the *`* key and type *vsync*) while the emulator is running. See the "OtterGB Console"
 section below.
 
-### 1b - Linux builds
+### Linux builds
 
 On linux there are several command line options
 
 | Option              | Args           | Description                                                 |
 |:--------------------|:--------------:|:------------------------------------------------------------|
 | --config (-c)       | <filename>     | Specify an input configuration file.                        |
-| --input (-i)        | <filename>     | Specify an input geant macro.                               |
+| --input (-i)        | <filename>     | Specify an input ROM file.                                  |
 | --framerate (-F)    | <fps>          | Set target framerate (default=59.73).                       |
 | --volume (-V)       | <volume>       | Set initial output volume (in range 0 to 1).                |
 | --verbose (-v)      |                | Toggle verbose output mode.                                 |
@@ -133,28 +175,29 @@ take priority.
 If a config file is not used (with the -c flag), the input filename MUST be
 specified, other the program will exit immediately.
 
-### 1c - Using bootstrap ROMs
+### Using bootstrap ROMs
 
 OtterGB supports custom bootstrap ROMs on startup. Bootstraps have a maximum 
 length of 16 kB and must contain compiled LR35902 code. They must also contain 
 no vital code between addresses 0x100 and 0x200 (byte numbers 256 to 512) because
 the cartridge ROM header needs to be visible to the emulator. Bootstrap program
-entry point must be byte 0.
+entry point must be byte 0, although you could use a *JP* at byte 0 to jump to the
+start of the program.
 
 The expected filenames for the CGB and DMG bootstrap programs are *cgb_bios.bin*
 and *DMG_ROM.bin* respectively and they must be placed in the same directory as
-the executable to function.
+the executable in order to function.
 
 The standard DMG and CGB bootstrap ROMs are not included with OtterGB because
 they contain potentially copyrighted material, but you can find them online.
 
-## 2 - Running ROMs
+## Running ROMs
 
-While the emulator is running, press esc to exit and press F1 for default button
-mapping. Default button functions are shown below, but they may be changed using
-the config file.
+While the emulator is running, press *esc* to exit and press *F1* for default button
+mapping. Default game controls are shown below, but they may be changed using the
+config file.
 
-DMG / CGB button inputs:
+### DMG / CGB button inputs:
 
  Start = Enter
 Select = Tab
@@ -165,7 +208,7 @@ Select = Tab
   Left = a (left)
  Right = d (right)
 
-System functions:
+### System functions:
 
 F1 : Display help screen
 F2 : Pause emulation
@@ -186,7 +229,7 @@ F12: Take screenshot
  f : Show/hide FPS counter on screen
  m : Mute output audio
 
-### 2a - Controller support
+### Controller support
 
 OtterGB supports 360-style and PS-style controllers. Simply plug in a controller
 and start using it using the default mapping below (bindings may be changed using
@@ -204,7 +247,7 @@ Select = Back
 Press [GUIDE/HOME] to pause emulation (does not work on all platforms because some
 bind the guide button to an on-screen menu e.g. Windows).
 
-### 2b - Fullscreen and windowed modes
+### Fullscreen and windowed modes
 
 Upon booting, OtterGB starts in windowed mode. The window may be resized to any size
 you wish. Pillarboxing or letterboxing will be added for windows with an aspect ratio
@@ -218,7 +261,7 @@ To switch to fullscreen mode, press *F11* at any time. VSync is automatically en
 when in fullscreen mode, regardless of previous settings, but you may disable it by
 using the console *`*. Pressing *F11* again will return to windowed mode.
 
-### 2c - Save RAM
+### Save RAM
 
 OtterGB supports saving and loading of cartridge save ram (SRAM) for ROMs which
 support this feature. By default, SRAM is loaded automatically when the ROM is
@@ -226,7 +269,7 @@ loaded (using the filename of the ROM, if it exists) and it is saved automatical
 when the emulator is closed. If the emulator crashes, SRAM may not save successfully.
 To avoid potential loss of save data, SRAM may be saved at any time by pressing *F8*.
 
-### 2d - Savestates
+### Savestates
 
 Savestates are supported by OtterGB, but are currently still in development and may
 be buggy. They are not guaranteed to work properly and their format is subject to 
@@ -234,14 +277,14 @@ change in future updates. Pressing *F5* will save the current emulator state and
 pressing *F9* will load the saved state. This feature usually works, but sometimes 
 the emulator will hang and will need to be reset by pressing *F4*.
 
-### 2e - Screenshots
+### Screenshots
 
 Screenshots may be saved at any time by pressing *F12*. Screenshots will be saved
 in the same directory as the executable and will have the game title, the date,
 and the time in the filename. Currently only BMP output is supported, but this
 will be changed to PNG in the future.
 
-### 2f - Midi output
+### Midi output
 
 OtterGB supports recording midi files. Press *F10* while the emulator is running
 to start a midi recording and then press *F10* again to finalize the output midi
@@ -252,7 +295,7 @@ Midi file recording works fairly well, but may not produce pleasant sounding
 midi files if the ROM being recorded makes heavy use of the frequency sweep on
 channel 1 or if it changes note frequency very rapidly.
 
-## 3 - OtterGB console and LR35902 interpreter
+## OtterGB console and LR35902 interpreter
 
 OtterGB contains a built in console and LR35902 interpreter. To enable the console,
 press *`* at any time while the emulator is running. The console supports many

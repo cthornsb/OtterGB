@@ -138,7 +138,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	// Handle command line options
 	optionHandler handler;
 	handler.add(optionExt("config", required_argument, NULL, 'c', "<filename>", "Specify an input configuration file."));
-	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input geant macro."));
+	handler.add(optionExt("input", required_argument, NULL, 'i', "<filename>", "Specify an input ROM file."));
 	handler.add(optionExt("framerate", required_argument, NULL, 'F', "<fps>", "Set target framerate (default=59.73)."));
 	handler.add(optionExt("volume", required_argument, NULL, 'V', "<volume>", "Set initial output volume (in range 0 to 1)."));
 	handler.add(optionExt("verbose", no_argument, NULL, 'v', "", "Toggle verbose output mode."));
