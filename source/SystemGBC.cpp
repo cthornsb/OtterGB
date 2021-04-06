@@ -50,14 +50,14 @@ const std::string sysWarning    = " [System] Warning: ";
 const std::string sysError      = " [System] Error! ";
 const std::string sysFatalError = " [System] FATAL ERROR! ";
 
-#ifdef GB_BOOT_ROM
-	const std::string bootstrapRomPathDMG(GB_BOOT_ROM);
+#ifdef DMG_BOOTSTRAP_ROM
+	const std::string bootstrapRomPathDMG(DMG_BOOTSTRAP_ROM);
 #else
 	const std::string bootstrapRomPathDMG("");
 #endif
 
-#ifdef GBC_BOOT_ROM
-	const std::string bootstrapRomPathCGB(GBC_BOOT_ROM);
+#ifdef CGB_BOOTSTRAP_ROM
+	const std::string bootstrapRomPathCGB(CGB_BOOTSTRAP_ROM);
 #else
 	const std::string bootstrapRomPathCGB("");
 #endif

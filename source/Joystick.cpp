@@ -43,8 +43,8 @@ void getKeyFromString(ConfigFile* config, unsigned char& key) {
 }
 
 void getButtonFromString(OTTJoypad* gamepad, ConfigFile* config, GamepadInput& button) {
-	std::string str = toLowercase(config->getCurrentParameterString());
-	gamepad->findNamedButton(str, button);
+	//std::string str = toLowercase(config->getCurrentParameterString());
+	gamepad->findNamedButton(config->getCurrentParameterString(), button);
 }
 
 /////////////////////////////////////////////////////////////////////

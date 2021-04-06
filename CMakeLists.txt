@@ -77,6 +77,8 @@ find_package(Threads REQUIRED)
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
+set(INSTALL_BIN_DIR "${CMAKE_INSTALL_PREFIX}/bin/default.cfg")
+
 #Compiler definitions
 if(ENABLE_DEBUGGER)
 	add_definitions(-DUSE_QT_DEBUGGER)
@@ -86,6 +88,15 @@ endif(ENABLE_DEBUGGER)
 #if(ENABLE_AUDIO)
 	ott_use_audio()
 #endif()
+
+if(WIN32 AND INSTALL_DLLS)
+	#List of external dlls
+	set( INSTALL_DLL_LIST
+		${GLFW3_DLL_PATH}
+		${GLEW_DLL_PATH}
+		${PORT_AUDIO_DLL_PATH}
+	)
+endif()
 
 #Gui debugger (Qt4)
 if(ENABLE_DEBUGGER)
@@ -99,14 +110,14 @@ if(ENABLE_DEBUGGER)
 endif()
 
 #Set the DMG bootstrap ROM
-if(NOT GB_BOOT_ROM)
-	set(GB_BOOT_ROM "" CACHE STRING "DMG bootstrap program" FORCE)
-endif(NOT GB_BOOT_ROM)
+if(NOT DMG_BOOTSTRAP_ROM)
+	set(DMG_BOOTSTRAP_ROM "" CACHE STRING "DMG bootstrap program" FORCE)
+endif(NOT DMG_BOOTSTRAP_ROM)
 
 #Set the CGB bootstrap ROM
-if(NOT GBC_BOOT_ROM)
-	set(GBC_BOOT_ROM "" CACHE STRING "CGB bootstrap program" FORCE)
-endif(NOT GBC_BOOT_ROM)
+if(NOT CGB_BOOTSTRAP_ROM)
+	set(CGB_BOOTSTRAP_ROM "" CACHE STRING "CGB bootstrap program" FORCE)
+endif(NOT CGB_BOOTSTRAP_ROM)
 
 #Add the graphics directory.
 add_subdirectory(graphics/source)

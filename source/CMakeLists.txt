@@ -40,14 +40,6 @@ if(ENABLE_DEBUGGER)
 	)
 endif()
 
-# Bootstrap rom paths (optional)
-if(NOT ${GB_BOOT_ROM} STREQUAL "")
-	target_compile_definitions(COMPONENT_OBJECTS PRIVATE GB_BOOT_ROM=${GB_BOOT_ROM})
-endif()
-if(NOT ${GBC_BOOT_ROM} STREQUAL "")
-	target_compile_definitions(COMPONENT_OBJECTS PRIVATE GBC_BOOT_ROM=${GBC_BOOT_ROM})
-endif()
-
 # Generate the system component library
 add_library(
 	COMPONENT_LIB 
@@ -57,35 +49,61 @@ add_library(
 
 #Build renderer executable.
 if(NOT ENABLE_DEBUGGER)
-	add_executable(gbc gbc.cpp SystemGBC.cpp)
+	add_executable( ottergb 
+		gbc.cpp 
+		SystemGBC.cpp
+	)
 else()
 	# Create moc code
-	QT4_WRAP_CPP(
-		MOC_FILENAME
+	QT4_WRAP_CPP( MOC_FILENAME
 		${TOP_DIRECTORY}/qtfiles/mainwindow.h
-		TARGET
-		gbc
+		TARGET ottergb
 	)
 
 	# Create uic file
-	QT4_WRAP_UI(
-		UIC_FILENAME
+	QT4_WRAP_UI( UIC_FILENAME
 		${TOP_DIRECTORY}/qtfiles/mainwindow.ui
-		TARGET
-		gbc
+		TARGET ottergb
 	)
 	
-	add_executable(gbc 
-		gbc.cpp SystemGBC.cpp 
+	add_executable( ottergb 
+		gbc.cpp 
+		SystemGBC.cpp 
 		${TOP_DIRECTORY}/qtfiles/mainwindow.cpp 
 		${UIC_FILENAME} 
 		${MOC_FILENAME}
 	)
 endif()
 
+# Bootstrap rom paths (optional)
+if(NOT ${DMG_BOOTSTRAP_ROM} STREQUAL "")
+	get_filename_component( DMG_BOOTSTRAP_FILENAME
+		${DMG_BOOTSTRAP_ROM} NAME
+	)
+	target_compile_definitions( ottergb 
+		PRIVATE DMG_BOOTSTRAP_ROM="${DMG_BOOTSTRAP_FILENAME}"
+	)
+	install(
+		FILES ${DMG_BOOTSTRAP_ROM}
+		DESTINATION bin
+	)
+endif()
+if(NOT ${CGB_BOOTSTRAP_ROM} STREQUAL "")
+	get_filename_component( CGB_BOOTSTRAP_FILENAME
+		${CGB_BOOTSTRAP_ROM} NAME
+	)
+	target_compile_definitions( COMPONENT_OBJECTS 
+		PRIVATE CGB_BOOTSTRAP_ROM="${CGB_BOOTSTRAP_FILENAME}"
+	)
+	install(
+		FILES ${CGB_BOOTSTRAP_ROM}
+		DESTINATION bin
+	)
+endif()
+
 # Add include directories
 target_include_directories(
-	gbc
+	ottergb
 	PRIVATE
 	../include
 	../core/include
@@ -98,7 +116,7 @@ target_include_directories(
 )
 if(ENABLE_DEBUGGER)
 	target_include_directories(
-		gbc
+		ottergb
 		PRIVATE
 		../qtfiles
 		${CMAKE_CURRENT_BINARY_DIR}
@@ -107,7 +125,7 @@ endif()
 
 # Add linker libraries
 target_link_libraries(
-	gbc 
+	ottergb 
 	COMPONENT_LIB 
 	AUDIO_LIB 
 	GRAPHICS_LIB 
@@ -124,19 +142,19 @@ target_link_libraries(
 )
 if(WIN32)
 	target_link_libraries(
-		gbc
+		ottergb
 		Winmm
 	)
 endif()
 if(ENABLE_AUDIO)
 	target_link_libraries(
-		gbc
+		ottergb
 		${PORT_AUDIO_LIBRARY}
 	)
 endif()
 if(ENABLE_DEBUGGER)
 	target_link_libraries(
-		gbc 
+		ottergb 
 		Qt4::QtGui 
 		Qt4::QtCore 
 		Qt4::QtOpenGL 
@@ -144,15 +162,28 @@ if(ENABLE_DEBUGGER)
 endif()
 
 # Install executable
-install(TARGETS gbc DESTINATION bin)
+install(
+	TARGETS ottergb
+	DESTINATION bin
+)
 
-# Copy default configuration file (if it doesn't already exist)
-if(NOT EXISTS ${CMAKE_INSTALL_PREFIX}/bin/default.cfg)
-	install(FILES ${TOP_DIRECTORY}/assets/default.cfg DESTINATION bin)
-endif()
+# Install README
+install(
+	FILES  "${TOP_DIRECTORY}/README.md" 
+	DESTINATION bin
+)
+
+# Install default configuration file
+install(
+	FILES "${TOP_DIRECTORY}/assets/default.cfg" 
+	DESTINATION bin
+)
 
 # Install windows dlls
 if(WIN32 AND INSTALL_DLLS)
 	#Install required dlls
-	install(FILES ${INSTALL_DLL_LIST} DESTINATION bin)
+	install(
+		FILES ${INSTALL_DLL_LIST} 
+		DESTINATION bin
+	)
 endif(WIN32 AND INSTALL_DLLS)
