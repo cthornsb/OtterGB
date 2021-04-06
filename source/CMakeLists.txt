@@ -130,7 +130,6 @@ target_link_libraries(
 	AUDIO_LIB 
 	GRAPHICS_LIB 
 	CORE_LIB 
-	Threads::Threads
 	Ott::OtterCore
 	Ott::OtterAudio
 	Ott::OtterMath

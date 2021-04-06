@@ -70,9 +70,6 @@ include(PreRequisites)
 # Use OtterEngine 2d library
 ott_use_core()
 
-#Find threads
-find_package(Threads REQUIRED) 
-
 #Set the current working directory (needed by some files)
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
