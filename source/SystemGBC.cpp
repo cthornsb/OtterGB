@@ -34,14 +34,16 @@
 	#include "mainwindow.h"
 #endif
 
-constexpr unsigned char SAVESTATE_VERSION = 0x1;
+#ifndef OTTERGB_VERSION
+#define OTTERGB_VERSION "0.9"
+#endif
 
+constexpr unsigned char SAVESTATE_VERSION = 0x1;
 constexpr unsigned short VRAM_SWAP_START = 0x8000;
 constexpr unsigned short CART_RAM_START  = 0xA000;
 constexpr unsigned short WRAM_ZERO_START = 0xC000;
 constexpr unsigned short OAM_TABLE_START = 0xFE00;
 constexpr unsigned short HIGH_RAM_START  = 0xFF80;
-
 constexpr unsigned short REGISTER_LOW    = 0xFF00;
 constexpr unsigned short REGISTER_HIGH   = 0xFF80;
 
@@ -110,6 +112,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	bUseTileViewer(false),
 	bUseLayerViewer(false),
 	bAudioOutputEnabled(true),
+	bVSyncEnabled(true),
+	bForceVSync(false),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -184,13 +188,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			romPath += cfgFile.getValue();
 	}
 
-	// Check for ROM path
-	if(romPath.empty()){
-		std::cout << sysFatalError << "Input gb/gbc ROM file not specified!" << std::endl;
-		fatalError = true;
-		return;
-	}
-	
 	// Get the ROM filename and file extension
 	setRomFilename(romPath);
 	
@@ -221,8 +218,12 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	this->initialize();
 
 	if(cfgFile.good()){ // Handle user input from config file
-		if (cfgFile.searchBoolFlag("VSYNC_ENABLED")) // Set the default VSync state
-			enableVSync();
+		if (cfgFile.searchBoolFlag("VSYNC_ENABLED")) // Enable use of VSync when in fullscreen
+			bVSyncEnabled = true;
+		if (cfgFile.searchBoolFlag("VSYNC_FORCED")){ // Force use of VSync regardless of window mode
+			bForceVSync = true;
+			enableVSync(); // Enable it immediately
+		}
 		if (cfgFile.searchBoolFlag("VERBOSE_MODE")) // Toggle verbose flag
 			setVerboseMode(true);
 		if (cfgFile.searchBoolFlag("FORCE_COLOR")) // Use CGB mode for original DMG games
@@ -339,7 +340,7 @@ bool SystemGBC::execute(){
 	// Start audio output
 	if(!emulationPaused)
 		sound->resume();
-	
+
 	// Run the ROM. Main loop.
 	while(true){
 		// Check the status of the GPU and LCD screen
@@ -609,6 +610,10 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 	return true; // Successfully read from memory location (loc)
 }
 
+std::string SystemGBC::getVersionString() {
+	return std::string(OTTERGB_VERSION);
+}
+
 unsigned char SystemGBC::getValue(const unsigned short &loc){
 	unsigned char retval;
 	read(loc, retval);
@@ -737,6 +742,8 @@ void SystemGBC::setMemoryReadRegion(const unsigned short &locL, const unsigned s
 }
 
 void SystemGBC::setRomFilename(const std::string& fname){
+	if(fname.empty()) // Empty path
+		return;
 	size_t index = fname.find_last_of('/');
 	if(index != std::string::npos){
 		romFilename = fname.substr(index + 1);
@@ -749,7 +756,12 @@ void SystemGBC::setRomFilename(const std::string& fname){
 		romExtension = romFilename.substr(index+1);
 		romFilename = romFilename.substr(0, index);
 	}
-	romPath = romDirectory + "/" + romFilename + "." + romExtension;
+	romPath = "";
+	if(!romDirectory.empty())
+		romPath += romDirectory + "/";
+	romPath += romFilename;
+	if(!romExtension.empty())
+		romPath += "." + romExtension;
 	bNeedsReloaded = true;
 }
 	
@@ -953,7 +965,7 @@ void SystemGBC::updateDebuggers(){
 	}
 	// Update layer viewer (if enabled)
 	if(bUseLayerViewer){
-		gpu->drawLayer(layerViewer.get());//, ui->radioButton_PPU_Map0->isChecked());
+		gpu->drawLayer(layerViewer.get());
 		layerViewer->setCurrent();
 		layerViewer->drawBuffer();
 		//if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
@@ -1008,6 +1020,8 @@ void SystemGBC::pause(){
 }
 
 void SystemGBC::unpause(bool resumeAudio/*=true*/){ 
+	if (!cart->isLoaded()) // Do not resume emulation if no ROM is loaded
+		return;
 	emulationPaused = false; 
 #ifdef USE_QT_DEBUGGER
 	if(debugMode)
@@ -1025,6 +1039,12 @@ bool SystemGBC::reset() {
 	// Read the ROM into memory if it is not currently loaded
 	bool stateBeforeReset = bGBCMODE;
 	if(bNeedsReloaded){
+		if(romPath.empty()){
+			// No ROM file specified. Open the interpreter console instead.
+			openDebugConsole();
+			return true;
+		}
+	
 		// Read new ROM file
 		if(verboseMode){
 			std::cout << sysMessage << "Reading input ROM file \"" << romPath << "\"" << std::endl;
@@ -1033,6 +1053,8 @@ bool SystemGBC::reset() {
 
 		// Check that the ROM is loaded and the window is open
 		if (!retval || !gpu->getWindowStatus()){
+			// Failed to read ROM file. Open the interpreter console instead.
+			openDebugConsole();
 			std::cout << sysError << "Failed to read ROM file (" << romPath << ")." << std::endl;
 			return false;
 		}
@@ -1184,7 +1206,7 @@ bool SystemGBC::reset() {
 		cpu->setProgramCounter(0); // Set program counter to beginning of bootstrap ROM
 		bootSequence = true; // Bootstrap already loaded, re-enable it
 	}
-
+	
 	return true;
 }
 
@@ -1450,6 +1472,18 @@ void SystemGBC::disableVSync() {
 	window->disableVSync();	
 }
 
+void SystemGBC::toggleFullScreenMode(){
+	if(window->toggleFullScreenMode()){ 
+		// Windowed to fullscreen: Enable VSync unless not enabled (and not forced on)
+		if(bVSyncEnabled || bForceVSync) 
+			enableVSync();
+	}
+	else if(!bForceVSync){ 
+		// Fullscreen to windowed: Disable VSync when going to windowed mode, unless VSync is forced on
+		disableVSync();
+	}
+}
+
 bool SystemGBC::writeRegister(const unsigned short &reg, const unsigned char &val){
 	if(reg < REGISTER_LOW || reg > REGISTER_HIGH)
 		return false;
@@ -1548,7 +1582,7 @@ void SystemGBC::checkSystemKeys(){
 		}
 	}
 	else if (keys->poll(0xFB)) // F11 Toggle fullscreen mode
-		window->toggleFullScreenMode();
+		toggleFullScreenMode();
 	else if (keys->poll(0xFC)) // F12 Screenshot
 		screenshot();
 	else if (keys->poll(0x2D)) // '-'    Decrease volume

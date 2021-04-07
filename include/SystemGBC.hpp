@@ -239,6 +239,10 @@ public:
 		return debugMode;
 	}
 	
+	/** Get the OtterGB version number string
+	  */
+	static std::string getVersionString();
+	
 	/** Attempt to read a byte from system memory and return the result
 	  * If address is not readable, behavior is undefined.
 	  * @param loc 16-bit system memory address
@@ -658,6 +662,12 @@ public:
 	  */
 	void disableVSync();
 
+	/** Switch from windowed mode to full screen, or vice versa.
+	  * VSync will be enabled when switching from windowed to full screen, unless VSync is disabled (and is not forced on).
+	  * VSync will be disabled when switching from full screen back to windowed, unless VSync is forced on.
+	  */
+	void toggleFullScreenMode();
+
 private:
 	SystemComponent dummyComponent; ///< Dummy system component used to organize system registers
 
@@ -704,6 +714,10 @@ private:
 	bool bUseLayerViewer; ///< Set if user has requested render layer viewer window
 
 	bool bAudioOutputEnabled; ///< Set if audio output interface is enabled
+
+	bool bVSyncEnabled; ///< Set if VSync will be used when in fullscreen mode
+	
+	bool bForceVSync; ///< Set if VSync will always be used, regardless of windowed / fullscreen mode
 
 	unsigned char dmaSourceH; ///< DMA source MSB
 	

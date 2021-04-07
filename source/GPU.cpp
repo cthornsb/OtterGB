@@ -23,14 +23,6 @@ constexpr int MAX_SPRITES_PER_LINE = 10;
 constexpr int SCREEN_WIDTH_PIXELS  = 160;
 constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
-namespace Colors{
-	// Monochrome colors (GB)
-	const ColorRGB GB_DKSTGREEN(15.0f/255,  56.0f/255,  15.0f/255);
-	const ColorRGB GB_DKGREEN(  48.0f/255,  98.0f/255,  48.0f/255);
-	const ColorRGB GB_LTGREEN(  139.0f/255, 172.0f/255, 15.0f/255);
-	const ColorRGB GB_GREEN(    155.0f/255, 188.0f/255, 15.0f/255);
-}
-
 GPU::GPU() : 
 	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
 	bUserSelectedPalette(false),
@@ -445,6 +437,7 @@ void GPU::renderScanline(){
 void GPU::render(){	
 	// Update the screen
 	if(window->status()){ // Check window status
+		window->clear(); // Clear screen to avoid visual artifacts in un-drawn areas
 		window->setCurrent();
 		window->renderBuffer();
 	}
@@ -478,7 +471,12 @@ void GPU::setPixelScale(const unsigned int &n){
 void GPU::setColorPaletteDMG(){
 	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
 		return;
-	setColorPaletteDMG(Colors::GB_GREEN, Colors::GB_LTGREEN, Colors::GB_DKGREEN, Colors::GB_DKSTGREEN);
+	// Monochrome green DMG color palette
+	const ColorRGB GB_DKSTGREEN(15.0f/255,  56.0f/255,  15.0f/255);
+	const ColorRGB GB_DKGREEN(  48.0f/255,  98.0f/255,  48.0f/255);
+	const ColorRGB GB_LTGREEN(  139.0f/255, 172.0f/255, 15.0f/255);
+	const ColorRGB GB_GREEN(    155.0f/255, 188.0f/255, 15.0f/255);
+	setColorPaletteDMG(GB_GREEN, GB_LTGREEN, GB_DKGREEN, GB_DKSTGREEN);
 	bUserSelectedPalette = false; // Unset user palette flag, since we're using the default palette
 }
 
@@ -715,7 +713,7 @@ void GPU::readConfigFile(ConfigFile* config) {
 	if (config->search("PIXEL_SCALE", true)) // Set graphical window pixel scaling factor
 		setPixelScale(config->getUInt());
 	if (config->searchBoolFlag("START_FULLSCREEN")) // Start in fullscreen mode
-		window->setFullScreenMode(true);
+		sys->toggleFullScreenMode();
 	if (config->searchBoolFlag("UNLOCK_ASPECT_RATIO")) // Lock window aspect ratio
 		window->lockWindowAspectRatio(false);
 }

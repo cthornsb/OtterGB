@@ -33,8 +33,7 @@ int main(int argc, char *argv[]){
 
 	// Load the ROM into memory
 	if(!gbc->reset()){
-		// Failed to load input ROM, open the interpreter console.
-		gbc->openDebugConsole();
+		return 1;
 	}
 	
 	ottergb = gbc.get();

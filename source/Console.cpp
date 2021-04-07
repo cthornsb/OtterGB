@@ -240,8 +240,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::ABOUT:
-			//(*this) << "ottergb v" << Globals::VersionString << "\n";
-			(*this) << "ottergb v0.0\n";
+			(*this) << "OtterGB v" << sys->getVersionString() << "\n";
 			(*this) << "by C Thornsberry\n";
 			(*this) << "github.com/cthornsb\n";
 			break;
@@ -325,10 +324,15 @@ void ConsoleGBC::handleInput(){
 			clear();
 			break;
 		case cmdType::RESET: // Reset
-			if (sys->reset())
-				sys->closeDebugConsole();
-			else
-				(*this) << "Reset failed\n";
+			if(sys->getCartridge()->isLoaded()){
+				if (sys->reset())
+					sys->closeDebugConsole();
+				else
+					(*this) << "Reset failed\n";
+			}
+			else{
+				(*this) << "No ROM loaded\n";
+			}
 			break;
 		case cmdType::QSAVE: // Quicksave
 			if(nArgs >= 2){ // User specified filename
