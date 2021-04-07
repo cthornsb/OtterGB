@@ -1020,7 +1020,7 @@ void SystemGBC::pause(){
 }
 
 void SystemGBC::unpause(bool resumeAudio/*=true*/){ 
-	if (!cart->isLoaded()) // Do not resume emulation if no ROM is loaded
+	if (!cart->isLoaded() || consoleIsOpen) // Do not resume emulation if no ROM is loaded or if console is open
 		return;
 	emulationPaused = false; 
 #ifdef USE_QT_DEBUGGER
@@ -1132,18 +1132,22 @@ bool SystemGBC::reset() {
 		std::ifstream bootstrap;
 		if(bGBCMODE){
 			if(!bootstrapRomPathCGB.empty()){
+				if(verboseMode)
+					std::cout << sysMessage << "Loading CGB bootstrap \"" << bootstrapRomPathCGB << "\"." << std::endl;
 				bootstrap.open(bootstrapRomPathCGB.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load GBC boot ROM \"" << bootstrapRomPathCGB << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load CGB bootstrap ROM \"" << bootstrapRomPathCGB << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}
 		}
 		else{
 			if(!bootstrapRomPathDMG.empty()){
+				if(verboseMode)
+					std::cout << sysMessage << "Loading DMG bootstrap \"" << bootstrapRomPathDMG << "\"." << std::endl;
 				bootstrap.open(bootstrapRomPathDMG.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load GB boot ROM \"" << bootstrapRomPathDMG << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load DMG bootstrap ROM \"" << bootstrapRomPathDMG << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}

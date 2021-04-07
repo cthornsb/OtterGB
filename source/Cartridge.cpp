@@ -412,7 +412,7 @@ Register* Cartridge::writeToMBC(const unsigned short &reg, const unsigned char &
 }
 
 void Cartridge::print(){
-	std::cout << "Title: " << getTitleString() << std::endl;
+	std::cout << " Title: " << getTitleString() << std::endl;
 	std::cout << " ROM: " << getRomSize() << " kB (banks=" << nBanks << ", size=" << nBytes / 1024 << " kB)" << std::endl;
 	std::cout << " RAM: " << getRamSize() << " kB" << std::endl;
 	std::cout << " Type: " << getHex(cartridgeType) << " (" << getCartridgeType() << ")" << std::endl;

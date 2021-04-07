@@ -77,27 +77,13 @@ endif()
 
 # Bootstrap rom paths (optional)
 if(NOT ${DMG_BOOTSTRAP_ROM} STREQUAL "")
-	get_filename_component( DMG_BOOTSTRAP_FILENAME
-		${DMG_BOOTSTRAP_ROM} NAME
-	)
 	target_compile_definitions( ottergb 
-		PRIVATE DMG_BOOTSTRAP_ROM="${DMG_BOOTSTRAP_FILENAME}"
-	)
-	install(
-		FILES ${DMG_BOOTSTRAP_ROM}
-		DESTINATION bin
+		PRIVATE DMG_BOOTSTRAP_ROM="${DMG_BOOTSTRAP_ROM}"
 	)
 endif()
 if(NOT ${CGB_BOOTSTRAP_ROM} STREQUAL "")
-	get_filename_component( CGB_BOOTSTRAP_FILENAME
-		${CGB_BOOTSTRAP_ROM} NAME
-	)
-	target_compile_definitions( COMPONENT_OBJECTS 
-		PRIVATE CGB_BOOTSTRAP_ROM="${CGB_BOOTSTRAP_FILENAME}"
-	)
-	install(
-		FILES ${CGB_BOOTSTRAP_ROM}
-		DESTINATION bin
+	target_compile_definitions( ottergb
+		PRIVATE CGB_BOOTSTRAP_ROM="${CGB_BOOTSTRAP_ROM}"
 	)
 endif()
 
