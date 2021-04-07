@@ -27,13 +27,14 @@ enum class cmdType{
 	HEX,       ///< Convert a value to hexadecimal
 	BIN,       ///< Convert a value to binary
 	DEC,       ///< Convert a value to decimal
-	CLS,       ///< Clear terminal
+	CLS,       ///< Clear console
 	RESET,     ///< Reset emulator
 	QSAVE,     ///< Quick-save
 	QLOAD,     ///< Quick-load
 	DIRECTORY, ///< ROM directory
 	FILENAME,  ///< ROM filename
-	VSYNC      ////< Toggle VSync on/off
+	VSYNC,     ///< Toggle VSync on/off
+	ECHO       ///< Echo input commands back to the console
 };
 
 class ConsoleCommand{
@@ -114,23 +115,27 @@ public:
 	void draw();
 	
 private:
-	unsigned short nCols;
-	unsigned short nRows;
+	bool bEcho; ///< Set if command input will be echoed back
+
+	unsigned short nCols; ///< Number of console columns
 	
-	unsigned short nX;
-	unsigned short nY;
+	unsigned short nRows; ///< Number of console rows
 	
-	std::string strbuff;
+	unsigned short nX; ///< Current console column position
+	
+	unsigned short nY; ///< Current console row position
+	
+	std::string strbuff; ///< Console character stream buffer
 
-	std::string line;
+	std::string line; ///< Currently active console line
 
-	SystemGBC *sys;
+	SystemGBC *sys; ///< Pointer to emulator system
 
-	std::deque<std::string> buffer;
+	std::deque<std::string> buffer; ///< Console row strings
 
-	std::map<std::string, ConsoleCommand> commands;
+	std::map<std::string, ConsoleCommand> commands; ///< Map of all console commands
 
-	TextParser parser;
+	TextParser parser; ///< Text input parser
 
 	void put(const char &c);
 	

@@ -27,6 +27,15 @@ typedef void (LR35902::*regSet16bit)(const unsigned short&);
 
 class LR35902 : public SystemComponent {
 public:
+	struct StateOfCPU{
+		bool half, full;
+		unsigned char A, B, C, D;
+		unsigned char E, H, L, F;
+		unsigned char d8, d16h, d16l;
+		unsigned char value;
+		unsigned short addr, SP, PC;
+	};
+
 	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
 
 	LR35902() : 
@@ -47,7 +56,10 @@ public:
 		memoryValue(0),
 		memoryAddress(0),
 		SP(0), 
-		PC(0) { }
+		PC(0),
+		opcodes(this) 
+	{ 
+	}
 
 	void initialize();
 
@@ -60,31 +72,74 @@ public:
 	  */
 	bool onClockUpdate() override ;
 
-	Opcode *getOpcodes(){ return opcodes.getOpcodes(); }
+	/** Get a pointer to the LR35902 opcode handler
+	  */
+	OpcodeHandler* getOpcodeHandler(){
+		return &opcodes;
+	}
+
+	/** Get the array of all LR35902 standard opcodes
+	  */
+	Opcode *getOpcodes() { 
+		return opcodes.getOpcodes(); 
+	}
 	
-	Opcode *getOpcodesCB(){ return opcodes.getOpcodesCB(); }
+	/** Get the array of all LR35902 CB-prefix opcodes
+	  */ 
+	Opcode *getOpcodesCB() { 
+		return opcodes.getOpcodesCB(); 
+	}
 
-	OpcodeData *getLastOpcode(){ return opcodes(); }
+	/** Get a pointer to the currently executing opcode
+	  */
+	OpcodeData *getLastOpcode() { 
+		return opcodes(); 
+	}
 
-	std::string getInstruction() const { return opcodes()->getInstruction(); }
-
-	unsigned short getAddress_C() const { return (0xFF00 + C); }
-
-	unsigned short getAddress_d8() const { return (0xFF00 + d8); }
-
-	unsigned short getCyclesRemaining() const { return opcodes()->nCycles; }
+	std::string getInstruction() const { 
+		return opcodes()->getInstruction();
+	}
 	
-	unsigned short getMemoryAddress() const { return memoryAddress; }
+	StateOfCPU getCpuState() const {
+		return StateOfCPU{halfCarry, fullCarry, A, B, C, D, E, F, H, L, d8, d16h, d16l, memoryValue, memoryAddress, SP, PC};
+	}
 	
-	unsigned char getMemoryValue() const { return memoryValue; }
+	void setCpuState(const StateOfCPU& state){
+	}
+
+	unsigned short getAddress_C() const { 
+		return (0xFF00 + C);
+	}
+
+	unsigned short getAddress_d8() const { 
+		return (0xFF00 + d8);
+	}
+
+	unsigned short getCyclesRemaining() const { 
+		return opcodes()->nCycles;
+	}
+	
+	unsigned short getMemoryAddress() const { 
+		return memoryAddress;
+	}
+	
+	unsigned char getMemoryValue() const { 
+		return memoryValue;
+	}
 
 	unsigned short getd16() const ;
 	unsigned short getAF() const ;
 	unsigned short getBC() const ;
 	unsigned short getDE() const ;
 	unsigned short getHL() const ;
-	unsigned short getProgramCounter() const { return PC; }
-	unsigned short getStackPointer() const { return SP; }
+	
+	unsigned short getProgramCounter() const { 
+		return PC; 
+	}
+	
+	unsigned short getStackPointer() const { 
+		return SP; 
+	}
 
 	unsigned char getd8() const { return d8; }
 	unsigned char getA() const { return A; }
@@ -96,15 +151,27 @@ public:
 	unsigned char getH() const { return H; }
 	unsigned char getL() const { return L; }
 
-	void setMemoryAddress(const unsigned short &addr){ memoryAddress = addr; }
+	void setMemoryAddress(const unsigned short& addr) { 
+		memoryAddress = addr; 
+	}
+	
+	void setMemoryValue(const unsigned char& value) {
+		memoryValue = value;
+	}
 
 	void setd16(const unsigned short &val);
 	void setAF(const unsigned short &val);
 	void setBC(const unsigned short &val);
 	void setDE(const unsigned short &val);
 	void setHL(const unsigned short &val);
-	void setProgramCounter(const unsigned short &pc){ PC = pc; }
-	void setStackPointer(const unsigned short &sp){ SP = sp; }
+	
+	void setProgramCounter(const unsigned short &pc) { 
+		PC = pc; 
+	}
+	
+	void setStackPointer(const unsigned short &sp) { 
+		SP = sp; 
+	}
 
 	void setd8(const unsigned char &d){ d8 = d; }
 	void setA(const unsigned char &val){ A = val; }
@@ -130,7 +197,11 @@ public:
 
 	void readMemory();
 	
+	unsigned char readMemory(const unsigned short& addr);
+	
 	void writeMemory();
+	
+	void writeMemory(const unsigned short& addr, const unsigned char& value);
 
 	addrGetFunc getMemoryAddressFunction(const std::string &target);
 
@@ -138,28 +209,39 @@ public:
 
 protected:
 	bool halfCarry;
+	
 	bool fullCarry;
 
 	unsigned char A; ///< Accumulator
+	
 	unsigned char B; ///< B register
+	
 	unsigned char C; ///< C register
+	
 	unsigned char D; ///< D register
+	
 	unsigned char E; ///< E register
+	
 	unsigned char H; ///< H register
+	
 	unsigned char L; ///< L register
 
 	unsigned char F; ///< Flags register
 
 	// Immediate data
 	unsigned char d8; ///< 8-bit immediate data
+
 	unsigned char d16h; ///< High 8 bits of 16-bit immediate data
+
 	unsigned char d16l; ///< Low 8 bits of 16-bit immediate data
 
 	// Memory data
 	unsigned char memoryValue; ///< Value read from and/or written to memory
+
 	unsigned short memoryAddress; ///< Address in memory which will be read/written
 
 	unsigned short SP; ///< Stack Pointer (16-bit)
+
 	unsigned short PC; ///< Program Counter (16-bit)
 	
 	//OpcodeData lastOpcode; ///< Pointer to the last read opcode.
@@ -167,9 +249,11 @@ protected:
 	OpcodeHandlerLR35902 opcodes;
 
 	std::map<std::string, regGet8bit> rget8; ///< Map of 8-bit register getters
+
 	std::map<std::string, regSet8bit> rset8; ///< Map of 8-bit register setters
 	
 	std::map<std::string, regGet16bit> rget16; ///< Map of 16-bit register getters
+
 	std::map<std::string, regSet16bit> rset16; ///< Map of 16-bit register setters
 
 	void acknowledgeVBlankInterrupt();
@@ -184,13 +268,21 @@ protected:
 
 	void callInterruptVector(const unsigned char &offset);
 
-	bool getFlagZ() const { return ((F & FLAG_Z_MASK) != 0); }
+	bool getFlagZ() const { 
+		return ((F & FLAG_Z_MASK) != 0); 
+	}
 	
-	bool getFlagS() const { return ((F & FLAG_S_MASK) != 0); }
+	bool getFlagS() const { 
+		return ((F & FLAG_S_MASK) != 0); 
+	}
 	
-	bool getFlagH() const { return ((F & FLAG_H_MASK) != 0); }
+	bool getFlagH() const { 
+		return ((F & FLAG_H_MASK) != 0); 
+	}
 	
-	bool getFlagC() const { return ((F & FLAG_C_MASK) != 0); }
+	bool getFlagC() const { 
+		return ((F & FLAG_C_MASK) != 0); 
+	}
 
 	void setFlag(const unsigned char &bit, bool state=true);
 
@@ -345,11 +437,15 @@ protected:
 
 	// INC SP
 
-	void INC_SP(){ SP++; }
+	void INC_SP() { 
+		SP++; 
+	}
 
 	// DEC SP
 
-	void DEC_SP(){ SP--; }
+	void DEC_SP() { 
+		SP--; 
+	}
 
 	// SCF
 
@@ -361,7 +457,9 @@ protected:
 	
 	// LD d16,A 
 	
-	void LD_a16_A(){ memoryValue = A; }
+	void LD_a16_A() { 
+		memoryValue = A; 
+	}
 	
 	// LD HL,SP+r8 or LDHL SP,r8
 
@@ -377,8 +475,13 @@ protected:
 	
 	// LD SP,d16[HL]
 	
-	void LD_SP_d16(){ ld_SP_d16(d16h, d16l); }
-	void LD_SP_HL(){ ld_SP_d16(H, L); }
+	void LD_SP_d16() { 
+		ld_SP_d16(d16h, d16l); 
+	}
+	
+	void LD_SP_HL(){ 
+		ld_SP_d16(H, L); 
+	}
 
 	// ADD HL,BC[DE|HL|SP]
 	
@@ -405,11 +508,15 @@ protected:
 
 	// LDH d8,A
 
-	void LDH_a8_A(){ memoryValue = A; }
+	void LDH_a8_A() { 
+		memoryValue = A; 
+	}
 
 	// LDH A,d8
 
-	void LDH_A_a8(){ A = memoryValue; }
+	void LDH_A_a8() { 
+		A = memoryValue; 
+	}
 
 	// CCF
 
@@ -439,7 +546,9 @@ protected:
 
 	// LD (C),A
 
-	void LD_aC_A(){ memoryValue = A; }
+	void LD_aC_A() { 
+		memoryValue = A; 
+	}
 
 	// LD D,A[B|C|D|E|H|L|d8]
 
@@ -516,11 +625,15 @@ protected:
 
 	// LD (BC),A
 
-	void LD_aBC_A(){ memoryValue = A; }
+	void LD_aBC_A() { 
+		memoryValue = A; 
+	}
 
 	// LD (DE),A
 
-	void LD_aDE_A(){ memoryValue = A; }
+	void LD_aDE_A() { 
+		memoryValue = A; 
+	}
 
 	// LD A,A[B|C|D|E|H|L|d8]
 

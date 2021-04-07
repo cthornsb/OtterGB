@@ -53,6 +53,7 @@ ConsoleGBC::ConsoleGBC() :
 	addConsoleCommand("dir"  ,0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
 	addConsoleCommand("file" ,0, cmdType::FILENAME, "[fname]", "Print ROM filename");
 	addConsoleCommand("vsync",0, cmdType::VSYNC, "", "Toggle VSync on or off");
+	addConsoleCommand("echo", 0, cmdType::ECHO, "", "Echo console input");
 	put('>');
 }
 
@@ -133,9 +134,7 @@ void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
 			handleInput();
 			put('>');
 		}
-		else{ // Printing output
-			line = "";
-		}
+		line = "";
 	}
 	else if(c == 0x8){ // Backspace
 		if(!line.empty()) // Pop off the last character
@@ -150,37 +149,37 @@ void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
 
 void ConsoleGBC::handleInput(){
 	//handle user input commands here
+	if(bEcho){
+		(*this) << line << "\n";
+	}
 	LR35902 *cpu = sys->getCPU();
 	Register* reg = 0x0;
 	std::vector<std::string> args;
-	if (parser.isExpression(line)) {
-		NumericalString value;
-		if (parser.parse(line, value)) {
-			if(value.type == NUMTYPE::INTEGER)
-				(*this) << value.getUInt() << "\n";
-			else if(value.type == NUMTYPE::BOOLEAN)
-				(*this) << (value.getBool() ? "true" : "false") << "\n";
-		}
-		else {
-			(*this) << "invalid syntax\n";
-		}
-		line = "";
-		return;
-	}
 	unsigned int nArgs = splitString(line, args, ' ');
-	line = "";
 	if(!nArgs)
 		return;
 	std::string cmdstr = args.front();
 	auto iter = commands.find(cmdstr);
 	if(iter == commands.end()){
+		// Mathematical expression
+		if (parser.isExpression(line)) {
+			NumericalString value;
+			if (parser.parse(line, value)) {
+				if(value.type == NUMTYPE::INTEGER)
+					(*this) << value.getUInt() << "\n";
+				else if(value.type == NUMTYPE::BOOLEAN)
+					(*this) << (value.getBool() ? "true" : "false") << "\n";
+			}
+			else {
+				(*this) << "invalid syntax\n";
+			}
+			return;
+		}	
 		// CPU opcodes
 		OpcodeData data;
 		if(cpu->findOpcode(line, data)){ // Valid LR35902 opcode found
+			cpu->getOpcodeHandler()->execute(&data);
 			(*this) << data.getShortInstruction() << "\n";
-			while(data.executing()){
-				//data.clock(cpu); // TEMP
-			}
 			return;
 		}
 		// System registers
@@ -198,7 +197,7 @@ void ConsoleGBC::handleInput(){
 		(*this) << "unknown command\n";
 		return;
 	}
-	ConsoleCommand *cmd = &iter->second;
+	ConsoleCommand* cmd = &iter->second;
 	if(nArgs-1 < cmd->getRequiredArgs()){
 		(*this) << "syntax error\n";
 		(*this) << cmd->getName() << " " << cmd->getArgStr() << "\n";
@@ -379,6 +378,9 @@ void ConsoleGBC::handleInput(){
 				sys->disableVSync();
 				(*this) << "vsync disabled\n";
 			}
+			break;
+		case cmdType::ECHO: // Toggle console echo on/off
+			bEcho = !bEcho;
 			break;
 		default:
 			break;

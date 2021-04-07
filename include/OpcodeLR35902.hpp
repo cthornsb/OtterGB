@@ -10,8 +10,13 @@ class OpcodeHandlerLR35902 : public OpcodeHandler {
 public:
 	/** Default constructor
 	  */
-	OpcodeHandlerLR35902() :
-		OpcodeHandler()
+	OpcodeHandlerLR35902() = delete;
+	
+	/** CPU pointer constructor
+	  */
+	OpcodeHandlerLR35902(LR35902* parent) :
+		OpcodeHandler(),
+		cpu(parent)
 	{
 	}
 
@@ -32,9 +37,16 @@ public:
 	  * Similarly, if clocking ticks to its write cycle, the memory address will be written to.
 	  * @return True if clocking the current opcode causes it to tick its execute cycle
 	  */
-	bool clock(LR35902* cpu) override;
+	bool clock() override;
+	
+	/** Execute a CPU instruction
+	  * If opcode reads from memory, 
+	  */
+	void execute(OpcodeData* instruction) override;
 	
 protected:
+	LR35902* cpu;
+
 	/** Set memory address getter function pointer for all opcodes which read or write to memory
 	  */
 	void setOpcodeMemAddressGetter(Opcode* op, LR35902* cpu);

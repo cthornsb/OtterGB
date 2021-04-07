@@ -79,7 +79,7 @@ bool LR35902::onClockUpdate(){
 		}
 		evaluate();
 	}
-	return opcodes.clock(this); // Execute the instruction on the last cycle
+	return opcodes.clock(); // Execute the instruction on the last cycle
 }
 
 void LR35902::acknowledgeVBlankInterrupt(){
@@ -266,8 +266,18 @@ void LR35902::readMemory(){
 	sys->read(memoryAddress, memoryValue);
 }
 
+unsigned char LR35902::readMemory(const unsigned short& addr){
+	unsigned char retval = 0;
+	sys->read(addr, retval);
+	return retval;
+}
+
 void LR35902::writeMemory(){
 	sys->write(memoryAddress, memoryValue);
+}
+
+void LR35902::writeMemory(const unsigned short& addr, const unsigned char& value){
+	sys->write(addr, value);
 }
 
 addrGetFunc LR35902::getMemoryAddressFunction(const std::string &target){

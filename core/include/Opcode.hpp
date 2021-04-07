@@ -214,24 +214,14 @@ public:
 	  * @param index_ Opcode index (0-255)
 	  * @param pc_ Current 16-bit program counter
 	  */
-	void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-	
-	/** Set a new opcode instruction
-	  * @param op_ Pointer to the new opcode
-	  */
-	void set(Opcode *op_);
+	void set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_ = 0);
 	
 	/** Set a new CB-prefix opcode instruction
 	  * @param opcodes_ Array of all CB-prefix LR35902 CPU opcodes
 	  * @param index_ Opcode index (0-255)
 	  * @param pc_ Current 16-bit program counter
 	  */
-	void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_);
-
-	/** Set a new CB-prefix opcode instruction
-	  * @param op_ Pointer to the new opcode
-	  */
-	void setCB(Opcode *op_);
+	void setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_ = 0);
 
 	/** Set the current instruction's 8-bit immediate data value
 	  */
@@ -311,14 +301,20 @@ public:
 	/** Clock the currently executing opcode
 	  * @return True if clocking the current opcode causes it to tick its execute cycle
 	  */
-	virtual bool clock(LR35902*);
-
+	virtual bool clock();
+	
+	/** Execute a CPU instruction
+	  */
+	virtual void execute(OpcodeData*);
+	
 protected:
-	std::vector<Opcode> aliases; ///< List of opcode aliases
+	std::vector<std::pair<Opcode, unsigned char> > aliases; ///< List of opcode aliases (and their matching opcode index)
 
 	Opcode opcodes[256]; ///< Opcode functions for LR35902 processor
 	
 	Opcode opcodesCB[256]; ///< CB-Prefix opcode functions for LR35902 processor
+	
+	virtual void onUserFindOpcode(OpcodeData&) { }
 };
 
 #endif

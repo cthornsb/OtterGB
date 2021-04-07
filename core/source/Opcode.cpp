@@ -36,7 +36,7 @@ Opcode::Opcode(
 {
 	const std::vector<std::string> dataTargets = { "d8", "r8", "a8", "d16", "a16" };
 	if(nBytes > 1){
-		for (auto target = dataTargets.begin(); target != dataTargets.end(); target++) {
+		for (auto target = dataTargets.cbegin(); target != dataTargets.cend(); target++) {
 			size_t index = sName.find(*target);
 			if(index != std::string::npos){
 				sPrefix = sName.substr(0, index);
@@ -177,7 +177,7 @@ std::string OpcodeData::getShortInstruction() const {
 	return retval;
 }
 
-void OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
+void OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_/*=0*/){
 	op            = &opcodes_[index_];
 	nIndex        = index_;
 	nPC           = pc_;
@@ -190,23 +190,8 @@ void OpcodeData::set(Opcode *opcodes_, const unsigned char &index_, const unsign
 	cbPrefix = false;
 }
 
-void OpcodeData::set(Opcode *op_){
-	op            = op_;
-	nCycles       = 0;
-	nReadCycle    = op->nReadCycles;
-	nWriteCycle   = op->nWriteCycles;
-	nExecuteCycle = op->nCycles;
-	sLabel = "";
-	cbPrefix = false;
-}
-
-void OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_){
+void OpcodeData::setCB(Opcode *opcodes_, const unsigned char &index_, const unsigned short &pc_/*=0*/){
 	set(opcodes_, index_, pc_);
-	cbPrefix = true;
-}
-
-void OpcodeData::setCB(Opcode *op_){
-	set(op_);
 	cbPrefix = true;
 }
 
@@ -751,19 +736,19 @@ OpcodeHandler::OpcodeHandler() :
 	}
 {
 	// Add opcode aliases
-	aliases.push_back(Opcode("LD (HL+),A  ", 2, 1, 0, 2));
-	aliases.push_back(Opcode("LD A,(HL+)  ", 2, 1, 2, 0));	
-	aliases.push_back(Opcode("LD (HL-),A  ", 2, 1, 0, 2));
-	aliases.push_back(Opcode("LD A,(HL-)  ", 2, 1, 2, 0));
-	aliases.push_back(Opcode("ADD d8      ", 2, 2, 0, 0));
-	aliases.push_back(Opcode("ADC d8      ", 2, 2, 0, 0));
+	aliases.push_back(std::make_pair(Opcode("LD (HL+),A  ", 2, 1, 0, 2), 0x22));
+	aliases.push_back(std::make_pair(Opcode("LD A,(HL+)  ", 2, 1, 2, 0), 0x2a));	
+	aliases.push_back(std::make_pair(Opcode("LD (HL-),A  ", 2, 1, 0, 2), 0x32));
+	aliases.push_back(std::make_pair(Opcode("LD A,(HL-)  ", 2, 1, 2, 0), 0x3a));
+	aliases.push_back(std::make_pair(Opcode("ADD d8      ", 2, 2, 0, 0), 0xc6));
+	aliases.push_back(std::make_pair(Opcode("ADC d8      ", 2, 2, 0, 0), 0xce));
 }
 
 bool OpcodeHandler::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 	std::vector<std::string> args;
 	unsigned int nArgs = splitString(mnemonic, args, ' ');
 	if (!nArgs)
-		return 0x0;
+		return false;
 	std::string operand1, operand2;
 	unsigned short d16 = 0; // Immediate data
 	std::string label; // Variable label
@@ -822,20 +807,26 @@ bool OpcodeHandler::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 	bool foundMatch = false;
 	for (unsigned short i = 0; i < 256; i++) {
 		if (opcodes[i].check(args.front(), type, operand1, operand2)) {
-			data.set(&opcodes[i]);
+			data.set(opcodes, (unsigned char)i);
 			foundMatch = true;
 			break;
 		}
 		else if (opcodesCB[i].check(args.front(), type, operand1, operand2)) {
-			data.set(&opcodesCB[i]);
+			data.set(opcodesCB, (unsigned char)i);
 			foundMatch = true;
 			break;
 		}
 	}
-	if (!foundMatch) {
-		for (auto alias = aliases.begin(); alias != aliases.end(); alias++) {
-			if (alias->check(args.front(), type, operand1, operand2)) {
-				data.set(&(*alias));
+	if (!foundMatch) { // Check alias names
+		for (auto alias = aliases.cbegin(); alias != aliases.cend(); alias++) {
+			if (alias->first.check(args.front(), type, operand1, operand2)) {
+				/*if(!alias->first.cbPrefix){ // Normal opcode alias
+					data.set(opcodes, alias->second);
+				}
+				else{ // CB prefix alias
+					data.set(opcodesCB, alias->second);
+				}*/
+				data.set(opcodes, alias->second);
 				foundMatch = true;
 				break;
 			}
@@ -853,12 +844,15 @@ bool OpcodeHandler::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 	return false;
 }
 
-bool OpcodeHandler::clock(LR35902*){
+bool OpcodeHandler::clock(){
 	lastOpcode.clock();
 	bool retval = false;
 	if(lastOpcode.onExecute()){
 		retval = true;
 	}
 	return retval;
+}
+
+void OpcodeHandler::execute(OpcodeData*){
 }
 
