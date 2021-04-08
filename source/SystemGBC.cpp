@@ -515,8 +515,7 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
-		if(cart->hasRam())
-			cart->getRam()->write(loc, src);
+		cart->writeToRam(loc, src);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) bank 0, swap, and echo
 		wram->write(loc, src);
@@ -577,8 +576,7 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
-		if(cart->hasRam())
-			cart->getRam()->read(loc, dest);
+		cart->readFromRam(loc, dest);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) bank 0, swap, and echo
 		wram->read(loc, dest);
@@ -1156,7 +1154,7 @@ bool SystemGBC::reset() {
 			bootstrap.seekg(0, bootstrap.end);
 			bootLength = (unsigned short)bootstrap.tellg();
 			bootstrap.seekg(0);
-			bootROM.insert(bootROM.begin(), bootLength, 0); // Reserve enough space for bootstrap
+			bootROM.resize(bootLength, 0); // Reserve enough space for bootstrap
 			bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire contents all at once
 			bootstrap.close();
 			std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;

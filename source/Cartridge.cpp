@@ -21,6 +21,7 @@ Cartridge::Cartridge() :
 	batterySupport(false),
 	timerSupport(false),
 	rumbleSupport(false),
+	bLatchState(false),
 	leader(0),
 	programStart(0),
 	bootBitmapString(""),
@@ -38,8 +39,38 @@ Cartridge::Cartridge() :
 	headerChecksum(0),
 	globalChecksum(0),
 	ram("SRAM", 0x4d415253),
-	mbcType(CartMBC::UNKNOWN)
+	mbcType(CartMBC::UNKNOWN),
+	registerSelect(0x0),
+	mbcRegisters()
 { 
+}
+
+bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& value) {
+	if (ram.empty())// || !extRamEnabled)
+		return false;
+	if (addr >= 0xa000 && addr < 0xc000) {
+		if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register
+			registerSelect->write(value);
+			return true;
+		}
+		ram.write(addr, value);
+		return true;
+	}
+	return false;
+}
+
+bool Cartridge::readFromRam(const unsigned short& addr, unsigned char& value) {
+	if (ram.empty())// || !extRamEnabled)
+		return false;
+	if (addr >= 0xa000 && addr < 0xc000) {
+		if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register
+			registerSelect->read(value);
+			return true;
+		}
+		ram.read(addr, value);
+		return true;
+	}
+	return false;
 }
 
 bool Cartridge::preReadAction(){
@@ -94,11 +125,52 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 			mbcRegisters[1].getBits(0, 3);
 		}
 	}
-	else if(mbcType == CartMBC::MMM01){ // MMM01
-	}
 	else if(mbcType == CartMBC::MBC3){ // MBC3
-	}
-	else if(mbcType == CartMBC::MBC4){ // MBC4
+		// RAM and timer enabled
+		extRamEnabled = (mbcRegisters[0].getBits(0, 3) == 0x0a);
+
+		// 7 bit ROM bank (MBC3 reads bank 0 as bank 1, like MBC1)
+		bs = mbcRegisters[1].getBits(0, 7);
+		if (bs == 0)
+			bs = 1;
+
+		// RAM bank select or RTC register select
+		registerSelect = 0x0;
+		unsigned char ramBankSelect = mbcRegisters[2].getBits(0, 3); // (0-3: RAM bank, 8-C: RTC register)
+		if(ramBankSelect <= 0x3) // RAM bank
+			ram.setBank(ramBankSelect);
+		else {
+			switch (ramBankSelect) {
+			case 0x8:
+				registerSelect = &mbcRegisters[4];
+				break;
+			case 0x9:
+				registerSelect = &mbcRegisters[5];
+				break;
+			case 0xa:
+				registerSelect = &mbcRegisters[6];
+				break;
+			case 0xb:
+				registerSelect = &mbcRegisters[7];
+				break;
+			case 0xc:
+				registerSelect = &mbcRegisters[8];
+				break;
+			default:
+				break;
+			}
+		}
+
+		// Latch clock data, write current clock time to RTC registers
+		bool nextLatchState = mbcRegisters[3].getBit(0);
+		if (!bLatchState && nextLatchState) { // 0->1, latch data
+			mbcRegisters[4].setValue(0); // Seconds
+			mbcRegisters[5].setValue(0); // Minutes
+			mbcRegisters[6].setValue(0); // Hours
+			mbcRegisters[7].setValue(0); // Low 8-bits of day counter
+			mbcRegisters[8].setValue(0); // Seconds
+		}
+		bLatchState = nextLatchState;
 	}
 	else if(mbcType == CartMBC::MBC5){ // MBC5
 		// RAM enabled
@@ -108,8 +180,11 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		bs = mbcRegisters[1].getValue() + (mbcRegisters[2].getBit(0) ? 0x0100 : 0x0);
 		
 		// RAM bank
-		ram.setBank(mbcRegisters[3].getBits(0, 3));
+		unsigned char ramBank = mbcRegisters[3].getBits(0, 3);
+		if(ramBank < ram.getNumberOfBanks()) // Ensure new bank number is not garbage
+			ram.setBank(ramBank);
 	}
+
 	return true;
 }
 
@@ -121,11 +196,7 @@ bool Cartridge::readRegister(const unsigned short &reg, unsigned char &val){
 			break;
 		case CartMBC::MBC2: // MBC2 (5-6)
 			break;
-		case CartMBC::MMM01: // MMM01
-			break;
 		case CartMBC::MBC3: // MBC3
-			break;
-		case CartMBC::MBC4: // MBC4
 			break;
 		case CartMBC::MBC5: // MBC5
 			break;
@@ -147,14 +218,8 @@ std::string Cartridge::getCartridgeType() const {
 		case CartMBC::MBC2: // MBC2 (5-6)
 			retval = "MBC2";
 			break;
-		case CartMBC::MMM01: // MMM01
-			retval = "MMM01";
-			break;
 		case CartMBC::MBC3: // MBC3
 			retval = "MBC3";
-			break;
-		case CartMBC::MBC4: // MBC4
-			retval = "MBC4";
 			break;
 		case CartMBC::MBC5: // MBC5
 			retval = "MBC5";
@@ -233,16 +298,12 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		mbcType = CartMBC::MBC1;
 	else if(cartridgeType >= 0x05 && cartridgeType <= 0x06) // MBC2
 		mbcType = CartMBC::MBC2;
-	else if(cartridgeType >= 0x0B && cartridgeType <= 0x0D) // MMM01
-		mbcType = CartMBC::MMM01;
 	else if(cartridgeType >= 0x0F && cartridgeType <= 0x13) // MBC3
 		mbcType = CartMBC::MBC3;
-	else if(cartridgeType >= 0x15 && cartridgeType <= 0x17) // MBC4
-		mbcType = CartMBC::MBC4;
 	else if(cartridgeType >= 0x19 && cartridgeType <= 0x1E) // MBC5
 		mbcType = CartMBC::MBC5;
 	else
-		std::cout << " Warning! Unknown cartridge type (" << getHex(cartridgeType) << ")." << std::endl;
+		std::cout << " [" << sName << "] Error! Unknown cartridge type (" << getHex(cartridgeType) << ")." << std::endl;
 	
 	// Set cartridge component flags
 	if(cartridgeType <= 30){
@@ -286,16 +347,20 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		case 0x07: // 4 MB (256 banks)
 			initialize(16384, 256);
 			break;
-		case 0x52: // 1.1 MB (72 banks)
+		case 0x08: // 8 MB (512 banks)
+			initialize(16384, 512);
+			break;
+		case 0x52: // 1.1 MB (72 banks, unofficial)
 			initialize(16384, 72);
 			break;
-		case 0x53: // 1.2 MB (80 banks)
+		case 0x53: // 1.2 MB (80 banks, unofficial)
 			initialize(16384, 80);
 			break;
-		case 0x54: // 1.5 MB (96 banks)
+		case 0x54: // 1.5 MB (96 banks, unofficial)
 			initialize(16384, 96);
 			break;
 		default:
+			std::cout << " [" << sName << "] Error! Unknown cartridge ROM size (" << getHex(romSize) << ")." << std::endl;
 			break;
 	}
 
@@ -303,7 +368,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 	switch(ramSize){
 		case 0x0: // No onboard RAM
 			break;
-		case 0x1: // 2 kB
+		case 0x1: // 2 kB (unofficial size)
 			ram.initialize(2048);
 			break;
 		case 0x2: // 8 kB
@@ -312,7 +377,14 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		case 0x3: // 32 kB (4 banks)
 			ram.initialize(8192, 4);
 			break;
+		case 0x4: // 128 kB (16 banks)
+			ram.initialize(8192, 16);
+			break;
+		case 0x5: // 64 kB (8 banks)
+			ram.initialize(8192, 8);
+			break;
 		default:
+			std::cout << " [" << sName << "] Error! Unknown cartridge RAM size (" << getHex(ramSize) << ")." << std::endl;
 			break;
 	}
 	
@@ -335,19 +407,24 @@ void Cartridge::createRegisters(){
 		mbcRegisters.push_back(Register("MBC1_SELECT", "20000000")); // ROM / RAM mode select
 		break;
 	case CartMBC::MBC2: // MBC2 (5-6)
-		mbcRegisters.push_back(Register("MBC2_ENABLE", "20000000")); // RAM enable ???
-		mbcRegisters.push_back(Register("MBC2_BANKLO", "22220000")); // Low 5 bits of ROM bank
-		break;
-	case CartMBC::MMM01: // MMM01
+		mbcRegisters.push_back(Register("MBC2_ENABLE", "20000000")); // RAM enable
+		mbcRegisters.push_back(Register("MBC2_BANKLO", "22220000")); // ROM bank
 		break;
 	case CartMBC::MBC3: // MBC3
-		break;
-	case CartMBC::MBC4: // MBC4
+		mbcRegisters.push_back(Register("MBC3_ENABLE",  "22220000")); // RAM and timer enable
+		mbcRegisters.push_back(Register("MBC3_ROMBANK", "22222220")); // ROM bank number
+		mbcRegisters.push_back(Register("MBC3_RAMBANK", "22220000")); // RAM bank select or RTC register select
+		mbcRegisters.push_back(Register("MBC3_LATCH",   "20000000")); // Latch clock data
+		mbcRegisters.push_back(Register("MBC3_SECONDS", "33333333")); // RTC seconds register
+		mbcRegisters.push_back(Register("MBC3_MINUTES", "33333333")); // RTC minutes register
+		mbcRegisters.push_back(Register("MBC3_HOURS",   "33333000")); // RTC hours register
+		mbcRegisters.push_back(Register("MBC3_DAYLOW",  "33333333")); // RTC low 8 bits of day counter
+		mbcRegisters.push_back(Register("MBC3_DAYHIGH", "30000033")); // RTC upper bit of day counter
 		break;
 	case CartMBC::MBC5: // MBC5
 		mbcRegisters.push_back(Register("MBC5_ENABLE",  "22220000")); // RAM enable
 		mbcRegisters.push_back(Register("MBC5_BANKLO",  "22222222")); // Low 8 bits of ROM bank
-		mbcRegisters.push_back(Register("MBC5_BANKHI",  "20000000")); // High bit of ROM bank
+		mbcRegisters.push_back(Register("MBC5_BANKHI",  "20000000")); // 9th bit of ROM bank
 		mbcRegisters.push_back(Register("MBC5_BANKRAM", "22220000")); // RAM bank
 		break;
 	default:
@@ -383,11 +460,19 @@ Register* Cartridge::writeToMBC(const unsigned short &reg, const unsigned char &
 			retval = &mbcRegisters[1];
 		}
 		break;
-	case CartMBC::MMM01: // MMM01
-		break;
 	case CartMBC::MBC3: // MBC3
-		break;
-	case CartMBC::MBC4: // MBC4
+		if (reg < 0x2000) { // RAM and timer enable
+			retval = &mbcRegisters[0];
+		}
+		else if (reg < 0x4000) { // ROM bank number
+			retval = &mbcRegisters[1];
+		}
+		else if (reg < 0x6000) { // RAM bank select or RTC register select
+			retval = &mbcRegisters[2];
+		}
+		else if (reg < 0x8000) { // Latch clock data
+			retval = &mbcRegisters[3];
+		}
 		break;
 	case CartMBC::MBC5: // MBC5
 		if(reg < 0x2000){ // RAM enable
@@ -406,8 +491,9 @@ Register* Cartridge::writeToMBC(const unsigned short &reg, const unsigned char &
 	default:
 		break;	
 	}
-	if(retval) // Write to the MBC register
-		retval->write(val);
+	if (retval) { // Write to the MBC register
+		retval->write(val);			
+	}
 	return retval;	
 }
 

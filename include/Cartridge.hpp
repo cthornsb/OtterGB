@@ -15,15 +15,27 @@ public:
 		ROMONLY, 
 		MBC1, 
 		MBC2, 
-		MMM01, 
 		MBC3, 
-		MBC4, 
 		MBC5
 	};
 
 	/** Default constructor
 	  */
 	Cartridge();
+
+	/** Write to cartridge RAM (if available)
+	  * @param addr 16-bit system memory address
+	  * @param value 8-bit value to write to RAM
+	  * @return True if value is written successfully
+	  */
+	bool writeToRam(const unsigned short& addr, const unsigned char& value);
+
+	/** Read from cartridge RAM (if available)
+	  * @param addr 16-bit system memory address
+	  * @param value 8-bit value reference to read from RAM
+	  * @return True if value is read successfully
+	  */
+	bool readFromRam(const unsigned short& addr, unsigned char& value);
 
 	/** ROM is read-only, so return false to prevent writing to it
 	  */
@@ -170,6 +182,8 @@ private:
 
 	bool rumbleSupport; ///< Catridge supports rumble feature
 
+	bool bLatchState; ///< Cartridge real-time-clock (RTC) latch state
+
 	unsigned char leader; ///< Header block leader opcode (usually a JP)
 
 	unsigned short programStart; ///< Program entry point address
@@ -206,6 +220,8 @@ private:
 	
 	CartMBC mbcType; ///< Input ROM catridge type
 	
+	Register* registerSelect;
+
 	std::vector<Register> mbcRegisters; ///< Map of MBC registers (if used by the ROM)
 	
 	/** Read input ROM header
