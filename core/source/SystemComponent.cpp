@@ -39,14 +39,13 @@ bool SystemComponent::write(const unsigned short &loc, const unsigned short &ban
 	writeVal = src;
 	if(readOnly || !preWriteAction())
 		return false;
-#ifdef USE_QT_DEBUGGER
+#ifdef DEEP_ERROR_CHECKING
 	if (nBytes == 0 || (writeLoc - offset) >= nBytes || writeBank >= nBanks) {
-		if (verboseMode) {
-			std::cout << " Warning! Failed to write to memory address " << getHex(writeLoc) << std::endl;
-		}
+		if (verboseMode)
+			std::cout << " [" << sName << "] Warning! Failed to write to memory addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
 		return false;
 	}
-#endif // ifdef USE_QT_DEBUGGER
+#endif // ifdef DEEP_ERROR_CHECKING
 	mem[writeBank][writeLoc-offset] = writeVal;
 	return true;		
 }	
@@ -80,14 +79,13 @@ bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank
 	readBank = bank;
 	if(!preReadAction())
 		return false;
-#ifdef USE_QT_DEBUGGER
+#ifdef DEEP_ERROR_CHECKING
 	if (nBytes == 0 || (readLoc - offset) >= nBytes || readBank >= nBanks) {
-		if (verboseMode) {
-			std::cout << " Warning! Failed to read from memory address " << getHex(readLoc) << std::endl;
-		}
+		if (verboseMode) 
+			std::cout << " [" << sName << "] Warning! Failed to read from memory addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
 		return false;
 	}
-#endif // ifdef USE_QT_DEBUGGER
+#endif // ifdef DEEP_ERROR_CHECKING
 	dest = mem[readBank][readLoc-offset];
 	return true;
 }
@@ -98,6 +96,19 @@ void SystemComponent::readFast(const unsigned short &loc, unsigned char &dest){
 
 void SystemComponent::readFastBank0(const unsigned short &loc, unsigned char &dest){ 
 	dest = mem[0][loc-offset];
+}
+
+void SystemComponent::setBank(const unsigned short& b) {
+#ifdef DEEP_ERROR_CHECKING
+	if (nBytes == 0 || (writeLoc - offset) >= nBytes || writeBank >= nBanks) {
+		if (verboseMode) {
+			std::cout << " [" << sName << "] Warning! Invalid bank number " << getHex(b) << std::endl;
+		}
+		return;
+	}
+#endif // ifdef DEEP_ERROR_CHECKING
+	if (b < nBanks)
+		bs = b;
 }
 
 void SystemComponent::print(const unsigned short bytesPerRow/*=10*/){
@@ -180,8 +191,8 @@ unsigned int SystemComponent::readSavestateHeader(std::ifstream &f){
 		(readBackBytes != nBytes) ||
 		(readBackBanks != nBanks))
 	{
-		std::cout << " [SystemComponent] Warning! Signature of savestate does not match signature for component name=" << sName << std::endl;
-		std::cout << " [SystemComponent]  Unstable behavior will likely occur" << std::endl;
+		std::cout << " [" << sName << "] Warning! Signature of savestate does not match signature for component name=" << sName << std::endl;
+		std::cout << " [" << sName << "]  Unstable behavior will likely occur" << std::endl;
 	}
 	f.read((char*)&bs, 2); // Read the bank select
 	return 13;

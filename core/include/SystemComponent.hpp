@@ -74,10 +74,10 @@ public:
 		sys(0x0), 
 		nComponentID(id),
 		sName(name), 
-		readOnly(0),
-		debugMode(0), 
-		verboseMode(0),
-		bSaveRAM(1), 
+		readOnly(false),
+		debugMode(false),
+		verboseMode(false),
+		bSaveRAM(true), 
 		offset(off), 
 		nBytes(nB), 
 		nBanks(N), 
@@ -123,6 +123,18 @@ public:
 	  */
 	bool empty() const { 
 		return mem.empty(); 
+	}
+
+	/** Get the number of bytes per memory bank
+	  */
+	unsigned short getBytesPerBank() const {
+		return nBytes;
+	}
+
+	/** Get the number of memory banks
+	  */
+	unsigned short getNumberOfBanks() const {
+		return nBanks;
 	}
 	
 	/** Attempt to write to an address in component RAM (using the current memory bank select, if enabled)
@@ -231,9 +243,7 @@ public:
 
 	/** Select the RAM bank which will be used for following calls to read / write
 	  */
-	void setBank(const unsigned short &b){ 
-		bs = (b < nBanks ? b : b-1); 
-	}
+	void setBank(const unsigned short& b);
 
 	/** Set the address component memory offset in the 16-bit system memory map
 	  */
