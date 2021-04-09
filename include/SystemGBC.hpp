@@ -13,6 +13,13 @@
 	class MainWindow;
 #endif
 
+struct BackgroundWindowSettings {
+	unsigned char nscx;
+	unsigned char nscy;
+	unsigned char nwx;
+	unsigned char nwy;
+};
+
 class SoundManager;
 class SerialController;
 class DmaController;
@@ -719,6 +726,8 @@ private:
 	
 	bool bForceVSync; ///< Set if VSync will always be used, regardless of windowed / fullscreen mode
 
+	bool bLayerViewerSelect; ///< 
+
 	unsigned char dmaSourceH; ///< DMA source MSB
 	
 	unsigned char dmaSourceL; ///< DMA source LSB
@@ -794,6 +803,8 @@ private:
 	std::vector<Register> registers; ///< System control registers
 	
 	std::vector<unsigned char> bootROM; ///< Variable length DMG / CGB boot ROM
+
+	std::vector<BackgroundWindowSettings> winScrollPositions; ///< Vector of window and scroll coordinates for each scanline
 
 	std::unique_ptr<ComponentList> subsystems; ///< List of all system component pointers 
 

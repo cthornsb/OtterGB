@@ -114,6 +114,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	bAudioOutputEnabled(true),
 	bVSyncEnabled(true),
 	bForceVSync(false),
+	bLayerViewerSelect(true),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -127,14 +128,35 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	pauseAfterNextHBlank(false),
 	pauseAfterNextVBlank(false),
 	audioInterface(&SoundManager::getInstance()),
-	window(0x0)
+	window(0x0),
+	serial(),
+	dma(),
+	cart(),
+	gpu(),
+	sound(),
+	oam(),
+	joy(),
+	wram(),
+	hram(),
+	sclk(),
+	timer(),
+	cpu(),
+	tileViewer(),
+	layerViewer(),
+#ifdef USE_QT_DEBUGGER
+	gui(0x0),
+#endif
+	breakpointProgramCounter(),
+	breakpointMemoryWrite(),
+	breakpointMemoryRead(),
+	breakpointOpcode(),
+	memoryAccessWrite{ 1, 0 },
+	memoryAccessRead{ 1, 0 },
+	registers(),
+	bootROM(),
+	winScrollPositions(),
+	subsystems()
 { 
-	// Disable memory region monitor
-	memoryAccessWrite[0] = 1; 
-	memoryAccessWrite[1] = 0;
-	memoryAccessRead[0] = 1; 
-	memoryAccessRead[1] = 0;
-	
 	// Configuration file handler
 	ConfigFile cfgFile;
 
@@ -457,6 +479,14 @@ bool SystemGBC::execute(){
 void SystemGBC::handleHBlankPeriod(){
 	if(!emulationPaused){
 		if(nFrames % frameSkip == 0){
+			if (bUseLayerViewer && rLY->getValue() < 144) { // Record current SCX, SCY, WX, and WY to use in the layer viewer
+				winScrollPositions[rLY->getValue()] = BackgroundWindowSettings{
+					rSCX->getValue(),
+					rSCY->getValue(),
+					rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWX->getValue() : (unsigned char)0xff, // to avoid int truncation warnings
+					rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWY->getValue() : (unsigned char)0xff  // to avoid int truncation warnings
+				};
+			}
 			// We multiply the pixel clock pause period by two if in double-speed mode
 			sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
 		}
@@ -795,7 +825,7 @@ void SystemGBC::openTileViewer(){
 	if(bUseTileViewer) // Already open
 		return;
 	tileViewer.reset(new OTTWindow(160, 160));
-	tileViewer->initialize();
+	tileViewer->initialize("Tile Viewer");
 	bUseTileViewer = true;
 	debugMode = true;
 }
@@ -804,7 +834,8 @@ void SystemGBC::openLayerViewer(){
 	if(bUseLayerViewer) // Already open
 		return;
 	layerViewer.reset(new OTTWindow(256, 256));
-	layerViewer->initialize();
+	layerViewer->initialize("Layer Viewer");
+	winScrollPositions.resize(144, BackgroundWindowSettings{ 0, 0, 0, 0 });
 	bUseLayerViewer = true;
 	debugMode = true;
 }
@@ -957,51 +988,43 @@ void SystemGBC::updateDebuggers(){
 #endif
 	// Update tile viewer (if enabled)
 	if(bUseTileViewer){
+		tileViewer->clear();
 		gpu->drawTileMaps(tileViewer.get());
 		tileViewer->setCurrent();
 		tileViewer->renderBuffer();
 	}
 	// Update layer viewer (if enabled)
 	if(bUseLayerViewer){
-		gpu->drawLayer(layerViewer.get());
+		layerViewer->clear();
+		gpu->drawLayer(layerViewer.get(), bLayerViewerSelect);
+		for (unsigned char line = 0; line < 144; line++) { // Draw the screen scroll region
+			unsigned char xBg0 = winScrollPositions[line].nscx; // Start of screen X
+			unsigned char yBg0 = winScrollPositions[line].nscy; // Start of screen Y
+			unsigned char xBg1 = xBg0 + 159;
+			if (line == 0 || line == 143) { // line == SCY (draw top or bottom)
+				for (unsigned char dx = 0; dx < 160; dx++)
+					layerViewer->buffWrite((unsigned char)(xBg0 + dx), (unsigned char)(line + yBg0), Colors::RED);
+			}
+			else { // line != SCY (draw edges)
+				layerViewer->buffWrite(xBg0, (unsigned char)(line + yBg0), Colors::RED);
+				layerViewer->buffWrite(xBg1, (unsigned char)(line + yBg0), Colors::RED);
+			}
+		}
+		for (unsigned char line = 0; line < 144; line++) { // Draw the window region
+			unsigned char xWin0 = winScrollPositions[line].nwx - 7;
+			unsigned char yWin0 = winScrollPositions[line].nwy;
+			if (xWin0 < 160 && yWin0 < 144) {
+				if (line > yWin0) {
+					layerViewer->buffWrite(159 - xWin0, 143 - line, Colors::GREEN); // Right edge
+				}
+				else if (line == yWin0) { // Bottom
+					for (unsigned char dx = 0; dx <= (159 - xWin0); dx++)
+						layerViewer->buffWrite(dx, 143 - line, Colors::GREEN);
+				}
+			}
+		}
 		layerViewer->setCurrent();
-		layerViewer->drawBuffer();
-		//if(ui->checkBox_PPU_DrawViewport->isChecked()){ // Draw the screen viewport
-			unsigned char x0 = rSCX->getValue();
-			unsigned char x1 = x0 + 159;
-			unsigned char y0 = rSCY->getValue();
-			unsigned char y1 = y0 + 143;
-			layerViewer->setDrawColor(Colors::RED);
-			if(x0 < x1){ // Viewport does not wrap horiontally
-				layerViewer->drawLine(x0, y0, x1, y0);
-				layerViewer->drawLine(x0, y1, x1, y1);
-			}
-			else{ // Viewport wraps horizontally
-				layerViewer->drawLine(0, y0, x1, y0);
-				layerViewer->drawLine(x0, y0, 255, y0);
-				layerViewer->drawLine(0, y1, x1, y1);
-				layerViewer->drawLine(x0, y1, 255, y1);
-			}
-			if(y0 < y1){ // Viewport does not wrap vertically
-				layerViewer->drawLine(x0, y0, x0, y1);
-				layerViewer->drawLine(x1, y0, x1, y1);
-			}
-			else{ // Viewport wraps vertically
-				layerViewer->drawLine(x0, 0, x0, y1);
-				layerViewer->drawLine(x0, y0, x0, 255);
-				layerViewer->drawLine(x1, 0, x1, y1);
-				layerViewer->drawLine(x1, y0, x1, 255);
-			}			
-			x0 = rWX->getValue()-7;
-			y0 = rWY->getValue();
-			if(rLCDC->getBit(5) && x0 < 160 && y0 < 144){ // Draw the window box
-				x1 = 159 - x0;
-				y1 = 143 - y0;
-				layerViewer->setDrawColor(Colors::GREEN);
-				layerViewer->drawRectangle(0, 0, x1, y1);
-			}
-		//}
-		layerViewer->render();
+		layerViewer->renderBuffer();
 	}
 }
 
@@ -1153,11 +1176,17 @@ bool SystemGBC::reset() {
 		if(loadBootROM){
 			bootstrap.seekg(0, bootstrap.end);
 			bootLength = (unsigned short)bootstrap.tellg();
-			bootstrap.seekg(0);
-			bootROM.resize(bootLength, 0); // Reserve enough space for bootstrap
-			bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire contents all at once
+			if (bootLength > 0) {
+				bootROM.reserve(bootLength);
+				bootROM.resize(bootLength, 0); // Reserve enough space for bootstrap
+				bootstrap.seekg(0, std::ios::beg);				
+				bootstrap.read((char*)bootROM.data(), bootLength); // Read the entire contents all at once
+				std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;
+			}
+			else {
+				std::cout << sysWarning << "Loaded empty bootstrap ROM?" << std::endl;
+			}
 			bootstrap.close();
-			std::cout << sysMessage << "Successfully loaded " << bootLength << " B boot ROM." << std::endl;
 		}
 	}
 
@@ -1422,6 +1451,7 @@ void SystemGBC::help(){
 	std::cout << "   + : Increase volume" << std::endl;
 	std::cout << "   c : Change currently active gamepad" << std::endl;
 	std::cout << "   f : Show/hide FPS counter on screen" << std::endl;
+	std::cout << "   l : Toggle layer-viewer map number" << std::endl;
 	std::cout << "   m : Mute output audio" << std::endl;
 }
 
@@ -1566,19 +1596,19 @@ void SystemGBC::checkSystemKeys(){
 	else if (keys->poll(0xF5)) // F5  Quicksave
 		quicksave();
 	else if (keys->poll(0xF6)) // F6  Decrease frame-skip (slower)
-		frameSkip = (frameSkip > 1 ? frameSkip-1 : 1);
+		frameSkip = (frameSkip > 1 ? frameSkip - 1 : 1);
 	else if (keys->poll(0xF7)) // F7  Increase frame-skip (faster)
 		frameSkip++;
 	else if (keys->poll(0xF8)) // F8  Save cartridge RAM to file
 		writeExternalRam();
 	else if (keys->poll(0xF9)) // F9  Quickload
 		quickload();
-	else if (keys->poll(0xFA)){ // F10 Start / stop midi recording
-		if(sound->midiFileEnabled()){
+	else if (keys->poll(0xFA)) { // F10 Start / stop midi recording
+		if (sound->midiFileEnabled()) {
 			std::cout << sysMessage << "Finalizing MIDI recording." << std::endl;
 			sound->stopMidiFile();
 		}
-		else{
+		else {
 			std::cout << sysMessage << "Starting MIDI recording." << std::endl;
 			sound->startMidiFile("out.mid");
 		}
@@ -1597,6 +1627,8 @@ void SystemGBC::checkSystemKeys(){
 		window->getJoypad()->changeActiveGamepad();
 	else if (keys->poll(0x66)) // 'f' Display framerate
 		displayFramerate = !displayFramerate;
+	else if (keys->poll(0x6c)) // 'l' Toggle layer select
+		bLayerViewerSelect = !bLayerViewerSelect;
 	else if (keys->poll(0x6D)) // 'm' Mute
 		sound->getMixer()->mute();
 }
