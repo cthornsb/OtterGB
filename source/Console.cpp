@@ -269,7 +269,7 @@ void ConsoleGBC::handleInput(){
 				addrGetFunc func = cpu->getMemoryAddressFunction(args.at(1));
 				d16 = (cpu->*func)();
 			}
-			else
+			else // Absolute address
 				d16 = getUserInputUShort(args.at(1));
 			sys->read(d16, d8);
 			(*this) << getHex(d8) << "\n";
@@ -279,8 +279,10 @@ void ConsoleGBC::handleInput(){
 				addrGetFunc func = cpu->getMemoryAddressFunction(args.at(1));
 				d16 = (cpu->*func)();
 			}
-			else
+			else { // Absolute address
 				d16 = getUserInputUShort(args.at(1));
+				d8 = getUserInputUChar(args.at(2));
+			}
 			sys->write(d16, d8);
 			break;
 		case cmdType::READREG:
