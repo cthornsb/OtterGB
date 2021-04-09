@@ -123,10 +123,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	romDirectory(),
 	romFilename(),
 	romExtension(),
-	pauseAfterNextInstruction(false),
-	pauseAfterNextClock(false),
-	pauseAfterNextHBlank(false),
-	pauseAfterNextVBlank(false),
 	audioInterface(&SoundManager::getInstance()),
 	window(0x0),
 	serial(),
@@ -150,6 +146,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	breakpointMemoryWrite(),
 	breakpointMemoryRead(),
 	breakpointOpcode(),
+	nBreakCycles(0),
 	memoryAccessWrite{ 1, 0 },
 	memoryAccessRead{ 1, 0 },
 	registers(),
@@ -294,11 +291,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 
 	// Initialize the audio output interface
 	sound->initialize(bAudioOutputEnabled, sclk->getCyclesPerSecond());
-
-	pauseAfterNextInstruction = false;
-	pauseAfterNextClock = false;
-	pauseAfterNextHBlank = false;
-	pauseAfterNextVBlank = false;
 }
 
 SystemGBC::~SystemGBC(){
@@ -387,27 +379,23 @@ bool SystemGBC::execute(){
 
 			// Tick the system sclk
 			sclk->onClockUpdate();
-			
-#ifdef USE_QT_DEBUGGER
-			if(pauseAfterNextClock){
-				pauseAfterNextClock = false;					
-				pause();
-			}
-#endif
 
 			// Check if the CPU is halted.
 			if(!cpuHalted && !dma->onClockUpdate()){
 				// Perform one instruction.
 				if(cpu->onClockUpdate()){
 #ifdef USE_QT_DEBUGGER
-					if(pauseAfterNextInstruction){
-						pauseAfterNextInstruction = false;					
-						pause();
-					}
-					else if(breakpointOpcode.check(cpu->getLastOpcode()->nIndex) ||
+					if(breakpointOpcode.check(cpu->getLastOpcode()->nIndex) ||
 					   breakpointProgramCounter.check(cpu->getLastOpcode()->nPC))
 						pause();
 #endif
+				}
+			}
+
+			if (nBreakCycles > 0) {
+				nBreakCycles--;
+				if (nBreakCycles == 0) { // Reached the next cycle break point
+					pause();
 				}
 			}
 
@@ -425,12 +413,6 @@ bool SystemGBC::execute(){
 				}
 				if(debugMode){
 					updateDebuggers();
-#ifdef USE_QT_DEBUGGER
-					if(pauseAfterNextVBlank){
-						pauseAfterNextVBlank = false;
-						pause();
-					}
-#endif
 				}
 			}
 		}
@@ -1048,9 +1030,10 @@ void SystemGBC::unpause(bool resumeAudio/*=true*/){
 	if(debugMode)
 		gui->updatePausedState(false);
 #endif
-	if(resumeAudio)
+	if (resumeAudio) {
 		sound->resume(); // Restart audio output
-	window->setWindowTitle("ottergb");
+		window->setWindowTitle("ottergb");
+	}
 }
 
 bool SystemGBC::reset() {
@@ -1453,6 +1436,7 @@ void SystemGBC::help(){
 	std::cout << "   f : Show/hide FPS counter on screen" << std::endl;
 	std::cout << "   l : Toggle layer-viewer map number" << std::endl;
 	std::cout << "   m : Mute output audio" << std::endl;
+	std::cout << "   n : Break at the start of the next frame" << std::endl;
 }
 
 void SystemGBC::openDebugConsole(){
@@ -1471,22 +1455,22 @@ void SystemGBC::closeDebugConsole(){
 
 void SystemGBC::stepThrough(){
 	unpause(false); // Do not resume audio
-	pauseAfterNextInstruction = true;
+	nBreakCycles = cpu->getCyclesRemaining();
 }
 
 void SystemGBC::advanceClock(){
 	unpause(false); // Do not resume audio
-	pauseAfterNextClock = true;
+	nBreakCycles = 1;
 }
 
 void SystemGBC::resumeUntilNextHBlank(){
 	unpause(false); // Do not resume audio
-	pauseAfterNextHBlank = true;
+	nBreakCycles = sclk->getCyclesUntilNextScanline();
 }
 
 void SystemGBC::resumeUntilNextVBlank(){
 	unpause(false); // Do not resume audio
-	pauseAfterNextVBlank = true;
+	nBreakCycles = sclk->getCyclesUntilNextFrame();
 }
 
 void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
@@ -1585,25 +1569,25 @@ void SystemGBC::checkSystemKeys(){
 		return;
 	}
 	// Function keys
-	if (keys->poll(0xF1))      // F1  Help
+	if (keys->poll(0xf1))      // F1  Help
 		help();
-	else if (keys->poll(0xF2)) // F2  Pause emulation
+	else if (keys->poll(0xf2)) // F2  Pause emulation
 		pause();
-	else if (keys->poll(0xF3)) // F3  Resume emulation
+	else if (keys->poll(0xf3)) // F3  Resume emulation
 		unpause();
-	else if (keys->poll(0xF4)) // F4  Reset emulator
+	else if (keys->poll(0xf4)) // F4  Reset emulator
 		reset();
-	else if (keys->poll(0xF5)) // F5  Quicksave
+	else if (keys->poll(0xf5)) // F5  Quicksave
 		quicksave();
-	else if (keys->poll(0xF6)) // F6  Decrease frame-skip (slower)
+	else if (keys->poll(0xf6)) // F6  Decrease frame-skip (slower)
 		frameSkip = (frameSkip > 1 ? frameSkip - 1 : 1);
-	else if (keys->poll(0xF7)) // F7  Increase frame-skip (faster)
+	else if (keys->poll(0xf7)) // F7  Increase frame-skip (faster)
 		frameSkip++;
-	else if (keys->poll(0xF8)) // F8  Save cartridge RAM to file
+	else if (keys->poll(0xf8)) // F8  Save cartridge RAM to file
 		writeExternalRam();
-	else if (keys->poll(0xF9)) // F9  Quickload
+	else if (keys->poll(0xf9)) // F9  Quickload
 		quickload();
-	else if (keys->poll(0xFA)) { // F10 Start / stop midi recording
+	else if (keys->poll(0xfa)) { // F10 Start / stop midi recording
 		if (sound->midiFileEnabled()) {
 			std::cout << sysMessage << "Finalizing MIDI recording." << std::endl;
 			sound->stopMidiFile();
@@ -1613,13 +1597,13 @@ void SystemGBC::checkSystemKeys(){
 			sound->startMidiFile("out.mid");
 		}
 	}
-	else if (keys->poll(0xFB)) // F11 Toggle fullscreen mode
+	else if (keys->poll(0xfb)) // F11 Toggle fullscreen mode
 		toggleFullScreenMode();
-	else if (keys->poll(0xFC)) // F12 Screenshot
+	else if (keys->poll(0xfc)) // F12 Screenshot
 		screenshot();
-	else if (keys->poll(0x2D)) // '-'    Decrease volume
+	else if (keys->poll(0x2d)) // '-'    Decrease volume
 		sound->getMixer()->decreaseVolume();
-	else if (keys->poll(0x3D)) // '=(+)' Increase volume
+	else if (keys->poll(0x3d)) // '=(+)' Increase volume
 		sound->getMixer()->increaseVolume();
 	else if (keys->poll(0x60)) // '`' Open debugging console
 		openDebugConsole();
@@ -1629,6 +1613,8 @@ void SystemGBC::checkSystemKeys(){
 		displayFramerate = !displayFramerate;
 	else if (keys->poll(0x6c)) // 'l' Toggle layer select
 		bLayerViewerSelect = !bLayerViewerSelect;
-	else if (keys->poll(0x6D)) // 'm' Mute
+	else if (keys->poll(0x6d)) // 'm' Mute
 		sound->getMixer()->mute();
+	else if (keys->check(0x6e)) // 'n' Next frame
+		resumeUntilNextVBlank();
 }

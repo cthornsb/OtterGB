@@ -47,8 +47,21 @@ public:
 	/** Get the number of clock cycles since the previous horizontal blanking (HBlank) interval ended
 	  */
 	unsigned int getCyclesSinceHBlank() const { 
-		return cyclesSinceLastHSync; }
+		return cyclesSinceLastHSync; 
+	}
 	
+	/** Get the number of clock cycles remaining until the start of the next frame
+	  */
+	unsigned int getCyclesUntilNextFrame() const {
+		return (cyclesPerVSync - cyclesSinceLastVSync);
+	}
+
+	/** Get the number of clock cycles remaining until the start of the next scanline
+	  */
+	unsigned int getCyclesUntilNextScanline() const {
+		return (cyclesPerHSync - cyclesSinceLastHSync);
+	}
+
 	/** Get the current LCD driver mode
 	  *  0: Horizontal blank (HBlank) interval
 	  *  1: Vertical blank (VBlank) interval

@@ -744,14 +744,6 @@ private:
 	
 	std::string romExtension; ///< Input ROM file extension
 
-	bool pauseAfterNextInstruction; ///< Set if emulator will pause execution after next CPU instruction completes execution
-	
-	bool pauseAfterNextClock; ///< Set if emulator will pause execution after next system clock tick
-	
-	bool pauseAfterNextHBlank; ///< Set if emulator will pause execution after the next scanline is drawn
-	
-	bool pauseAfterNextVBlank; ///< Set if emulator will pause execution after the next frame is rendered
-
 	SoundManager* audioInterface; ///< Pointer to sound output interface
 
 	OTTWindow* window; ///< Pointer to output graphical window
@@ -795,6 +787,8 @@ private:
 	Breakpoint breakpointMemoryRead; ///< Memory address read access breakpoint
 	
 	Breakpoint breakpointOpcode; ///< LR35902 opcode read breakpoint
+
+	unsigned int nBreakCycles; ///< Number of clock cycles remaining before next break
 
 	unsigned short memoryAccessWrite[2]; ///< Memory address write access region
 	

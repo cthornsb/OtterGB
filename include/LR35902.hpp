@@ -96,14 +96,20 @@ public:
 		return opcodes(); 
 	}
 
+	/** Get the currently executing instruction string
+	  */
 	std::string getInstruction() const { 
 		return opcodes()->getInstruction();
 	}
 	
+	/** Get the current state of the CPU
+	  */
 	StateOfCPU getCpuState() const {
 		return StateOfCPU{halfCarry, fullCarry, A, B, C, D, E, F, H, L, d8, d16h, d16l, memoryValue, memoryAddress, SP, PC};
 	}
 	
+	/** Set the state of the CPU
+	  */
 	void setCpuState(const StateOfCPU& state){
 	}
 
@@ -115,14 +121,20 @@ public:
 		return (0xFF00 + d8);
 	}
 
+	/** Get the number of cycles remaining for the currently executing CPU instruction
+	  */
 	unsigned short getCyclesRemaining() const { 
-		return opcodes()->nCycles;
+		return opcodes()->cyclesRemaining();
 	}
 	
+	/** Get the memory address target for the current instruction (if instruction reads/writes)
+	  */
 	unsigned short getMemoryAddress() const { 
 		return memoryAddress;
 	}
-	
+
+	/** Get the memory address for the current instruction (if instruction reads/writes)
+	  */
 	unsigned char getMemoryValue() const { 
 		return memoryValue;
 	}
