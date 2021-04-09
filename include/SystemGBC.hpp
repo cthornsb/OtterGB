@@ -728,6 +728,8 @@ private:
 
 	bool bLayerViewerSelect; ///< 
 
+	bool bHardPaused; ///< Set if user has paused emulator manually, or if breakpoint reached
+
 	unsigned char dmaSourceH; ///< DMA source MSB
 	
 	unsigned char dmaSourceL; ///< DMA source LSB

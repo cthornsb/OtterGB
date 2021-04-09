@@ -115,6 +115,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	bVSyncEnabled(true),
 	bForceVSync(false),
 	bLayerViewerSelect(true),
+	bHardPaused(false),
 	dmaSourceH(0),
 	dmaSourceL(0),
 	dmaDestinationH(0),
@@ -395,6 +396,7 @@ bool SystemGBC::execute(){
 			if (nBreakCycles > 0) {
 				nBreakCycles--;
 				if (nBreakCycles == 0) { // Reached the next cycle break point
+					bHardPaused = true;
 					pause();
 				}
 			}
@@ -1011,6 +1013,8 @@ void SystemGBC::updateDebuggers(){
 }
 
 void SystemGBC::pause(){ 
+	if (emulationPaused) // Already paused
+		return;
 	emulationPaused = true; 
 	if(debugMode){
 #ifdef USE_QT_DEBUGGER
@@ -1023,7 +1027,7 @@ void SystemGBC::pause(){
 }
 
 void SystemGBC::unpause(bool resumeAudio/*=true*/){ 
-	if (!cart->isLoaded() || consoleIsOpen) // Do not resume emulation if no ROM is loaded or if console is open
+	if (!cart->isLoaded() || consoleIsOpen || bHardPaused) // Do not resume emulation if no ROM loaded, if console is open, or if user has paused emulation
 		return;
 	emulationPaused = false; 
 #ifdef USE_QT_DEBUGGER
@@ -1571,10 +1575,14 @@ void SystemGBC::checkSystemKeys(){
 	// Function keys
 	if (keys->poll(0xf1))      // F1  Help
 		help();
-	else if (keys->poll(0xf2)) // F2  Pause emulation
+	else if (keys->poll(0xf2)) { // F2  Pause emulation
+		bHardPaused = true;
 		pause();
-	else if (keys->poll(0xf3)) // F3  Resume emulation
+	}
+	else if (keys->poll(0xf3)) { // F3  Resume emulation
+		bHardPaused = false;
 		unpause();
+	}
 	else if (keys->poll(0xf4)) // F4  Reset emulator
 		reset();
 	else if (keys->poll(0xf5)) // F5  Quicksave
