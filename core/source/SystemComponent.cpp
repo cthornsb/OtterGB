@@ -124,9 +124,13 @@ unsigned int SystemComponent::writeMemoryToFile(std::ofstream &f){
 		return 0;
 
 	// Write memory contents to the output file.	
-	f.write((char*)&mem[0][0], size);
+	unsigned int nBytesWritten = 0;
+	for (unsigned short i = 0; i < nBanks; i++) {
+		f.write((char*)&mem[i][0], nBytes);
+		nBytesWritten += nBytes;
+	}
 
-	return size;
+	return nBytesWritten;
 }
 
 unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
@@ -134,9 +138,13 @@ unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
 		return 0;
 
 	// Write memory contents to the output file.
-	f.read((char*)&mem[0][0], size);
+	unsigned int nBytesRead = 0;
+	for (unsigned short i = 0; i < nBanks; i++) {
+		f.read((char*)&mem[i][0], nBytes);
+		nBytesRead += nBytes;
+	}
 
-	return size;
+	return nBytesRead;
 }
 
 unsigned int SystemComponent::writeSavestate(std::ofstream &f){
