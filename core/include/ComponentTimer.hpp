@@ -66,12 +66,18 @@ public:
 		nCyclesSinceLastTick = 0; 
 	}
 
+	/** Reset the timer's period rollover counter
+	  */
+	void resetCounter() {
+		nCounter = 0;
+	}
+
 protected:
 	unsigned short nCyclesSinceLastTick; ///< Number of clock ticks since last timer rollover
 	
 	unsigned short nPeriod; ///< Timer period
 	
-	unsigned short nCounter; ///< Current timer counter
+	unsigned short nCounter; ///< Current timer counter (the number of times the timer period has rolled over)
 	
 	bool bEnabled; ///< Enabled flag
 
