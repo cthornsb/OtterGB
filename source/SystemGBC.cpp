@@ -989,6 +989,7 @@ void SystemGBC::updateDebuggers(){
 			unsigned char xBg0 = winScrollPositions[line].nscx; // Start of screen X
 			unsigned char yBg0 = winScrollPositions[line].nscy; // Start of screen Y
 			unsigned char xBg1 = xBg0 + 159;
+			// Draw the shaded region
 			if (xBg0 < xBg1) {
 				buffer->drawLine(xBg0, (unsigned char)(line + yBg0), xBg1, (unsigned char)(line + yBg0));
 			}
@@ -996,28 +997,31 @@ void SystemGBC::updateDebuggers(){
 				buffer->drawLine(0, (unsigned char)(line + yBg0), xBg1, (unsigned char)(line + yBg0));
 				buffer->drawLine(xBg0, (unsigned char)(line + yBg0), 255, (unsigned char)(line + yBg0));
 			}
-			/*if (line == 0 || line == 143) { // line == SCY (draw top or bottom)
+			// Draw the outlines
+			if (line == 0 || line == 143) { // line == SCY (draw top or bottom)
 				for (unsigned char dx = 0; dx < 160; dx++)
 					layerViewer->buffWrite((unsigned char)(xBg0 + dx), (unsigned char)(line + yBg0), Colors::RED);
 			}
 			else { // line != SCY (draw edges)
 				buffer->setPixel(xBg0, (unsigned char)(line + yBg0), Colors::RED);
 				buffer->setPixel(xBg1, (unsigned char)(line + yBg0), Colors::RED);
-			}*/
+			}
 		}
 		layerViewer->getBuffer()->setDrawColor(ColorRGB(0.f, 1.f, 0.f, 0.5f)); // Green w/ 25% alpha
 		for (unsigned char line = 0; line < 144; line++) { // Draw the window region
 			unsigned char xWin0 = winScrollPositions[line].nwx - 7;
 			unsigned char yWin0 = winScrollPositions[line].nwy;
 			if (xWin0 < 160 && yWin0 < 144) { // Over every scanline, in case the window moves mid-frame
+				// Draw the shaded region
 				buffer->drawLine(0, 143 - line, 159 - xWin0, 143 - line);
-				/*if (line > yWin0) {					
+				// Draw the outlines
+				if (line > yWin0) {					
 					buffer->setPixel(159 - xWin0, 143 - line, Colors::GREEN); // Right edge
 				}
 				else if (line == yWin0) { // Bottom
 					for (unsigned char dx = 0; dx <= (159 - xWin0); dx++)
 						layerViewer->buffWrite(dx, 143 - line, Colors::GREEN);
-				}*/
+				}
 			}
 		}
 		layerViewer->setCurrent();
