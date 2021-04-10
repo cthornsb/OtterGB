@@ -57,6 +57,13 @@ public:
 		return bPriority; 
 	}
 
+	/** Return true if the pixel's priority flag is set and its color is non-zero.
+	  * Used to determine WIN and BG layer priority versus sprites.
+	  */
+	bool getColorPriority() const {
+		return (bPriority && (nColor != 0));
+	}
+
 	/** Return true if pixel is not transparent
 	  * Background and window pixels are always non-transparent, sprite palette color 0 is always transparent.
 	  */

@@ -13,6 +13,7 @@
 
 class Register;
 class OTTWindow;
+class OTTImageBuffer;
 class ConsoleGBC;
 
 enum class PPUMODE{
@@ -122,6 +123,11 @@ public:
 	  */
 	void setPixelScale(const unsigned int &n);
 
+	/** Set the strength of the averaging effect when drawing a new frame.
+	  * The default frame blur is 0 (i.e. no blurring effect), and the maximum blur strength is 1.
+	  */
+	void setFrameBlur(const float& blur);
+
 	/** Set default green DMG mode background and sprite color palettes
 	  */
 	void setColorPaletteDMG();
@@ -171,7 +177,13 @@ private:
 
 	bool bWindowVisible; ///< Set if window is present on current scanline
 
-	bool winDisplayEnable; ///< Set if the window layer is enabled and is on screen
+	bool bWinDisplayEnable; ///< Set if the window layer is enabled and is on screen
+
+	bool bGrayscalePalette; ///< Set if grayscale DMG palette will be used in place of the default green monochrome
+
+	bool bInvertColors; ///< Set if all palette colors will be inverted
+
+	bool bGreenPaletteCGB; ///< Set if the green DMG palette will be used even for CGB games
 
 	unsigned char nScanline; ///< Current LCD scanline
 	
@@ -204,6 +216,12 @@ private:
 	ColorGBC currentLineBackground[256]; ///< Pixel color and palette information for the current background layer scanline
 
 	bool userLayerEnable[3]; ///< Flags for the three render layers.
+
+	ColorRGB dmgColorPalette[4]; ///< Monochrome green DMG palette
+
+	float fNextFrameOpacity; ///< The opacity which the next frame will use for color blending with the preceeding frame (0 to 1)
+
+	OTTImageBuffer* imageBuffer; ///< Pointer to the output image buffer
 
 	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
 

@@ -3,7 +3,9 @@
 #include "OTTWindow.hpp"
 
 #ifdef WIN32
-#undef min // "min" is a macro defined in Windows.h
+// "min" and "max" are macros defined in Windows.h
+#undef min
+#undef max
 #endif // ifdef WIN32
 
 #include "SystemRegisters.hpp"
@@ -23,11 +25,14 @@ constexpr int MAX_SPRITES_PER_LINE = 10;
 constexpr int SCREEN_WIDTH_PIXELS  = 160;
 constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
-GPU::GPU() : 
+GPU::GPU() :
 	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
 	bUserSelectedPalette(false),
 	bWindowVisible(false),
-	winDisplayEnable(false),
+	bWinDisplayEnable(false),
+	bGrayscalePalette(false),
+	bInvertColors(false),
+	bGreenPaletteCGB(false),
 	nScanline(0),
 	nPosX(0),
 	nPosY(0),
@@ -44,6 +49,14 @@ GPU::GPU() :
 	currentLineWindow(),
 	currentLineBackground(),
 	userLayerEnable{ true, true, true },
+	dmgColorPalette{
+		ColorRGB(155.0f / 255, 188.0f / 255, 15.0f / 255), // Green
+		ColorRGB(139.0f / 255, 172.0f / 255, 15.0f / 255), // Light green
+		ColorRGB(48.0f / 255, 98.0f / 255, 48.0f / 255),   // Dark green
+		ColorRGB(15.0f / 255, 56.0f / 255, 15.0f / 255)    // Darkest green		
+},
+	fNextFrameOpacity(1.f),
+	imageBuffer(0x0),
 	sprites(),
 	buffLock(),
 	mode(PPUMODE::SCANLINE)
@@ -70,6 +83,10 @@ void GPU::initialize(){
 	window->lockWindowAspectRatio(true);
 	window->disableVSync();
 	window->clear();
+
+	// Get a pointer to the output image buffer
+	imageBuffer = window->getBuffer();
+	imageBuffer->setBlendMode(BlendMode::AVERAGE);
 
 	// Set default color palettes
 	this->onUserReset();
@@ -121,7 +138,7 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 		bgBankNumber     = bitTest(tileAttr, 3); // (0=Bank0, 1=Bank1)
 		bgHorizontalFlip = bitTest(tileAttr, 5); // (0=Normal, 1=HFlip)
 		bgVerticalFlip   = bitTest(tileAttr, 6); // (0=Normal, 1=VFlip)
-		bgPriority       = bitTest(tileAttr, 7); // (0=Use OAM, 1=BG Priority)
+		bgPriority       = bitTest(tileAttr, 7); // (0=Obj on top, 1=BG and WIN colors 1-3 over Obj)
 		if(bgVerticalFlip) // Vertical flip
 			pixelY = 7 - pixelY;
 	}
@@ -144,18 +161,42 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 	return (7-pixelX)+1;
 }
 
-bool GPU::drawSprite(const unsigned char &y, const SpriteAttributes &oam){
-	unsigned char xp = oam.xPos - 8; // Top left
-	unsigned char yp = oam.yPos - 16; // Top left
+bool GPU::drawSprite(const unsigned char& y, const SpriteAttributes& oam) {
+	unsigned char xp = oam.xPos - 8; // X coordinate of left side of sprite
+	unsigned char yp, ybot; // Y coordinate of top and bottom of sprite
+
+	// Check for sprites at the top of the screen
+	if (!rLCDC->bit2()) { // 8x8 sprites
+		if (oam.yPos >= 16) { // Sprite fully on screen
+			yp = oam.yPos - 16;
+			ybot = yp + 8;
+		}
+		else if (oam.yPos >= 8) { // At least one row of sprite on screen
+			yp = 0;
+			ybot = oam.yPos - 8;
+		}
+		else // Fully off top of screen
+			return false;
+	}
+	else { // 8x16 sprites
+		if (oam.yPos >= 16) { // Sprite fully on screen
+			yp = oam.yPos - 16;
+			ybot = yp + 16;
+		}
+		else {
+			yp = 0;
+			ybot = oam.yPos;
+		}
+	}
 
 	// Check that the current scanline goes through the sprite
-	if(y < yp || y >= yp + (!rLCDC->bit2() ? 8 : 16))
+	if (y < yp || y >= ybot)
 		return false;
 
-	unsigned char pixelY = y - yp; // Vertical pixel in the tile
+	unsigned char pixelY = (oam.yPos >= 16 ? y - yp : y + (16 - oam.yPos)); // Vertical pixel in the tile
 	unsigned char pixelColor;
 	unsigned short bmpLow;
-	
+
 	// Retrieve the background tile ID from OAM
 	// Tile map 0 is used (8000-8FFF)
 	if(!rLCDC->bit2()){ // 8x8 pixel sprites
@@ -238,7 +279,7 @@ void GPU::drawLayer(OTTWindow *win, bool mapSelect/*=true*/){
 		pixelX = 0;
 		for(unsigned short tx = 0; tx <= 32; tx++) // Draw the layer
 			pixelX += drawTile(pixelX, (unsigned char)y, 0, (mapSelect ? 0x1C00 : 0x1800), line);
-		for(unsigned short px = 0; px <= 256; px++){ // Draw the tile
+		for(unsigned short px = 0; px < 256; px++){ // Draw the tile
 			switch(line[px].getColor()){
 			case 0:
 				win->buffWrite(px, y, Colors::WHITE);
@@ -298,7 +339,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 
 	// Handle the window layer
 	bWindowVisible = false; // Is the window visible on this line?
-	if(winDisplayEnable && (nScanline >= rWY->getValue())){
+	if(bWinDisplayEnable && (nScanline >= rWY->getValue())){
 		if(userLayerEnable[1]){
 			nPosX = rWX->getValue()-7;
 			unsigned short nTiles = (159-(rWX->getValue()-7))/8; // Number of visible window tiles
@@ -353,62 +394,68 @@ void GPU::renderScanline(){
 	// Render the current scanline
 	ColorGBC *currentPixel;
 	unsigned char layerSelect = 0;
-	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline
+	bool bDrawingWindow = false;
+	for(unsigned short x = 0; x < 160; x++){ // Draw the scanline		
 		// Determine what layer should be drawn
 		// CGB:
 		//  LCDC bit 0 - 0=Sprites always on top of BG/WIN, 1=BG/WIN have priority
 		//  Tile attr priority bit - 0=Use OAM priority bit, 1=BG Priority
-		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
+		//  OAM sprite priority bit - 0=Sprite Above BG, 1=Sprite Behind BG color 1-3
 		// DMG:
 		//  LCDC bit 0 - 0=Off (white), 1=On
-		//  OAM sprite priority bit - 0=OBJ Above BG, 1=OBJ Behind BG color 1-3
+		//  OAM sprite priority bit - 0=Sprite Above BG, 1=Sprite Behind BG color 1-3
 		// 
+		if (!bDrawingWindow) { // Check if the window layer is visible
+			// Since the window layer is only ever visible at LY >= WY and X >= WX,
+			// the window will always be visible on a scanline after reaching pixel WX.
+			bDrawingWindow = (bWindowVisible && x >= (rWX->getValue() - 7));
+		}
 		if(bGBCMODE){
 			if(rLCDC->bit0()){ // BG/WIN priority
-				if(currentLineBackground[nPosX].getPriority()){ // BG priority (tile attributes)
-					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
+				if (bDrawingWindow) { // Drawing visible window region
+					if (currentLineWindow[x].getColorPriority() || !currentLineSprite[nPosX].visible())
 						layerSelect = 1;
-					else // Draw background
-						layerSelect = 0;
-				}
-				else if(currentLineSprite[nPosX].visible()){ // Use OAM priority bit
-					if(currentLineSprite[nPosX].getPriority() && currentLineBackground[nPosX].getColor()){ // OBJ behind BG color 1-3
-						if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
-								layerSelect = 1;
-							else // Draw background
-								layerSelect = 0;
-					}
-					else // OBJ above BG (except for color 0 which is always transparent)
+					else
 						layerSelect = 2;
 				}
-				else{ // Draw background or window
-					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
-						layerSelect = 1;
-					else // Draw background
-						layerSelect = 0;
+				else if(currentLineBackground[nPosX].getColorPriority()){ // BG priority (0=Sprite on top, 1=BG and WIN colors 1-3 over Sprite)
+					layerSelect = 0;
+				}
+				else if (currentLineSprite[nPosX].visible()) { // Sprite pixel is visible
+					if (currentLineSprite[nPosX].getPriority()) { // Sprite behind WIN and BG color 1-3
+						if (bDrawingWindow && currentLineWindow[x].getColor() > 0) // Draw window
+							layerSelect = 1;
+						else if (currentLineBackground[nPosX].getColor() > 0) // Draw background
+							layerSelect = 0;
+						else // Draw sprite
+							layerSelect = 2;
+					}
+					else // Sprite above BG/WIN (except for color 0 which is always transparent)
+						layerSelect = 2;
+				}
+				else { // Draw background or window
+					layerSelect = (bDrawingWindow ? 1 : 0);
 				}
 			}
-			else{ // Sprites always on top (if visible)
-				if(currentLineSprite[nPosX].visible()) // Draw sprite
-					layerSelect = 2;
-				else if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
-					layerSelect = 1;
-				else // Draw background
-					layerSelect = 0;
+			else if (currentLineSprite[nPosX].visible()) { // Sprites always on top (if visible)
+				layerSelect = 2;
+			}
+			else { // Draw background or window
+				layerSelect = (bDrawingWindow ? 1 : 0);
 			}
 		}
 		else{
 			if(currentLineSprite[nPosX].visible()){ // Use OAM priority bit
-				if(currentLineSprite[nPosX].getPriority() && currentLineBackground[nPosX].getColor()){ // OBJ behind BG color 1-3
-					if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
+				if(currentLineSprite[nPosX].getPriority() && currentLineBackground[nPosX].getColor()){ // Sprite behind BG color 1-3
+					if(bDrawingWindow) // Draw window
 							layerSelect = 1;
 						else // Draw background
 							layerSelect = 0;
 				}
-				else // OBJ above BG (except for color 0 which is always transparent)
+				else // Sprite above BG (except for color 0 which is always transparent)
 					layerSelect = 2;
 			}
-			else if(bWindowVisible && x >= (rWX->getValue()-7)) // Draw window
+			else if(bDrawingWindow) // Draw window
 				layerSelect = 1;
 			else // Draw background
 				layerSelect = 0;
@@ -426,10 +473,24 @@ void GPU::renderScanline(){
 			default:
 				break;
 		}
-		if(bGBCMODE) // CGB
-			window->buffWrite(x, nScanline, getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
-		else // DMG
-			window->buffWrite(x, nScanline, getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
+		if (bGBCMODE) { // CGB
+			if (fNextFrameOpacity == 1.f) {
+				imageBuffer->setPixel(x, nScanline, getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
+			}
+			else{
+				imageBuffer->setDrawColor(getPaletteColor(currentPixel->getPalette(), currentPixel->getColor()));
+				imageBuffer->drawPixel(x, nScanline);
+			}
+		}
+		else { // DMG
+			if (fNextFrameOpacity == 1.f) {
+				imageBuffer->setPixel(x, nScanline, getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
+			}
+			else {
+				imageBuffer->setDrawColor(getPaletteColor(currentPixel->getPaletteDMG(), dmgPaletteColor[currentPixel->getPalette()][currentPixel->getColor()]));
+				imageBuffer->drawPixel(x, nScanline);
+			}
+		}
 		nPosX++;
 	}
 }
@@ -468,15 +529,34 @@ void GPU::setPixelScale(const unsigned int &n){
 	window->updateWindowSize(n);
 }
 
+void GPU::setFrameBlur(const float& blur) {
+	fNextFrameOpacity = (1.f - std::min(std::max(blur, 0.f), 1.f)); // Clamp to the range 0 to 1
+	for (int i = 0; i < 4; i++)
+		dmgColorPalette[i].a = fNextFrameOpacity * 255;
+	for (int i = 0; i < 16; i++) { // Update the alpha (opacity) for all existing palette colors
+		for (int j = 0; j < 4; j++)
+			cgbPaletteColor[i][j].a = fNextFrameOpacity * 255;
+	}
+}
+
 void GPU::setColorPaletteDMG(){
 	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
 		return;
 	// Monochrome green DMG color palette
-	const ColorRGB GB_DKSTGREEN(15.0f/255,  56.0f/255,  15.0f/255);
-	const ColorRGB GB_DKGREEN(  48.0f/255,  98.0f/255,  48.0f/255);
-	const ColorRGB GB_LTGREEN(  139.0f/255, 172.0f/255, 15.0f/255);
-	const ColorRGB GB_GREEN(    155.0f/255, 188.0f/255, 15.0f/255);
-	setColorPaletteDMG(GB_GREEN, GB_LTGREEN, GB_DKGREEN, GB_DKSTGREEN);
+	if (bGrayscalePalette) { // Convert to sRGB grayscale
+		for (int i = 0; i < 4; i++)
+			dmgColorPalette[i].toGrayscale();
+	}
+	if (bInvertColors) { // Invert colors
+		for (int i = 0; i < 4; i++)
+			dmgColorPalette[i] = dmgColorPalette[i].invert();
+	}
+	setColorPaletteDMG(
+		dmgColorPalette[0],
+		dmgColorPalette[1],
+		dmgColorPalette[2],
+		dmgColorPalette[3]
+	);
 	bUserSelectedPalette = false; // Unset user palette flag, since we're using the default palette
 }
 
@@ -654,7 +734,31 @@ ColorRGB GPU::getColorRGB(const unsigned char &low, const unsigned char &high){
 	unsigned char r = low & 0x1F;
 	unsigned char g = ((low & 0xE0) >> 5) + ((high & 0x3) << 3);
 	unsigned char b = (high & 0x7C) >> 2;
-	return ColorRGB(r/31.0f, g/31.0f, b/31.0f);
+	ColorRGB retval(r / 31.0f, g / 31.0f, b / 31.0f, fNextFrameOpacity);
+	if (bGreenPaletteCGB) { // Convert CGB colors to DMG; dumb, but fun :)
+		auto colorDist = [](const ColorRGB& input, const ColorRGB& output) {
+			float dR = (float)input.r - (float)output.r;
+			float dG = (float)input.g - (float)output.g;
+			float dB = (float)input.b - (float)output.b;
+			return std::sqrt(dR * dR + dG * dG + dB * dB);
+		};
+		float fMinimumDistance = 100000.f;
+		ColorRGB* minColor = 0x0;
+		for (int i = 0; i < 4; i++) {
+			float dist = colorDist(retval, dmgColorPalette[i]);
+			if (dist < fMinimumDistance) {
+				fMinimumDistance = dist;
+				minColor = &dmgColorPalette[i];
+			}
+		}
+		if (minColor)
+			retval = *minColor;
+	}
+	if (bGrayscalePalette) // Convert to sRGB grayscale
+		retval.toGrayscale();
+	if (bInvertColors)
+		return retval.invert();
+	return retval;
 }
 
 ColorRGB& GPU::getPaletteColor(const unsigned char& palette, const unsigned char& color){
@@ -716,12 +820,20 @@ void GPU::readConfigFile(ConfigFile* config) {
 		sys->toggleFullScreenMode();
 	if (config->searchBoolFlag("UNLOCK_ASPECT_RATIO")) // Lock window aspect ratio
 		window->lockWindowAspectRatio(false);
+	if (config->searchBoolFlag("GRAYSCALE_PALETTE")) // Set DMG color palette to sRGB grayscale
+		bGrayscalePalette = true;
+	if (config->searchBoolFlag("INVERTED_COLORS")) // Invert output color palettes
+		bInvertColors = true;
+	if (config->searchBoolFlag("GREEN_PALETTE_CGB")) // Set CGB game colors to monochrome green DMG palette
+		bGreenPaletteCGB = true;
+	if (config->search("FRAME_BLUR", true))
+		setFrameBlur(config->getFloat());
 }
 
 bool GPU::checkWindowVisible(){	
 	// The window is visible if WX=[0,167) and WY=[0,144)
 	// WX=7, WY=0 locates the window at the upper left of the screen
-	return (winDisplayEnable = rLCDC->bit5() && (rWX->getValue() < 167) && (rWY->getValue() < 144));
+	return (bWinDisplayEnable = rLCDC->bit5() && (rWX->getValue() < 167) && (rWY->getValue() < 144));
 }
 
 void GPU::writeImageBuffer(const unsigned short& x, const unsigned short& y, const ColorRGB& color){
@@ -738,7 +850,7 @@ void GPU::writeImageBuffer(const unsigned short& y, const ColorRGB& color){
 
 void GPU::userAddSavestateValues(){
 	// Bools
-	addSavestateValue(&winDisplayEnable, sizeof(bool));
+	addSavestateValue(&bWinDisplayEnable, sizeof(bool));
 	// Bytes
 	unsigned int byte = sizeof(unsigned char);
 	addSavestateValue(&bgPaletteIndex,  byte);
@@ -750,7 +862,7 @@ void GPU::userAddSavestateValues(){
 }
 
 void GPU::onUserReset(){
-	winDisplayEnable = false;
+	bWinDisplayEnable = false;
 	nSpritesDrawn = 0;
 	bgPaletteIndex = 0;
 	objPaletteIndex = 0;
