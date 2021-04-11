@@ -41,16 +41,24 @@ Cartridge::Cartridge() :
 	ram("SRAM", 0x4d415253),
 	mbcType(CartMBC::UNKNOWN),
 	registerSelect(0x0),
+	rtcTimer(32), // 32.768 kHz clock
+	nRtcTimerSeconds(0),
 	mbcRegisters()
 { 
 }
 
 bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& value) {
-	if (ram.empty())// || !extRamEnabled)
+	if (ram.empty() || !extRamEnabled)
 		return false;
 	if (addr >= 0xa000 && addr < 0xc000) {
 		if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register
 			registerSelect->write(value);
+			if (registerSelect->getName() == "MBC3_DAYHIGH") {
+				if (registerSelect->bit6()) // Halt RTC timer
+					rtcTimer.disableTimer();
+				else // Resume RTC timer
+					rtcTimer.enableTimer();
+			}
 			return true;
 		}
 		ram.write(addr, value);
@@ -60,10 +68,10 @@ bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& valu
 }
 
 bool Cartridge::readFromRam(const unsigned short& addr, unsigned char& value) {
-	if (ram.empty())// || !extRamEnabled)
+	if (ram.empty() || !extRamEnabled)
 		return false;
-	if (addr >= 0xa000 && addr < 0xc000) {
-		if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register
+	if (addr >= 0xa000 && addr < 0xc000) {		
+		if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register			
 			registerSelect->read(value);
 			return true;
 		}
@@ -164,11 +172,19 @@ bool Cartridge::writeRegister(const unsigned short &reg, const unsigned char &va
 		// Latch clock data, write current clock time to RTC registers
 		bool nextLatchState = mbcRegisters[3].getBit(0);
 		if (!bLatchState && nextLatchState) { // 0->1, latch data
-			mbcRegisters[4].setValue(0); // Seconds
-			mbcRegisters[5].setValue(0); // Minutes
-			mbcRegisters[6].setValue(0); // Hours
-			mbcRegisters[7].setValue(0); // Low 8-bits of day counter
-			mbcRegisters[8].setValue(0); // Seconds
+			unsigned int nDays = nRtcTimerSeconds / 86400; // Number of days elapsed (< 512)
+			unsigned int nSeconds = nRtcTimerSeconds % 86400; // Number of seconds into the current day
+			unsigned char nTimeHours = nSeconds / 3600;
+			unsigned char nTimeMinutes = (nSeconds % 3600) / 60;
+			unsigned char nTimeSeconds = (nSeconds % 3600) % 60;
+			mbcRegisters[4].setValue(nTimeSeconds); // Seconds
+			mbcRegisters[5].setValue(nTimeMinutes); // Minutes
+			mbcRegisters[6].setValue(nTimeHours); // Hours
+			mbcRegisters[7].setValue((unsigned char)(nDays & 0x000000ff)); // Low 8-bits of day counter
+			if(nDays >= 256)
+				mbcRegisters[8].setBit(0); // Upper 1-bit of day
+			else
+				mbcRegisters[8].resetBit(0); // Upper 1-bit of day
 		}
 		bLatchState = nextLatchState;
 	}
@@ -510,3 +526,14 @@ void Cartridge::print(){
 	std::cout << " Program entry at " << getHex(programStart) << std::endl;
 }
 
+bool Cartridge::onClockUpdate() {
+	if (timerSupport && rtcTimer.clock()) {	// Increment the RTC second counter
+		if (rtcTimer.getTimerCounter() >= 32768) { // One tick per second
+			if (++nRtcTimerSeconds >= 44236800) //44236800 seconds max (512 days)
+				nRtcTimerSeconds %= 44236800;
+			rtcTimer.resetCounter();
+		}
+		return true;
+	}
+	return false;
+}

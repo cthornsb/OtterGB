@@ -36,7 +36,7 @@
 #endif
 
 #ifndef OTTERGB_VERSION
-#define OTTERGB_VERSION "0.9"
+#define OTTERGB_VERSION "0.9.1"
 #endif
 
 constexpr unsigned char SAVESTATE_VERSION = 0x1;
@@ -378,6 +378,9 @@ bool SystemGBC::execute(){
 
 			// Update joypad handler
 			joy->onClockUpdate();
+
+			// Update cartridge (in case it contains a real-time-clock)
+			cart->onClockUpdate();
 
 			// Tick the system sclk
 			sclk->onClockUpdate();

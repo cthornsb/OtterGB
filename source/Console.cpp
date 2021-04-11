@@ -22,6 +22,7 @@ ConsoleGBC::ConsoleGBC() :
 	addConsoleCommand("close",0, cmdType::CLOSE, "", "Close console");
 	addConsoleCommand("help", 0, cmdType::HELP, "[cmd]", "Print list of commands or syntax for (cmd)");
 	addConsoleCommand("about",0, cmdType::ABOUT, "", "Print program information");
+	addConsoleCommand("version",0, cmdType::ABOUT, "", "Print program information");
 	addConsoleCommand("a",    0, cmdType::REG8, "[val]", "Print A register");
 	addConsoleCommand("b",    0, cmdType::REG8, "[val]", "Print B register");
 	addConsoleCommand("c",    0, cmdType::REG8, "[val]", "Print C register");

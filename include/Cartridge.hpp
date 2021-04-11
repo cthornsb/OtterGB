@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "SystemComponent.hpp"
+#include "ComponentTimer.hpp"
 #include "Register.hpp"
 
 class Cartridge : public SystemComponent {
@@ -167,6 +168,11 @@ public:
 	  */
 	void print();
 
+	/** Method called once per 1 MHz system clock tick.
+	  * Clock the real-time-clock, if the cartridge contains an MBC which uses it.
+	  */
+	bool onClockUpdate() override;
+
 private:
 	bool bLoaded; ///< Set to true if a ROM is loaded in memory
 
@@ -220,7 +226,11 @@ private:
 	
 	CartMBC mbcType; ///< Input ROM catridge type
 	
-	Register* registerSelect;
+	Register* registerSelect; ///< Pointer to the currently selected MBC register
+
+	ComponentTimer rtcTimer; ///< Real-time-clock (RTC) timer
+
+	unsigned int nRtcTimerSeconds; ///< The number of seconds elapsed according to the RTC
 
 	std::vector<Register> mbcRegisters; ///< Map of MBC registers (if used by the ROM)
 	
