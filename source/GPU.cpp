@@ -240,7 +240,7 @@ void GPU::drawConsole(){
 }
 
 void GPU::drawTileMaps(OTTWindow *win){
-	int W = win->getWidth();
+	int W = win->getNativeWidth();
 	win->setCurrent();
 	// Tile maps are defined in VRAM [0x8000, 0x9800]
 	const unsigned short tilesPerRow = W/8;

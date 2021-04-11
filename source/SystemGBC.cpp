@@ -36,7 +36,7 @@
 #endif
 
 #ifndef OTTERGB_VERSION
-#define OTTERGB_VERSION "0.9.1"
+#define OTTERGB_VERSION "0.9.1a"
 #endif
 
 constexpr unsigned char SAVESTATE_VERSION = 0x1;
