@@ -157,6 +157,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	subsystems()
 { 
 	// Configuration file handler
+	std::string configFilePath = "default.cfg";
 	ConfigFile cfgFile;
 
 #ifndef _WIN32
@@ -180,43 +181,43 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		fatalError = true;
 		return;
 	}
-	if(handler.getOption(0)->active){ 
-		std::cout << sysMessage << "Reading from configuration file (" << handler.getOption(0)->argument << ")" << std::endl;
-		if(!cfgFile.read(handler.getOption(0)->argument)){ // Read configuration file
-			std::cout << sysFatalError << "Failed to load input configuration file." << std::endl;
-			fatalError = true;
-			return;
-		}
-		// Get the ROM path
-		romPath = cfgFile.getValue("ROM_DIRECTORY") + "/" + cfgFile.getValue("ROM_FILENAME");
+	if(handler.getOption(0)->active){ // Set input config file path
+		configFilePath = handler.getOption(0)->argument;
 	}
-	if(handler.getOption(1)->active) // Set input filename
+	if (handler.getOption(1)->active) { // Set input filename
 		romPath = handler.getOption(1)->argument;
+	}
 #else // ifndef _WIN32	
-	std::string configFilePath = "default.cfg";
 	if (argc > 1) { // Handle path string dropped on exe file
 		std::string cmdLineArg(argv[1]);
-		std::cout << " arg=" << cmdLineArg << std::endl;
 		size_t index = cmdLineArg.find_last_of('.');
+		bool validExtension = false;
 		if (index != std::string::npos) { // Get file extension to decide what to do with it
 			std::string extension = cmdLineArg.substr(index);
 			if (extension == ".cfg") { // Config file
 				configFilePath = cmdLineArg;
+				validExtension = true;
 			}
 			else if (extension == ".gb" || extension == ".gbc") { // Game ROM
 				romPath = cmdLineArg;
+				validExtension = true;
 			}
-			else { // Unknown file type. Game ROM?
-				std::cout << sysWarning << "Unrecognized file extension (" << extension << ")" << ", attempting to load as a ROM." << std::endl;
-				romPath = cmdLineArg;
+			else {
+				std::cout << sysWarning << "Unrecognized file extension (" << extension << ")." << std::endl;
 			}
 		}
+		if(!validExtension) { // Unknown file type. Game ROM?
+			std::cout << sysWarning << "Unknown file format, attempting to load as a ROM." << std::endl;
+			romPath = cmdLineArg;
+		}
 	}
-	std::cout << sysMessage << "Reading from configuration file (" << configFilePath << ")" << std::endl;
+#endif // ifndef _WIN32	
+
+	// Read config file
+	std::cout << sysMessage << "Reading configuration file (" << configFilePath << ")" << std::endl;
 	if(!cfgFile.read(configFilePath)){ // Read configuration file
 		std::cout << sysError << "Failed to load input configuration file." << std::endl;
 	}
-#endif // ifndef _WIN32	
 
 	// Get the ROM path from the config file (if not already set)
 	if(romPath.empty() && cfgFile.good()){ 

@@ -107,29 +107,31 @@ typically works at the same speed as *Release*.
 
 ## Getting started
 
-To run OtterGB simply run the executable. The Windows version does not support 
-command line options but will instead load a config file named `default.cfg` which
+Both the Linux and Windows version of OtterGB support input configuration files.
+By default, OtterGB will attempt to load a config file named `default.cfg` which
 must be placed in the same directory as the executable. The config file contains
-many different emulator options that you can use to tweak performance. Linux builds
-may also use config files, but they are not loaded unless you specify the -c flag
-from the command line.
+many different emulator options that you can use to tweak performance. 
 
-The most important variables in the config file are **ROM_DIRECTORY** and **ROM_FILENAME**.
+All possible emulator options are listed in the `default.cfg` file supplied with the
+executable. The most important variables in the config file are **ROM_DIRECTORY** and
+**ROM_FILENAME**.
 
-**ROM_DIRECTORY** is used to specify the directory where your ROM files are placed. It may
-be a relative path or an absolute path but it is required. If the ROMs are in the 
-same directory as the executable just leave it as `.` or `./`
+**ROM_DIRECTORY** is used to specify the directory where your ROM files are placed. 
+It may be a relative path or an absolute path. If the ROMs are in the same directory 
+as the executable, just leave it as `.` or `./` or leave the option unspecified.
 
 **ROM_FILENAME** specifies the file to load on boot, but you can switch it in the emulator 
 console (press \` and then type `file <filename>`) or drag and drop a DMG or CGB file 
 onto the emulator window to load it. If **ROM_FILENAME** is not specified or if OtterGB
-fails to load the file, the emulator will boot to the OtterGB console. See the 
+fails to load the file, the emulator will boot into the OtterGB console instead. See the 
 [OtterGB Console](#ottergb-console-and-lr35902-interpreter) section below for more information.
 
-All possible emulator options are listed in `default.cfg`, but more may be added
-in the future.
-
 ### Windows builds
+
+The Windows version does not support command line options but instead supports system 
+paths being dropped on the *.exe* file. If the extension of the dropped file is *.cfg*,
+OtterGB will load it as a config file (instead of `default.cfg`), otherwise it will attempt 
+to load it as a ROM file.
 
 I get very inconsistent framerates on Windows. It seems a lot harder to do high-res
 frame timing on Windows than it is on Linux (for C++ at least), although this probably
@@ -145,13 +147,14 @@ offset values will **INCREASE** the framerate while negative values will **DECRE
 the emulator is running too fast.
 
 VSync is off by default (for the reasons above), but you may enable it by changing
-**VSYNC_ENABLED** to *true* in the config file or by using the emulator console (press 
+**VSYNC_FORCED** to *true* in the config file or by using the emulator console (press 
 the ` key and type `vsync`) while the emulator is running. See the 
 [OtterGB Console](#ottergb-console-and-lr35902-interpreter) section below.
 
 ### Linux builds
 
-On linux there are several command line options
+OtterGB may be run on Linux with or without command line arguments. The accepted
+command line arguments are shown below:
 
 | Option              | Args           | Description                                                |
 |:--------------------|:--------------:|:-----------------------------------------------------------|
@@ -169,12 +172,12 @@ On linux there are several command line options
 | --tile-viewer (-T)  |                | Enable VRAM tile viewer (if debug gui enabled)             |
 | --layer-viewer (-L) |                | Enable BG/WIN layer viewer (if debug gui enabled)          |
 
-The -c flag allows the use of a config file just as is used for Windows, but many
+The `-c` flag allows the use of a config file just as is used for Windows, but many
 config file options are duplicated with command line options and the command flags
 take priority.
 
-If a config file is not used (with the -c flag), the input filename MUST be
-specified, other the program will exit immediately.
+If a config file is not used (with the `-c` flag), the input filename must be
+specified, otherwise the program will boot to the console.
 
 ### Using bootstrap ROMs
 
