@@ -106,12 +106,12 @@ endif()
 
 #Set the DMG bootstrap ROM
 if(NOT DMG_BOOTSTRAP_ROM)
-	set(DMG_BOOTSTRAP_ROM "" CACHE STRING "DMG bootstrap program" FORCE)
+	set(DMG_BOOTSTRAP_ROM "bootstraps/dmg_boot.bin" CACHE STRING "DMG bootstrap program" FORCE)
 endif(NOT DMG_BOOTSTRAP_ROM)
 
 #Set the CGB bootstrap ROM
 if(NOT CGB_BOOTSTRAP_ROM)
-	set(CGB_BOOTSTRAP_ROM "" CACHE STRING "CGB bootstrap program" FORCE)
+	set(CGB_BOOTSTRAP_ROM "bootstraps/cgb_boot.bin" CACHE STRING "CGB bootstrap program" FORCE)
 endif(NOT CGB_BOOTSTRAP_ROM)
 
 #Add the graphics directory.

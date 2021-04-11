@@ -68,7 +68,7 @@ need. If all goes well and CMake completes successfully, type:
     make install
 ```
 
-To build and install OtterGB. The default binary install directory is *OtterGB/install/bin*, 
+To build and install OtterGB. The default binary install directory is `OtterGB/install/bin`, 
 this is where the *ottergb* executable is located.
 
 ### Windows
@@ -86,9 +86,8 @@ environment scripts OtterGB needs in order to build. And that should be all we
 need. 
 
 Save the CMake settings and hopefully CMake will complete successfully. Once this is
-done, build the project by clicking *Build->Build All* followed by *Build->Install OtterEngine* 
-to install the *ottergb* executable to the install directory (*OtterEngine/out/install/* 
-by default).
+done, build the project by clicking `Build->Build All` followed by `Build->Install OtterEngine` 
+to install the executable to the install directory (`OtterEngine/out/install/` by default).
 
 ### Additional Build Options
 
@@ -109,7 +108,7 @@ typically works at the same speed as *Release*.
 ## Getting started
 
 To run OtterGB simply run the executable. The Windows version does not support 
-command line options but will instead load a config file named *default.cfg* which
+command line options but will instead load a config file named `default.cfg` which
 must be placed in the same directory as the executable. The config file contains
 many different emulator options that you can use to tweak performance. Linux builds
 may also use config files, but they are not loaded unless you specify the -c flag
@@ -119,15 +118,15 @@ The most important variables in the config file are **ROM_DIRECTORY** and **ROM_
 
 **ROM_DIRECTORY** is used to specify the directory where your ROM files are placed. It may
 be a relative path or an absolute path but it is required. If the ROMs are in the 
-same directory as the executable just leave it as *.* or *./*
+same directory as the executable just leave it as `.` or `./`
 
 **ROM_FILENAME** specifies the file to load on boot, but you can switch it in the emulator 
-console (press ` and then type *file <filename>*) or drag and drop a DMG or CGB file 
+console (press \` and then type `file <filename>`) or drag and drop a DMG or CGB file 
 onto the emulator window to load it. If **ROM_FILENAME** is not specified or if OtterGB
 fails to load the file, the emulator will boot to the OtterGB console. See the 
 [OtterGB Console](#ottergb-console-and-lr35902-interpreter) section below for more information.
 
-All possible emulator options are listed in *default.cfg*, but more may be added
+All possible emulator options are listed in `default.cfg`, but more may be added
 in the future.
 
 ### Windows builds
@@ -147,7 +146,7 @@ the emulator is running too fast.
 
 VSync is off by default (for the reasons above), but you may enable it by changing
 **VSYNC_ENABLED** to *true* in the config file or by using the emulator console (press 
-the ` key and type *vsync*) while the emulator is running. See the 
+the ` key and type `vsync`) while the emulator is running. See the 
 [OtterGB Console](#ottergb-console-and-lr35902-interpreter) section below.
 
 ### Linux builds
@@ -183,12 +182,14 @@ OtterGB supports custom bootstrap ROMs on startup. Bootstraps have a maximum
 length of 16 kB and must contain compiled LR35902 code. They must also contain 
 no vital code between addresses 0x100 and 0x200 (byte numbers 256 to 512) because
 the cartridge ROM header needs to be visible to the emulator. Bootstrap program
-entry point must be byte 0, although you could use a *JP* at byte 0 to jump to the
+entry point must be byte 0, although you could use a `JP` at byte 0 to jump to the
 start of the program.
 
-The expected filenames for the CGB and DMG bootstrap programs are *cgb_bios.bin*
-and *DMG_ROM.bin* respectively and they must be placed in the same directory as
-the executable in order to function.
+By default, bootstrap programs are expected to exist in a subdirectory named 
+`./bootstraps/` which must be placed in the same directory as the executable in
+order to function. The expected filenames for the DMG and CGB bootstrap ROMs
+are `dmg_boot.bin` and `cgb_boot.bin` respectively. If OtterGB fails to locate
+the bootstrap ROMs, it will simply ignore them and start the input ROM immediately.
 
 The standard DMG and CGB bootstrap ROMs are not included with OtterGB because
 they contain potentially copyrighted material, but you can find them online.
@@ -223,12 +224,12 @@ config file.
 | F5  | Quicksave state     |
 | F6  | Decrease frame-skip (higher CPU usage) |
 | F7  | Increase frame-skip (lower CPU usage)  |
-| F8  | Save cart SRAM to *sram.dat*        |
+| F8  | Save cart SRAM to `sram.dat`        |
 | F9  | Quickload state                     |
-| F10 | Start/stop midi recording *out.mid* |
+| F10 | Start/stop midi recording `out.mid` |
 | F11 | Enable/disable full screen mode |
 | F12 | Take screenshot                 |
-| `   | Open interpreter console        |
+| \`  | Open interpreter console        |
 | -   | Decrease volume                 |
 | +   | Increase volume                 |
 | c   | Change currently active gamepad |
@@ -307,7 +308,7 @@ channel 1 or if it changes note frequency very rapidly.
 ## OtterGB console and LR35902 interpreter
 
 OtterGB contains a built in console and LR35902 interpreter. To enable the console,
-press ` at any time while the emulator is running. The console supports many
+press \` at any time while the emulator is running. The console supports many
 built-in commands as well as allowing direct read/write access to all CPU registers,
 system registers, and all 64 kB of system memory.
 

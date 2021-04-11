@@ -56,13 +56,13 @@ const std::string sysFatalError = " [System] FATAL ERROR! ";
 #ifdef DMG_BOOTSTRAP_ROM
 	const std::string bootstrapRomPathDMG(DMG_BOOTSTRAP_ROM);
 #else
-	const std::string bootstrapRomPathDMG("");
+	const std::string bootstrapRomPathDMG;
 #endif
 
 #ifdef CGB_BOOTSTRAP_ROM
 	const std::string bootstrapRomPathCGB(CGB_BOOTSTRAP_ROM);
 #else
-	const std::string bootstrapRomPathCGB("");
+	const std::string bootstrapRomPathCGB;
 #endif
 
 /** INTERRUPTS:
