@@ -563,13 +563,8 @@ void GPU::setColorPaletteDMG(){
 void GPU::setColorPaletteDMG(const unsigned short& paletteID){
 	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
 		return;
-#ifdef TOP_DIRECTORY
-	std::string path = std::string(TOP_DIRECTORY) + "/assets/palettes.dat";
-#else
-	std::string path = "./assets/palettes.dat";
-#endif // ifdef TOP_DIRECTORY
 	ColorPaletteDMG palette;
-	if(palette.find(path, paletteID, verboseMode)){
+	if(palette.find("assets/palettes.dat", paletteID, verboseMode)){
 		const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
 		for(int i = 0; i < 3; i++){
 			cgbPaletteColor[indices[i]][0] = palette[i][0];

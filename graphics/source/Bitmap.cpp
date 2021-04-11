@@ -62,13 +62,13 @@ void Bitmap::dump(){
 }
 
 CharacterMap::CharacterMap() : window(0x0) {
-	std::string path(TOP_DIRECTORY);
-	path += "/assets/cmap.dat";
-	loadCharacterMap(path);
 	palette[0] = Colors::WHITE;
 	palette[1] = Colors::LTGRAY;
 	palette[2] = Colors::DKGRAY;
 	palette[3] = Colors::BLACK;
+	if (!loadCharacterMap("assets/cmap.dat")) {
+		std::cout << " [CharacterMap] Error! Failed to load character map file \"assets/cmap.dat\"." << std::endl;
+	}
 }
 
 void CharacterMap::setPaletteColor(unsigned short &index, const ColorRGB &color){

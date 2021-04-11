@@ -160,8 +160,14 @@ install(
 
 # Install default configuration file
 install(
-	FILES "${TOP_DIRECTORY}/assets/default.cfg" 
+	FILES "${TOP_DIRECTORY}/assets/default.cfg"
 	DESTINATION bin
+)
+
+# Install default configuration file
+install(
+	FILES "${TOP_DIRECTORY}/assets/cmap.dat" "${TOP_DIRECTORY}/assets/palettes.dat"
+	DESTINATION bin/assets
 )
 
 # Install windows dlls

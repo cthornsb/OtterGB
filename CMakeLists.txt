@@ -72,7 +72,6 @@ ott_use_core()
 
 #Set the current working directory (needed by some files)
 set(TOP_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-DTOP_DIRECTORY="${TOP_DIRECTORY}")
 
 #Compiler definitions
 if(ENABLE_DEBUGGER)
