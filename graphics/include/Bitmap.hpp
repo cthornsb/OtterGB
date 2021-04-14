@@ -68,7 +68,7 @@ public:
 	/** Enable or disable text background transparency
 	  */
 	void setTransparency(bool state=true){ 
-		transparency = state; 
+		bTransparency = state; 
 	}
 
 	/** Load ascii character bitmaps from a file
@@ -92,11 +92,24 @@ public:
 	  */
 	void putString(const std::string &str, const unsigned short &x, const unsigned short &y, bool wrap=true);
 
+	/** Draw character string to external RAM image buffer with upper left corner at pixel offset of (x0, y0)
+	  */
+	void drawString(
+		const std::string& str,
+		const unsigned short& x0,
+		const unsigned short& y0,
+		OTTImageBuffer* buffer,
+		const unsigned char& alphaColor = 4,
+		bool invert = false
+	);
+
 protected:
 	OTTWindow *window; ///< Pointer to graphical display window
 	
-	bool transparency; ///< Set if text background transparency is enabled
+	bool bTransparency; ///< Set if text background transparency is enabled
 	
+	bool bInvertColors; ///< Set if pixel colors should be inverted
+
 	ColorRGB palette[4]; ///< Text color palette
 
 	Bitmap cmap[128]; ///< Ascii character map bitmaps

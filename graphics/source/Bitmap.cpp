@@ -61,11 +61,18 @@ void Bitmap::dump(){
 	std::cout << std::endl;
 }
 
-CharacterMap::CharacterMap() : window(0x0) {
-	palette[0] = Colors::WHITE;
-	palette[1] = Colors::LTGRAY;
-	palette[2] = Colors::DKGRAY;
-	palette[3] = Colors::BLACK;
+CharacterMap::CharacterMap() : 
+	window(0x0) ,
+	bTransparency(false),
+	bInvertColors(false),
+	palette{
+		Colors::WHITE,
+		Colors::LTGRAY,
+		Colors::DKGRAY,
+		Colors::BLACK
+	},
+	cmap()
+{
 	if (!loadCharacterMap("assets/cmap.dat")) {
 		std::cout << " [CharacterMap] Error! Failed to load character map file \"assets/cmap.dat\"." << std::endl;
 	}
@@ -78,7 +85,10 @@ void CharacterMap::setPaletteColor(unsigned short &index, const ColorRGB &color)
 
 bool CharacterMap::loadCharacterMap(const std::string &fname){
 	// Load the ascii character map
-	unsigned char rgb[16];
+	unsigned char rgb[16] = {
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0
+	};
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
 	if(!ifile.good())
 		return false;
@@ -95,7 +105,9 @@ void CharacterMap::putCharacter(const char &val, const unsigned short &x, const 
 	for(unsigned short dy = 0; dy < 8; dy++){
 		for(unsigned short dx = 0; dx < 8; dx++){
 			pixelColor = cmap[(unsigned int)val].get(dx, dy);
-			if(transparency && pixelColor == 0) // Transparent
+			if (bInvertColors)
+				pixelColor = 3 - pixelColor;
+			if (bTransparency && pixelColor == 0) // Transparent
 				continue;
 			window->buffWrite(
 				8 * x + dx, 
@@ -107,8 +119,8 @@ void CharacterMap::putCharacter(const char &val, const unsigned short &x, const 
 }
 
 void CharacterMap::putString(const std::string &str, const unsigned short &x, const unsigned short &y, bool wrap/*=true*/){
-	short sx = x;
-	short sy = y;
+	unsigned short sx = x;
+	unsigned short sy = y;
 	for(size_t i = 0; i < str.length(); i++){
 		putCharacter(str[i], sx++, sy);
 		if(sx >= 20){
@@ -117,5 +129,34 @@ void CharacterMap::putString(const std::string &str, const unsigned short &x, co
 			sx = 0;
 			sy++;
 		}
+	}
+}
+
+void CharacterMap::drawString(
+	const std::string& str, 
+	const unsigned short& x0, 
+	const unsigned short& y0, 
+	OTTImageBuffer* buffer, 
+	const unsigned char& alphaColor/* = 4*/, 
+	bool invert/* = false*/
+) {
+	unsigned short sx = x0;
+	unsigned char pixelColor;
+	for (size_t i = 0; i < str.length(); i++) {
+		for (unsigned short dy = 0; dy < 8; dy++) {
+			for (unsigned short dx = 0; dx < 8; dx++) {
+				pixelColor = cmap[(unsigned int)str[i]].get(dx, dy);
+				if (invert)
+					pixelColor = 3 - pixelColor;
+				if (pixelColor == alphaColor) // Transparent
+					continue;
+				buffer->setPixel(
+					sx + dx,
+					y0 + dy,
+					palette[pixelColor]
+				);
+			}
+		}
+		sx += 8;
 	}
 }
