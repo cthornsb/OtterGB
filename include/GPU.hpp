@@ -172,6 +172,10 @@ public:
 	  */
 	void readConfigFile(ConfigFile* config) override;
 
+	/** Load the splash screen and display it for a specified number of frames (default is 300 frames, or about 5 seconds)
+	  */
+	bool showSplashScreen(const int& displayFrames = 300);
+
 private:
 	bool bUserSelectedPalette; ///< Set if user has specified a DMG color palette to use for DMG games
 

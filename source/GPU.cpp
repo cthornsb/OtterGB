@@ -1,6 +1,8 @@
+#include <iostream> // TEMP
 #include <algorithm>
 
 #include "OTTWindow.hpp"
+#include "OTTTexture.hpp"
 
 #ifdef WIN32
 // "min" and "max" are macros defined in Windows.h
@@ -21,9 +23,6 @@ constexpr unsigned short VRAM_LOW  = 0x8000;
 constexpr unsigned short VRAM_HIGH = 0xA000;
 
 constexpr int MAX_SPRITES_PER_LINE = 10;
-
-constexpr int SCREEN_WIDTH_PIXELS  = 160;
-constexpr int SCREEN_HEIGHT_PIXELS = 144;
 
 GPU::GPU() :
 	SystemComponent("GPU", 0x20555050, 8192, 2, VRAM_LOW), // "PPU " (2 8kB banks of VRAM)
@@ -68,10 +67,10 @@ GPU::~GPU(){
 
 void GPU::initialize(){
 	// Create a new window
-	window.reset(new OTTWindow(SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS, 2));
+	window.reset(new OTTWindow(160, 144, 2));
 
 	// Setup the ascii character map for text output
-	console = std::unique_ptr<ConsoleGBC>(new ConsoleGBC());
+	console.reset(new ConsoleGBC());
 	console->setWindow(window.get());
 	console->setSystem(sys);
 	console->setTransparency(false);
@@ -82,10 +81,9 @@ void GPU::initialize(){
 	window->enableGamepad();
 	window->lockWindowAspectRatio(true);
 	window->disableVSync();
-	window->clear();
 
 	// Get a pointer to the output image buffer
-	imageBuffer = window->getBuffer();
+	imageBuffer = window->enableImageBuffer(false);
 	imageBuffer->setBlendMode(BlendMode::AVERAGE);
 
 	// Set default color palettes
@@ -532,10 +530,10 @@ void GPU::setPixelScale(const unsigned int &n){
 void GPU::setFrameBlur(const float& blur) {
 	fNextFrameOpacity = (1.f - std::min(std::max(blur, 0.f), 1.f)); // Clamp to the range 0 to 1
 	for (int i = 0; i < 4; i++)
-		dmgColorPalette[i].a = fNextFrameOpacity * 255;
+		dmgColorPalette[i].a = (unsigned char)(fNextFrameOpacity * 255);
 	for (int i = 0; i < 16; i++) { // Update the alpha (opacity) for all existing palette colors
 		for (int j = 0; j < 4; j++)
-			cgbPaletteColor[i][j].a = fNextFrameOpacity * 255;
+			cgbPaletteColor[i][j].a = (unsigned char)(fNextFrameOpacity * 255);
 	}
 }
 
@@ -821,8 +819,49 @@ void GPU::readConfigFile(ConfigFile* config) {
 		bInvertColors = true;
 	if (config->searchBoolFlag("GREEN_PALETTE_CGB")) // Set CGB game colors to monochrome green DMG palette
 		bGreenPaletteCGB = true;
-	if (config->search("FRAME_BLUR", true))
+	if (config->search("FRAME_BLUR_STRENGTH", true))
 		setFrameBlur(config->getFloat());
+	//if (config->searchBoolFlag("FRAME_FILTER_LINEAR"))
+	//	imageBuffer->
+}
+
+bool GPU::showSplashScreen(const int& displayFrames/* = 300*/) {
+	// Load splash screen textures
+	OTTTexture splash("assets/OtterIcon.png");
+	OTTTexture logo("assets/OtterLogo.png");
+	if (!splash.isGood() || !logo.isGood()) { // Failed to load
+		return false;
+	}
+	// Convert to an OpenGL textures for display
+	splash.getTexture(false); 
+	logo.getTexture(false);
+
+	// Generate a texture containing the version number
+	std::string version = "v" + sys->getVersionString();
+	OTTTexture versionTexture(version.length() * 8, 8, "version");
+	console->drawString(version, 0, 0, &versionTexture, 0, true);
+	versionTexture.getTexture(false);
+
+	float alpha = 1.f;
+	window->enableAlphaBlending();
+	window->setCurrent();
+	for (int i = 0; i < displayFrames; i++) {
+		window->clear();		
+		window->drawTexture(splash.getContext()); // Draw the splash background
+		window->drawTexture(versionTexture.getContext(), 0, 136, versionTexture.getWidth(), 144); // Draw the version
+		if (alpha > 0.f) { // Draw logo and fade it out
+			window->setDrawColor(ColorRGB(1.f, 1.f, 1.f, alpha));
+			window->drawTexture(logo.getContext());
+			if(i >= displayFrames / 2)
+				alpha -= 3.f / displayFrames;
+		}		
+		window->resetDrawColor();
+		window->processEvents();
+		window->render();		
+		sys->getClock()->sync();
+	}
+	window->disableAlphaBlending();
+	return true;
 }
 
 bool GPU::checkWindowVisible(){	

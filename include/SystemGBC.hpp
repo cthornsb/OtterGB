@@ -728,6 +728,8 @@ private:
 
 	bool bLayerViewerSelect; ///< 
 
+	bool bSkipSplashScreen; ///< Set if OtterGB splash screen should be skipped (when not using a bootstrap ROM)
+
 	bool bHardPaused; ///< Set if user has paused emulator manually, or if breakpoint reached
 
 	unsigned char dmaSourceH; ///< DMA source MSB
@@ -745,6 +747,10 @@ private:
 	std::string romFilename; ///< Input ROM filename (with no path or extension)
 	
 	std::string romExtension; ///< Input ROM file extension
+
+	std::string sBootstrapRomPathDMG; ///< File path to DMG bootstrap ROM
+
+	std::string sBootstrapRomPathCGB; ///< File path to DMG bootstrap ROM
 
 	SoundManager* audioInterface; ///< Pointer to sound output interface
 

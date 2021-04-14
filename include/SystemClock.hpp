@@ -100,11 +100,6 @@ public:
 	  */
 	void readConfigFile(ConfigFile* config) override;
 	
-	/** Sleep until the start of the next VSync cycle (i.e. wait until the start of the next frame)
-	  * Useful for maintaining desired framerate without advancing the system clock.
-	  */
-	void waitUntilNextVSync();
-	
 	/** Reset cycle counters, zero LY register, and handle LY - LYC coincidence check
 	  * If LCDC register bit 7 is set (LCD enabled) LCD driver mode is set to 2, otherwise driver mode is set to 1
 	  */

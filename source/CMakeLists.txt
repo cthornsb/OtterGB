@@ -164,9 +164,13 @@ install(
 	DESTINATION bin
 )
 
-# Install default configuration file
+# Install needed mutlimedia assets
 install(
-	FILES "${TOP_DIRECTORY}/assets/cmap.dat" "${TOP_DIRECTORY}/assets/palettes.dat"
+	FILES 
+	"${TOP_DIRECTORY}/assets/cmap.dat" 
+	"${TOP_DIRECTORY}/assets/palettes.dat"
+	"${TOP_DIRECTORY}/assets/OtterIcon.png"
+	"${TOP_DIRECTORY}/assets/OtterLogo.png"
 	DESTINATION bin/assets
 )
 

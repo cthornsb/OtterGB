@@ -36,7 +36,7 @@
 #endif
 
 #ifndef OTTERGB_VERSION
-#define OTTERGB_VERSION "0.9.1a"
+#define OTTERGB_VERSION "0.9.1b"
 #endif
 
 constexpr unsigned char SAVESTATE_VERSION = 0x1;
@@ -52,18 +52,6 @@ const std::string sysMessage    = " [System] ";
 const std::string sysWarning    = " [System] Warning: ";
 const std::string sysError      = " [System] Error! ";
 const std::string sysFatalError = " [System] FATAL ERROR! ";
-
-#ifdef DMG_BOOTSTRAP_ROM
-	const std::string bootstrapRomPathDMG(DMG_BOOTSTRAP_ROM);
-#else
-	const std::string bootstrapRomPathDMG;
-#endif
-
-#ifdef CGB_BOOTSTRAP_ROM
-	const std::string bootstrapRomPathCGB(CGB_BOOTSTRAP_ROM);
-#else
-	const std::string bootstrapRomPathCGB;
-#endif
 
 /** INTERRUPTS:
 	0x40 - VBlank interrupt (triggered at beginning of VBlank period [~59.7 Hz])
@@ -116,6 +104,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	bVSyncEnabled(true),
 	bForceVSync(false),
 	bLayerViewerSelect(true),
+	bSkipSplashScreen(false),
 	bHardPaused(false),
 	dmaSourceH(0),
 	dmaSourceL(0),
@@ -125,6 +114,16 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	romDirectory(),
 	romFilename(),
 	romExtension(),
+#ifdef DMG_BOOTSTRAP_ROM
+	sBootstrapRomPathDMG(DMG_BOOTSTRAP_ROM),
+#else
+	sBootstrapRomPathDMG(),
+#endif // ifdef DMG_BOOTSTRAP_ROM
+#ifdef CGB_BOOTSTRAP_ROM
+	sBootstrapRomPathCGB(CGB_BOOTSTRAP_ROM),
+#else
+	sBootstrapRomPathCGB(),
+#endif // ifdef CGB_BOOTSTRAP_ROM
 	audioInterface(&SoundManager::getInstance()),
 	window(0x0),
 	serial(),
@@ -277,6 +276,12 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 			openTileViewer();
 		if (cfgFile.searchBoolFlag("OPEN_LAYER_VIEWER")) // Open layer viewer window
 			openLayerViewer();
+		if (cfgFile.searchBoolFlag("SKIP_SPLASH_SCREEN")) // Skip OtterGB splash screen
+			bSkipSplashScreen = true;
+		if (cfgFile.search("BOOTSTRAP_PATH_DMG", true)) // Skip OtterGB splash screen
+			sBootstrapRomPathDMG = cfgFile.getValue();
+		if (cfgFile.search("BOOTSTRAP_PATH_CGB", true)) // Skip OtterGB splash screen
+			sBootstrapRomPathCGB = cfgFile.getValue();
 
 		// Read component settings from config file
 		for (auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++) {
@@ -468,7 +473,7 @@ bool SystemGBC::execute(){
 			gpu->render();
 
 			// Maintain framerate but do not advance the system clock
-			sclk->waitUntilNextVSync();
+			sclk->sync();
 		}
 	}
 #ifdef USE_QT_DEBUGGER
@@ -1177,23 +1182,23 @@ bool SystemGBC::reset() {
 		bool loadBootROM = false;
 		std::ifstream bootstrap;
 		if(bGBCMODE){
-			if(!bootstrapRomPathCGB.empty()){
+			if(!sBootstrapRomPathCGB.empty()){
 				if(verboseMode)
-					std::cout << sysMessage << "Loading CGB bootstrap \"" << bootstrapRomPathCGB << "\"." << std::endl;
-				bootstrap.open(bootstrapRomPathCGB.c_str(), std::ios::binary);
+					std::cout << sysMessage << "Loading CGB bootstrap \"" << sBootstrapRomPathCGB << "\"." << std::endl;
+				bootstrap.open(sBootstrapRomPathCGB.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load CGB bootstrap ROM \"" << bootstrapRomPathCGB << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load CGB bootstrap ROM \"" << sBootstrapRomPathCGB << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}
 		}
 		else{
-			if(!bootstrapRomPathDMG.empty()){
+			if(!sBootstrapRomPathDMG.empty()){
 				if(verboseMode)
-					std::cout << sysMessage << "Loading DMG bootstrap \"" << bootstrapRomPathDMG << "\"." << std::endl;
-				bootstrap.open(bootstrapRomPathDMG.c_str(), std::ios::binary);
+					std::cout << sysMessage << "Loading DMG bootstrap \"" << sBootstrapRomPathDMG << "\"." << std::endl;
+				bootstrap.open(sBootstrapRomPathDMG.c_str(), std::ios::binary);
 				if(!bootstrap.good())
-					std::cout << sysWarning << "Failed to load DMG bootstrap ROM \"" << bootstrapRomPathDMG << "\"." << std::endl;
+					std::cout << sysWarning << "Failed to load DMG bootstrap ROM \"" << sBootstrapRomPathDMG << "\"." << std::endl;
 				else
 					loadBootROM = true;
 			}
@@ -1257,6 +1262,10 @@ bool SystemGBC::reset() {
 			}
 			bGBCMODE = false; // Disable CGB mode so that DMG graphics display correctly
 		}
+
+		// Display ottergb splash screen (if no bootstrap)
+		if(!bSkipSplashScreen)
+			gpu->showSplashScreen();
 	}
 	else{ 
 		cpu->setProgramCounter(0); // Set program counter to beginning of bootstrap ROM

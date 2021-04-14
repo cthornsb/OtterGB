@@ -40,7 +40,7 @@ void SystemClock::setFramerateMultiplier(const float &freq){
 }
 
 void SystemClock::setDoubleSpeedMode(){
-	waitUntilNextVSync();
+	this->sync();
 	currentClockSpeed = SYSTEM_CLOCK_FREQUENCY * 2;
 	modeStart[0] = MODE0_START * 2;
 	modeStart[1] = MODE1_START * 2;
@@ -56,7 +56,7 @@ void SystemClock::setDoubleSpeedMode(){
 }
 
 void SystemClock::setNormalSpeedMode(){
-	waitUntilNextVSync();
+	this->sync();
 	currentClockSpeed = SYSTEM_CLOCK_FREQUENCY;
 	modeStart[0] = MODE0_START;
 	modeStart[1] = MODE1_START;
@@ -141,7 +141,7 @@ bool SystemClock::onClockUpdate(){
 		}
 	}
 	else{ // Start the next frame (Mode 1->2)
-		waitUntilNextVSync(); // vsync flag set to false
+		this->sync(); // vsync flag set to false
 		resetScanline(); // VBlank period has ended, next frame started
 		//startMode2(); // resetScanline() automatically starts mode 2
 	}
@@ -187,10 +187,6 @@ bool SystemClock::compareScanline(){
 		return true;
 	}
 	return false;
-}
-
-void SystemClock::waitUntilNextVSync(){
-	this->sync();
 }
 
 void SystemClock::startMode0(){
