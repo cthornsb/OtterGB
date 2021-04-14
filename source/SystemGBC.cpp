@@ -7,6 +7,7 @@
 #include "OTTImageBuffer.hpp"
 #include "OTTKeyboard.hpp"
 #include "OTTJoypad.hpp"
+#include "OTTSystem.hpp"
 
 #include "Support.hpp"
 #include "SystemGBC.hpp"
@@ -155,6 +156,16 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	winScrollPositions(),
 	subsystems()
 { 
+	// Check that the CWD is the same as the executable.
+	// The directory will probably need to be changed when running ROMs from the file explorer.
+	std::string sCurrentDir = ott::getCurrentWorkingDirectory();
+	std::string sExecuteDir = ott::getExecutingDirectory();
+	if (sCurrentDir != sExecuteDir) {
+		std::cout << sysMessage << "Current directory is not the same directory as the executable" << std::endl;
+		std::cout << sysMessage << "Changing directory to \"" << sExecuteDir << "\"" << std::endl;
+		ott::setCurrentWorkingDirectory(sExecuteDir);
+	}
+
 	// Configuration file handler
 	std::string configFilePath = "default.cfg";
 	ConfigFile cfgFile;
