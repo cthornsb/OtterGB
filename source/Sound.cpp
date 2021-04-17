@@ -649,6 +649,10 @@ void SoundProcessor::readConfigFile(ConfigFile* config) {
 		mixer->setOffsetDC(config->getFloat());
 	if (config->search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
 		setSampleRate(config->getFloat());
+	if (config->search("AUDIO_PACKET_SIZE", true)) { // Set the number of samples in outgoing audio packet
+		audio->setFramesPerBuffer(config->getUInt());
+		mixer->setNumberSamplesPerBuffer(config->getUInt());
+	}
 	mixer->setOutputLevels(fLeftVolume, fRightVolume);
 }
 
