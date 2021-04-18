@@ -12,8 +12,13 @@
 #include "ComponentThread.hpp"
 
 class Register;
+
 class OTTWindow;
+
+class OTTCharacterMap;
+
 class OTTImageBuffer;
+
 class ConsoleGBC;
 
 enum class PPUMODE{
@@ -183,11 +188,11 @@ private:
 
 	bool bWinDisplayEnable; ///< Set if the window layer is enabled and is on screen
 
-	bool bGrayscalePalette; ///< Set if grayscale DMG palette will be used in place of the default green monochrome
+	bool bGrayscalePalette; ///< If set, grayscale DMG palette will be used in place of the default green monochrome
 
-	bool bInvertColors; ///< Set if all palette colors will be inverted
+	bool bInvertColors; ///< If set, all palette colors will be inverted
 
-	bool bGreenPaletteCGB; ///< Set if the green DMG palette will be used even for CGB games
+	bool bGreenPaletteCGB; ///< If set, the green DMG palette will be used even for CGB games
 
 	unsigned char nScanline; ///< Current LCD scanline
 	
@@ -210,9 +215,11 @@ private:
 	ColorRGB cgbPaletteColor[16][4]; ///< RGB colors for GBC background and sprite palettes 0-7
 
 	std::unique_ptr<OTTWindow> window; ///< Pointer to the main renderer window
+
+	std::unique_ptr<OTTCharacterMap> cmap; ///< Pointer to text output character map
 	
-	std::unique_ptr<ConsoleGBC> console; ///< Pointer to the console object used for printing text.
-	
+	std::unique_ptr<ConsoleGBC> console; ///< Pointer to the console object used for printing text.	
+
 	ColorGBC currentLineSprite[256]; ///< Pixel color and palette information for the current sprite layer scanline
 	
 	ColorGBC currentLineWindow[256]; ///< Pixel color and palette information for the current window layer scanline

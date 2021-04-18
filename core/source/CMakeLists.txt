@@ -11,7 +11,6 @@ add_library(
 	Support.cpp
 	SystemComponent.cpp
 	Register.cpp
-	TextParser.cpp
 )
 else() # Windows
 add_library(
@@ -24,7 +23,6 @@ add_library(
 	Support.cpp
 	SystemComponent.cpp
 	Register.cpp
-	TextParser.cpp
 )
 endif()
 

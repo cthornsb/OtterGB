@@ -1,8 +1,9 @@
 #include <iostream> // TEMP
 #include <algorithm>
 
-#include "OTTWindow.hpp"
-#include "OTTTexture.hpp"
+#include <OTTWindow.hpp>
+#include <OTTTexture.hpp>
+#include <OTTCharacterMap.hpp>
 
 #ifdef WIN32
 // "min" and "max" are macros defined in Windows.h
@@ -70,10 +71,19 @@ void GPU::initialize(){
 	window.reset(new OTTWindow(160, 144, 2));
 
 	// Setup the ascii character map for text output
+	auto getBitmapPixel = [](const unsigned short& x, const unsigned short& y, const unsigned char* data) {
+		unsigned char dx = 7 - x;
+		unsigned char pixelColor = ((data[2 * y] & (0x1 << dx)) >> dx) + (((data[2 * y + 1] & (0x1 << dx)) >> dx) << 1); // [0,3]
+		return pixelColor; // [0,3]
+	};
+	cmap.reset(new OTTCharacterMap("assets/cmap.dat", 8, 8, 2, getBitmapPixel));
+	cmap->setForegroundColor(dmgColorPalette[3]);
+	cmap->setBackgroundColor(dmgColorPalette[0]);
+
 	console.reset(new ConsoleGBC());
-	console->setWindow(window.get());
+	console->setOutputWindow(window.get());
+	console->setCharacterMap(cmap.get());
 	console->setSystem(sys);
-	console->setTransparency(false);
 
 	// Setup the window
 	window->initialize("ottergb");
@@ -234,7 +244,7 @@ bool GPU::drawSprite(const unsigned char& y, const SpriteAttributes& oam) {
 
 void GPU::drawConsole(){
 	console->update();
-	console->draw();
+	console->draw(window->getBuffer());
 }
 
 void GPU::drawTileMaps(OTTWindow *win){
@@ -592,7 +602,7 @@ void GPU::setOperationMode(const PPUMODE& newMode){
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
-	console->putString(str, x, y);
+	//console->putString(str, x, y);
 }
 
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
@@ -819,6 +829,10 @@ void GPU::readConfigFile(ConfigFile* config) {
 		bInvertColors = true;
 	if (config->searchBoolFlag("GREEN_PALETTE_CGB")) // Set CGB game colors to monochrome green DMG palette
 		bGreenPaletteCGB = true;
+	if (config->searchBoolFlag("CONSOLE_NIGHT_MODE")) { // Invert console background and foreground colors
+		cmap->setForegroundColor(dmgColorPalette[0]);
+		cmap->setBackgroundColor(dmgColorPalette[3]);
+	}
 	if (config->search("FRAME_BLUR_STRENGTH", true))
 		setFrameBlur(config->getFloat());
 	//if (config->searchBoolFlag("FRAME_FILTER_LINEAR"))
@@ -839,7 +853,7 @@ bool GPU::showSplashScreen(const int& displayFrames/* = 300*/) {
 	// Generate a texture containing the version number
 	std::string version = "v" + sys->getVersionString();
 	OTTTexture versionTexture(version.length() * 8, 8, "version");
-	console->drawString(version, 0, 0, &versionTexture, 0, true);
+	//console->drawString(version, 0, 0, &versionTexture, 0, true);
 	versionTexture.getTexture(false);
 
 	float alpha = 1.f;

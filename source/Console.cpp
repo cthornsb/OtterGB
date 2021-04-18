@@ -1,5 +1,5 @@
-#include "OTTWindow.hpp"
-#include "OTTKeyboard.hpp"
+#include <OTTWindow.hpp>
+#include <OTTKeyboard.hpp>
 
 #include "SystemGBC.hpp"
 #include "LR35902.hpp"
@@ -7,55 +7,34 @@
 #include "Support.hpp"
 #include "Cartridge.hpp"
 
+enum cmdType {
+	NONE,
+	CLOSE,     ///< Close console
+	ABOUT,     ///< Print program details
+	REG8,      ///< Get or set 8-bit register
+	REG16,     ///< Get or set 16-bit register
+	INST,      ///< Print most recent instruction
+	READ,      ///< Read from memory
+	WRITE,     ///< Write to memory
+	READREG,   ///< Read system register
+	WRITEREG,  ///< Write system register
+	HEX,       ///< Convert a value to hexadecimal
+	BIN,       ///< Convert a value to binary
+	DEC,       ///< Convert a value to decimal
+	RESET,     ///< Reset emulator
+	QSAVE,     ///< Quick-save
+	QLOAD,     ///< Quick-load
+	DIRECTORY, ///< ROM directory
+	FILENAME,  ///< ROM filename
+	VSYNC,     ///< Toggle VSync on/off
+};
+
+
 ConsoleGBC::ConsoleGBC() :
-	CharacterMap(),
-	nCols(20), 
-	nRows(18), 
-	nX(0), 
-	nY(0),
-	strbuff(),
-	line(),
-	buffer(nRows, std::string(nCols, ' '))
+	OTTConsole(20, 18),
+	sys(0x0)
 { 
-	addConsoleCommand("quit", 0, cmdType::QUIT, "", "Exit emulator");
-	addConsoleCommand("exit", 0, cmdType::QUIT, "", "Exit emulator");
-	addConsoleCommand("close",0, cmdType::CLOSE, "", "Close console");
-	addConsoleCommand("help", 0, cmdType::HELP, "[cmd]", "Print list of commands or syntax for (cmd)");
-	addConsoleCommand("about",0, cmdType::ABOUT, "", "Print program information");
-	addConsoleCommand("version",0, cmdType::ABOUT, "", "Print program information");
-	addConsoleCommand("a",    0, cmdType::REG8, "[val]", "Print A register");
-	addConsoleCommand("b",    0, cmdType::REG8, "[val]", "Print B register");
-	addConsoleCommand("c",    0, cmdType::REG8, "[val]", "Print C register");
-	addConsoleCommand("d",    0, cmdType::REG8, "[val]", "Print D register");
-	addConsoleCommand("e",    0, cmdType::REG8, "[val]", "Print E register");
-	addConsoleCommand("f",    0, cmdType::REG8, "[val]", "Print F register");
-	addConsoleCommand("h",    0, cmdType::REG8, "[val]", "Print H register");
-	addConsoleCommand("l",    0, cmdType::REG8, "[val]", "Print L register");
-	addConsoleCommand("d8",   0, cmdType::REG8, "[val]", "Print d8 immediate");
-	addConsoleCommand("af",   0, cmdType::REG16, "[val]", "Print AF register");
-	addConsoleCommand("bc",   0, cmdType::REG16, "[val]", "Print BC register");
-	addConsoleCommand("de",   0, cmdType::REG16, "[val]", "Print DE register");
-	addConsoleCommand("hl",   0, cmdType::REG16, "[val]", "Print HL register");
-	addConsoleCommand("pc",   0, cmdType::REG16, "[val]", "Print program counter");
-	addConsoleCommand("sp",   0, cmdType::REG16, "[val]", "Print stack pointer");
-	addConsoleCommand("d16",  0, cmdType::REG16, "[val]", "Print d16 immediate");
-	addConsoleCommand("inst", 0, cmdType::INST, "", "Print instruction");
-	addConsoleCommand("read", 1, cmdType::READ, "<addr>", "Read byte at address");
-	addConsoleCommand("write",2, cmdType::WRITE, "<addr> <val>", "Write byte to address");
-	addConsoleCommand("rreg", 1, cmdType::READREG, "<reg>", "Read system register");
-	addConsoleCommand("wreg", 2, cmdType::WRITEREG, "<reg> <val>", "Write system register");
-	addConsoleCommand("hex",  1, cmdType::HEX, "<val>", "Convert value to hex");
-	addConsoleCommand("bin",  1, cmdType::BIN, "<val>", "Convert value to binary");
-	addConsoleCommand("dec",  1, cmdType::DEC, "<val>", "Convert value to decimal");
-	addConsoleCommand("cls",  0, cmdType::CLS, "", "Clear screen");
-	addConsoleCommand("reset",0, cmdType::RESET, "", "Reset emulator");
-	addConsoleCommand("qsave",0, cmdType::QSAVE, "[fname]", "Quicksave");
-	addConsoleCommand("qload",0, cmdType::QLOAD, "[fname]", "Quickload");
-	addConsoleCommand("dir"  ,0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
-	addConsoleCommand("file" ,0, cmdType::FILENAME, "[fname]", "Print ROM filename");
-	addConsoleCommand("vsync",0, cmdType::VSYNC, "", "Toggle VSync on or off");
-	addConsoleCommand("echo", 0, cmdType::ECHO, "", "Echo console input");
-	put('>');
+	initialize();
 }
 
 void ConsoleGBC::setSystem(SystemGBC* ptr) { 
@@ -81,136 +60,78 @@ void ConsoleGBC::setSystem(SystemGBC* ptr) {
 	parser.addExternalDefinition("sp", CPPTYPE::UINT16, cpu->getPointerToRegister16bit("sp"));
 }
 
-void ConsoleGBC::newline(){
-	buffer.pop_front();
-	//if(nX > 1)
-	//	line += buffer.back().substr(1, nX-1);
-	buffer.push_back(std::string(nCols, ' '));
-	nX = 0;
+void ConsoleGBC::onUserAddCommands() {
+	addConsoleCommand("close", 0, cmdType::CLOSE, "", "Close console");
+	addConsoleCommand("about", 0, cmdType::ABOUT, "", "Print program information");
+	addConsoleCommand("version", 0, cmdType::ABOUT, "", "Print program information");
+	addConsoleCommand("a", 0, cmdType::REG8, "[val]", "Print A register");
+	addConsoleCommand("b", 0, cmdType::REG8, "[val]", "Print B register");
+	addConsoleCommand("c", 0, cmdType::REG8, "[val]", "Print C register");
+	addConsoleCommand("d", 0, cmdType::REG8, "[val]", "Print D register");
+	addConsoleCommand("e", 0, cmdType::REG8, "[val]", "Print E register");
+	addConsoleCommand("f", 0, cmdType::REG8, "[val]", "Print F register");
+	addConsoleCommand("h", 0, cmdType::REG8, "[val]", "Print H register");
+	addConsoleCommand("l", 0, cmdType::REG8, "[val]", "Print L register");
+	addConsoleCommand("d8", 0, cmdType::REG8, "[val]", "Print d8 immediate");
+	addConsoleCommand("af", 0, cmdType::REG16, "[val]", "Print AF register");
+	addConsoleCommand("bc", 0, cmdType::REG16, "[val]", "Print BC register");
+	addConsoleCommand("de", 0, cmdType::REG16, "[val]", "Print DE register");
+	addConsoleCommand("hl", 0, cmdType::REG16, "[val]", "Print HL register");
+	addConsoleCommand("pc", 0, cmdType::REG16, "[val]", "Print program counter");
+	addConsoleCommand("sp", 0, cmdType::REG16, "[val]", "Print stack pointer");
+	addConsoleCommand("d16", 0, cmdType::REG16, "[val]", "Print d16 immediate");
+	addConsoleCommand("inst", 0, cmdType::INST, "", "Print instruction");
+	addConsoleCommand("read", 1, cmdType::READ, "<addr>", "Read byte at address");
+	addConsoleCommand("write", 2, cmdType::WRITE, "<addr> <val>", "Write byte to address");
+	addConsoleCommand("rreg", 1, cmdType::READREG, "<reg>", "Read system register");
+	addConsoleCommand("wreg", 2, cmdType::WRITEREG, "<reg> <val>", "Write system register");
+	addConsoleCommand("hex", 1, cmdType::HEX, "<val>", "Convert value to hex");
+	addConsoleCommand("bin", 1, cmdType::BIN, "<val>", "Convert value to binary");
+	addConsoleCommand("dec", 1, cmdType::DEC, "<val>", "Convert value to decimal");
+	addConsoleCommand("reset", 0, cmdType::RESET, "", "Reset emulator");
+	addConsoleCommand("qsave", 0, cmdType::QSAVE, "[fname]", "Quicksave");
+	addConsoleCommand("qload", 0, cmdType::QLOAD, "[fname]", "Quickload");
+	addConsoleCommand("dir", 0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
+	addConsoleCommand("file", 0, cmdType::FILENAME, "[fname]", "Print ROM filename");
+	addConsoleCommand("vsync", 0, cmdType::VSYNC, "", "Toggle VSync on or off");
 }
 
-void ConsoleGBC::put(const char &c){
-	if(nX >= nCols) // New line
-		newline();
-	buffer.back()[nX++] = c;
-	if(nX >= nCols)
-		newline();
-	buffer.back()[nX] = '_';
+void ConsoleGBC::onUserPrompt() {
+	put('>');
 }
 
-void ConsoleGBC::unput(){
-	if(nX <= 1){ // Do nothing (for now)
-		return;
+bool ConsoleGBC::onUserUnknownCommand(const std::vector<std::string>& args) {
+	// CPU opcodes
+	OpcodeData data;
+	if (sys->getCPU()->findOpcode(line, data)) { // Valid LR35902 opcode found
+		sys->getCPU()->getOpcodeHandler()->execute(&data);
+		(*this) << data.getShortInstruction() << "\n";
+		return true;
 	}
-	buffer.back()[nX--] = ' ';
-	buffer.back()[nX] = '_';
-}
-
-void ConsoleGBC::update(){
-	// Poll the screen controller to check for button presses.
-	OTTKeyboard *keys = window->getKeypress();
-	char keypress;
-	while(keys->get(keypress)){
-		handle(keypress);
-	}
-}
-
-void ConsoleGBC::draw(){
-	for(unsigned short y = 0; y < nRows; y++){
-		for(unsigned short x = 0; x < nCols; x++){
-			putCharacter(buffer[y][x], x, y);
+	// System registers
+	std::string regname = toUppercase(args.front());
+	Register* reg = sys->getRegisterByName(regname);
+	if (reg) { // System register
+		if (args.size() >= 2) { // Write register
+			reg->write(getUserInputUChar(args.at(1)));
 		}
-	}
-}
-
-void ConsoleGBC::handle(const char& c, bool flag/*=true*/){
-	if(c == '\t'){ // Tab
-		for(unsigned short i = 0; i < (nX/4+1)*4-nX; i++)
-			put(' ');
-	}
-	else if(c == '\n' || c == '\r'){ // New line
-		buffer.back()[nX] = ' ';
-		newline();
-		if(flag){ // User input
-			handleInput();
-			put('>');
+		else { // Read register
+			(*this) << getHex(reg->read()) << " (" << getBinary(reg->read()) << ")\n";
 		}
-		line = "";
+		return true;
 	}
-	else if(c == 0x8){ // Backspace
-		if(!line.empty()) // Pop off the last character
-			line.pop_back();
-		unput();
-	}
-	else{
-		line += c;
-		put(c);
-	}
+	return false;
 }
 
-void ConsoleGBC::handleInput(){
+void ConsoleGBC::onUserHandleInput(ConsoleCommand* cmd, const std::vector<std::string>& args) {
 	//handle user input commands here
-	if(bEcho){
-		(*this) << line << "\n";
-	}
 	LR35902 *cpu = sys->getCPU();
 	Register* reg = 0x0;
-	std::vector<std::string> args;
-	unsigned int nArgs = splitString(line, args, ' ');
-	if(!nArgs)
-		return;
-	std::string cmdstr = args.front();
-	auto iter = commands.find(cmdstr);
-	if(iter == commands.end()){
-		// Mathematical expression
-		if (parser.isExpression(line)) {
-			NumericalString value;
-			if (parser.parse(line, value)) {
-				if(value.type == NUMTYPE::INTEGER)
-					(*this) << value.getUInt() << "\n";
-				else if(value.type == NUMTYPE::BOOLEAN)
-					(*this) << (value.getBool() ? "true" : "false") << "\n";
-			}
-			else {
-				(*this) << "invalid syntax\n";
-			}
-			return;
-		}	
-		// CPU opcodes
-		OpcodeData data;
-		if(cpu->findOpcode(line, data)){ // Valid LR35902 opcode found
-			cpu->getOpcodeHandler()->execute(&data);
-			(*this) << data.getShortInstruction() << "\n";
-			return;
-		}
-		// System registers
-		std::string regname = toUppercase(args.front());
-		Register* reg = sys->getRegisterByName(regname);
-		if(reg){
-			if(nArgs >= 2){ // Write register
-				reg->write(getUserInputUChar(args.at(1)));
-			}
-			else{ // Read register
-				(*this) << getHex(reg->read()) << " (" << getBinary(reg->read()) << ")\n";
-			}
-			return;
-		}
-		(*this) << "unknown command\n";
-		return;
-	}
-	ConsoleCommand* cmd = &iter->second;
-	if(nArgs-1 < cmd->getRequiredArgs()){
-		(*this) << "syntax error\n";
-		(*this) << cmd->getName() << " " << cmd->getArgStr() << "\n";
-		return;
-	}
+	std::string cmdstr = cmd->getName();
 	unsigned char d8;
 	unsigned short d16;
-	switch(cmd->getType()){
+	switch(cmd->getID()){
 		case cmdType::NONE:
-			break;
-		case cmdType::QUIT:
-			sys->quit();
 			break;
 		case cmdType::CLOSE:
 			if(sys->getCartridge()->isLoaded())
@@ -218,34 +139,13 @@ void ConsoleGBC::handleInput(){
 			else
 				(*this) << "No ROM loaded\n";
 			break;
-		case cmdType::HELP:
-			if(nArgs >= 2){ // User specified command to print syntax for
-				for(auto allcmd = commands.cbegin(); allcmd != commands.cend(); allcmd++){
-					if(allcmd->first == args.at(1)){
-						(*this) << "syntax:\n";
-						(*this) << " " << allcmd->second.getName() << " " << allcmd->second.getArgStr() << "\n";
-						return;
-					}
-				}
-				(*this) << "unknown command\n";
-			}
-			else{
-				d16 = 0;
-				clear();
-				for(auto allcmd = commands.cbegin(); allcmd != commands.cend(); allcmd++){
-					if(d16++ >= nRows-1)
-						continue;
-					(*this) << allcmd->first << "\n";
-				}
-			}
-			break;
 		case cmdType::ABOUT:
 			(*this) << "OtterGB v" << sys->getVersionString() << "\n";
 			(*this) << "by C Thornsberry\n";
 			(*this) << "github.com/cthornsb\n";
 			break;
 		case cmdType::REG8: // 8 bit cpu registers
-			if(nArgs >= 2){
+			if(args.size() >= 2){
 				cpu->setRegister8bit(args.front(), getUserInputUChar(args.at(1)));
 			}
 			else{
@@ -254,7 +154,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::REG16: // 16 bit cpu registers
-			if(nArgs >= 2){
+			if(args.size() >= 2){
 				cpu->setRegister16bit(args.front(), getUserInputUChar(args.at(1)));
 			}
 			else{
@@ -322,9 +222,6 @@ void ConsoleGBC::handleInput(){
 		case cmdType::DEC:
 			(*this) << getUserInputUShort(args.at(1)) << "\n";
 			break;
-		case cmdType::CLS: // clear screen
-			clear();
-			break;
 		case cmdType::RESET: // Reset
 			if(sys->getCartridge()->isLoaded()){
 				if (sys->reset())
@@ -337,7 +234,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::QSAVE: // Quicksave
-			if(nArgs >= 2){ // User specified filename
+			if(args.size() >= 2){ // User specified filename
 				sys->quicksave(args.at(1));
 			}
 			else{
@@ -345,7 +242,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::QLOAD: // Quickload
-			if(nArgs >= 2){ // User specified filename
+			if(args.size() >= 2){ // User specified filename
 				sys->quickload(args.at(1));
 			}
 			else{
@@ -353,7 +250,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::DIRECTORY: // Display / set ROM directory
-			if(nArgs >= 2){ // User specified filename
+			if(args.size() >= 2){ // User specified filename
 				sys->setRomDirectory(args.at(1));
 			}
 			else{
@@ -361,7 +258,7 @@ void ConsoleGBC::handleInput(){
 			}
 			break;
 		case cmdType::FILENAME: // Display / set ROM filename
-			if(nArgs >= 2){ // User specified filename
+			if(args.size() >= 2){ // User specified filename
 				sys->setRomFilename(args.at(1));
 				if(sys->reset())
 					sys->closeDebugConsole();
@@ -382,27 +279,7 @@ void ConsoleGBC::handleInput(){
 				(*this) << "vsync disabled\n";
 			}
 			break;
-		case cmdType::ECHO: // Toggle console echo on/off
-			bEcho = !bEcho;
-			break;
 		default:
 			break;
 	}
-}
-
-void ConsoleGBC::addConsoleCommand(const std::string& name, const unsigned short& args, const cmdType& type, const std::string& argstr, const std::string& helpstr){
-	commands[name] = ConsoleCommand(name, args, type, argstr, helpstr);
-}
-
-void ConsoleGBC::flush(){
-	for(size_t i = 0; i < strbuff.length(); i++){
-		handle(strbuff[i], false);
-	}
-	strbuff = "";
-}
-
-void ConsoleGBC::clear(){
-	buffer.clear();
-	for(unsigned short i = 0; i < nRows; i++)
-		buffer.push_back(std::string(nCols, ' '));
 }

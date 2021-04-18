@@ -1,7 +1,6 @@
 add_library(
 	GRAPHICS_OBJECTS 
 	OBJECT
-	Bitmap.cpp
 	ColorGBC.cpp 
 	ColorPalette.cpp
 	ComponentThread.cpp
