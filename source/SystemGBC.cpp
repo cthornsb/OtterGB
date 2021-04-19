@@ -31,6 +31,7 @@
 #include "Serial.hpp"
 #include "SoundManager.hpp"
 #include "MidiFile.hpp"
+#include "Console.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	#include "mainwindow.h"
@@ -448,7 +449,7 @@ bool SystemGBC::execute(){
 				// Render the current frame
 				if(nFrames++ % frameSkip == 0 && !cpuStopped){
 					if(displayFramerate)
-						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 17);
+						gpu->print(doubleToStr(sclk->getFramerate(), 1)+" fps", 0, 136);
 					gpu->render(); // Draw frame
 				}
 				if(debugMode){
@@ -471,7 +472,7 @@ bool SystemGBC::execute(){
 			if (!consoleIsOpen) { // Check for system key presses
 				checkSystemKeys();
 				if (displayFramerate)
-					gpu->print(doubleToStr(sclk->getFramerate(), 1) + " fps", 0, 17);
+					gpu->print(doubleToStr(sclk->getFramerate(), 1) + " fps", 0, 136);
 			}
 			else { // Update the interpreter console
 				gpu->drawConsole();
@@ -1502,9 +1503,10 @@ void SystemGBC::help(){
 }
 
 void SystemGBC::openDebugConsole(){
+	gpu->getConsole()->refresh();
 	window->setKeyboardStreamMode();
 	consoleIsOpen = true;
-	pause();
+	pause();	
 }
 
 void SystemGBC::closeDebugConsole(){

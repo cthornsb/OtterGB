@@ -602,7 +602,7 @@ void GPU::setOperationMode(const PPUMODE& newMode){
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
-	//console->putString(str, x, y);
+	cmap->drawString(str, x, y, window->getBuffer());
 }
 
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){

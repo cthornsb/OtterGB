@@ -123,6 +123,12 @@ public:
 	/** Get a 15-bit color (5-bit RGB components) from sprite palette data array
 	  */
 	unsigned short getObjPaletteColorHex(const unsigned short &index) const ;
+
+	/** Get a pointer to the command console
+	  */
+	ConsoleGBC* getConsole() {
+		return console.get();
+	}
 	
 	/** Set the OpenGL pixel scaling factor
 	  */
