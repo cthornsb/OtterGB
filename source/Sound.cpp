@@ -328,11 +328,12 @@ bool SoundProcessor::onClockUpdate(){
 			if(ch4.clock())
 				mixer->setInputSample(3, ch4.sample());
 		}
-		// Clock 16 kHz mixer
-		if(mixer->clock()){ // New sample is pushed onto the sample FIFO buffer
-			if(bRecordMidi)
-				nMidiClockTicks++;
-		}
+	}
+
+	// Clock the mixer
+	if(mixer->clock()){ // New sample is pushed onto the sample FIFO buffer
+		if(bRecordMidi)
+			nMidiClockTicks++;
 	}
 	
 	// Update the 512 Hz frame sequencer.

@@ -31,7 +31,6 @@ SystemClock::SystemClock() :
 	nClockPause(0),
 	modeStart()
 {
-	setNormalSpeedMode();
 	setFramerateCap(4.0 * SYSTEM_CLOCK_FREQUENCY / VERTICAL_SYNC_CYCLES); // Set default framerate cap (59.73 fps)
 }
 
@@ -248,7 +247,6 @@ void SystemClock::userAddSavestateValues(){
 
 void SystemClock::onUserReset(){
 	vsync = false;
-	setNormalSpeedMode();
 	this->resetTimer();
 	//timeOfInitialization = hrclock::now();
 	//timeOfLastVSync = hrclock::now();

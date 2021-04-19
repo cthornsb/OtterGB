@@ -983,23 +983,31 @@ bool SystemGBC::loadSRAM(const std::string &fname){
 	return true;
 }
 
+void SystemGBC::setNormalSpeedMode() {
+	sclk->setNormalSpeedMode();
+	sclk->resetScanline();
+	sound->setNormalSpeedMode();
+	bCPUSPEED = false;
+	rKEY1->clear();
+}
+
+void SystemGBC::setDoubleSpeedMode() {
+	sclk->setDoubleSpeedMode();
+	sclk->resetScanline();
+	sound->setDoubleSpeedMode();
+	bCPUSPEED = true;
+	rKEY1->clear();
+	rKEY1->setBit(7);
+}
+
 void SystemGBC::resumeCPU(){ 
 	cpuStopped = false;
 	if(rKEY1->getBit(0)){ // Prepare speed switch
-		if(!bCPUSPEED){ // Normal speed
-			sclk->setDoubleSpeedMode();
-			sclk->resetScanline();
-			sound->setDoubleSpeedMode();
-			bCPUSPEED = true;
-			rKEY1->clear();
-			rKEY1->setBit(7);
+		if(!bCPUSPEED){ // Normal -> double speed
+			setDoubleSpeedMode();
 		}
-		else{ // Double speed
-			sclk->setNormalSpeedMode();
-			sclk->resetScanline();
-			sound->setNormalSpeedMode();
-			bCPUSPEED = false;
-			rKEY1->clear();
+		else{ // Double -> normal speed
+			setNormalSpeedMode();
 		}
 	}
 }
@@ -1141,6 +1149,9 @@ bool SystemGBC::reset() {
 			bGBCMODE = true;
 		}
 	}
+
+	// Reset system clock frequency
+	setNormalSpeedMode();		
 
 	// Switching CGB states 
 	if(stateBeforeReset != bGBCMODE){

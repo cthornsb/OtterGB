@@ -564,7 +564,15 @@ public:
 	void stopCPU(){
 		cpuStopped = true;
 	}
-	
+
+	/** Enable normal CPU speed mode (1 MHz, DMG or CGB)
+	  */
+	void setNormalSpeedMode();
+
+	/** Enable double CPU speed mode (2 MHz, CGB only)
+	  */
+	void setDoubleSpeedMode();
+
 	/** Resume CPU from HALTED or STOPPED state
 	  */
 	void resumeCPU();
