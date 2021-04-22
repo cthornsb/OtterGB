@@ -77,8 +77,8 @@ void GPU::initialize(){
 		return pixelColor; // [0,3]
 	};
 	cmap.reset(new OTTCharacterMap("assets/cmap.dat", 8, 8, 2, getBitmapPixel));
-	cmap->setForegroundColor(dmgColorPalette[3]);
-	cmap->setBackgroundColor(dmgColorPalette[0]);
+	for (int i = 0; i < 4; i++)
+		cmap->setPaletteColor(i, dmgColorPalette[i]);
 
 	console.reset(new ConsoleGBC());
 	console->setOutputWindow(window.get());
@@ -830,8 +830,8 @@ void GPU::readConfigFile(ConfigFile* config) {
 	if (config->searchBoolFlag("GREEN_PALETTE_CGB")) // Set CGB game colors to monochrome green DMG palette
 		bGreenPaletteCGB = true;
 	if (config->searchBoolFlag("CONSOLE_NIGHT_MODE")) { // Invert console background and foreground colors
-		cmap->setForegroundColor(dmgColorPalette[0]);
-		cmap->setBackgroundColor(dmgColorPalette[3]);
+		for (int i = 0; i < 4; i++)
+			cmap->setPaletteColor(3 - i, dmgColorPalette[i]);
 	}
 	if (config->search("FRAME_BLUR_STRENGTH", true))
 		setFrameBlur(config->getFloat());
