@@ -5,7 +5,6 @@ add_library(
 	OBJECT
 	ComponentTimer.cpp
 	ConfigFile.cpp
-	HighResTimer.cpp
 	Opcode.cpp
 	optionHandler.cpp
 	Support.cpp
@@ -18,7 +17,6 @@ add_library(
 	OBJECT
 	ComponentTimer.cpp
 	ConfigFile.cpp
-	HighResTimer.cpp
 	Opcode.cpp
 	Support.cpp
 	SystemComponent.cpp
