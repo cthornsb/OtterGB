@@ -117,6 +117,7 @@ target_link_libraries(
 	GRAPHICS_LIB 
 	CORE_LIB 
 	Ott::OtterCore
+	Ott::OtterSystem
 	Ott::OtterAudio
 	Ott::OtterMath
 	${GLFW3_LIBRARY}
