@@ -40,7 +40,7 @@ public:
 	/** Get pointer to output audio mixer
 	  */
 	SoundMixer* getMixer(){
-		return mixer;
+		return &mixer;
 	}
 
 	/** Return true if the APU is enabled (i.e. if it is powered up) and return false otherwise
@@ -180,8 +180,8 @@ private:
 	bool bRecordMidi; ///< Midi recording in progress
 
 	SoundManager* audio; ///< Main system audio handler
-
-	SoundMixer* mixer; ///< Pointer to audio output mixer
+	
+	SoundMixer mixer; ///< Audio output mixer
 
 	SquareWave ch1; ///< Channel 1 (square w/ frequency sweep)
 

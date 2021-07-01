@@ -17,7 +17,7 @@ SoundProcessor::SoundProcessor() :
 	bMasterSoundEnable(false),
 	bRecordMidi(false),
 	audio(&SoundManager::getInstance()),
-	mixer(audio->getAudioMixer()),	
+	mixer(4, 2),
 	ch1(new FrequencySweep()),
 	ch2(),
 	ch3(wavePatternRAM),
@@ -42,16 +42,16 @@ void SoundProcessor::initialize(bool audioOutputEnabled, const double& clockSpee
 		audio->setSampleRate(clockSpeed / nMixerClockPeriod);
 
 		// Initialize interface
-		audio->init();
+		audio->init(&mixer);
 		
 		// Enable output mixer clock
-		mixer->enable();
+		mixer.enable();
 		
 		bInitialized = true;
 	}
 	else{
 		// Disable output mixer clock
-		mixer->disable();
+		mixer.disable();
 	}
 }
 
@@ -180,20 +180,22 @@ bool SoundProcessor::writeRegister(const unsigned short &reg, const unsigned cha
 		// NR50-52 MASTER CONTROL
 		/////////////////////////////////////////////////////////////////////
 		case 0xFF24: // NR50 (Channel control / ON-OFF / volume)
+			// 3-bit output channel volume
 			// Ignore Vin since we do not emulate it
-			mixer->setOutputLevels(rNR50->getBits(4,6) / 7.f, rNR50->getBits(0,2) / 7.f); // 3-bit volumes
+			mixer.setOutputLevel(0, rNR50->getBits(4,6) / 7.f); // L
+			mixer.setOutputLevel(1, rNR50->getBits(0,2) / 7.f); // R
 			break;
 		case 0xFF25: // NR51 (Select sound output)
 			// Left channel
-			mixer->setInputToOutput(3, 0, rNR51->getBit(7)); // ch4
-			mixer->setInputToOutput(2, 0, rNR51->getBit(6)); // ch3
-			mixer->setInputToOutput(1, 0, rNR51->getBit(5)); // ch2
-			mixer->setInputToOutput(0, 0, rNR51->getBit(4)); // ch1
+			mixer.setInputToOutput(3, 0, rNR51->getBit(7)); // ch4
+			mixer.setInputToOutput(2, 0, rNR51->getBit(6)); // ch3
+			mixer.setInputToOutput(1, 0, rNR51->getBit(5)); // ch2
+			mixer.setInputToOutput(0, 0, rNR51->getBit(4)); // ch1
 			// Right channel
-			mixer->setInputToOutput(3, 1, rNR51->getBit(3)); // ch4
-			mixer->setInputToOutput(2, 1, rNR51->getBit(2)); // ch3
-			mixer->setInputToOutput(1, 1, rNR51->getBit(1)); // ch2
-			mixer->setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
+			mixer.setInputToOutput(3, 1, rNR51->getBit(3)); // ch4
+			mixer.setInputToOutput(2, 1, rNR51->getBit(2)); // ch3
+			mixer.setInputToOutput(1, 1, rNR51->getBit(1)); // ch2
+			mixer.setInputToOutput(0, 1, rNR51->getBit(0)); // ch1
 			break;
 		case 0xFF26: // NR52 (Sound ON-OFF)
 			bMasterSoundEnable = rNR52->getBit(7);
@@ -320,18 +322,18 @@ bool SoundProcessor::onClockUpdate(){
 		// Clock audio units (4 MHz clock)
 		for(int i = 0; i < 4; i++){
 			if(ch1.clock())
-				mixer->setInputSample(0, ch1.sample());
+				mixer.setInputSample(0, ch1.sample() / 15.f);
 			if(ch2.clock())
-				mixer->setInputSample(1, ch2.sample());
+				mixer.setInputSample(1, ch2.sample() / 15.f);
 			if(ch3.clock())
-				mixer->setInputSample(2, ch3.sample());
+				mixer.setInputSample(2, ch3.sample() / 15.f);
 			if(ch4.clock())
-				mixer->setInputSample(3, ch4.sample());
+				mixer.setInputSample(3, ch4.sample() / 15.f);
 		}
 	}
 
 	// Clock the mixer
-	if(mixer->clock()){ // New sample is pushed onto the sample FIFO buffer
+	if(mixer.clock()){ // New sample is pushed onto the sample FIFO buffer
 		if(bRecordMidi)
 			nMidiClockTicks++;
 	}
@@ -393,15 +395,15 @@ void SoundProcessor::setSampleRate(const float& rate){
 }
 
 void SoundProcessor::setSampleRateMultiplier(const float &mult){
-	mixer->setPeriod((unsigned short)(nMixerClockPeriod * mult));
+	mixer.setPeriod((unsigned short)(nMixerClockPeriod * mult));
 }
 
 void SoundProcessor::setDoubleSpeedMode(){
-	mixer->setPeriod(nMixerClockPeriod * 2);
+	mixer.setPeriod(nMixerClockPeriod * 2);
 }
 
 void SoundProcessor::setNormalSpeedMode(){
-	mixer->setPeriod(nMixerClockPeriod);
+	mixer.setPeriod(nMixerClockPeriod);
 }
 
 void SoundProcessor::disableChannel(const int& ch){
@@ -631,30 +633,31 @@ void SoundProcessor::readConfigFile(ConfigFile* config) {
 	float fLeftVolume = 1.f;
 	float fRightVolume = 1.f;
 	if (config->search("MASTER_VOLUME", true)) // Set master output volume
-		mixer->setVolume(config->getFloat());
+		mixer.setVolume(config->getFloat());
 	if (config->search("AUDIO_BALANCE", true)) // Set L-R audio balance
-		mixer->setBalance(config->getFloat());
+		mixer.setBalance(config->getFloat());
 	if (config->search("AUDIO_VOLUME_LEFT", true)) // Set left output channel volume
 		fLeftVolume = config->getFloat();
 	if (config->search("AUDIO_VOLUME_RIGHT", true)) // Set right output channel volume
 		fRightVolume = config->getFloat();
 	if (config->search("AUDIO_VOLUME_CH1", true)) // Set Ch1 (square) output volume
-		mixer->setChannelVolume(0, config->getFloat());
+		mixer.setInputLevel(0, config->getFloat());
 	if (config->search("AUDIO_VOLUME_CH2", true)) // Set Ch2 (square) output volume
-		mixer->setChannelVolume(1, config->getFloat());
+		mixer.setInputLevel(1, config->getFloat());
 	if (config->search("AUDIO_VOLUME_CH3", true)) // Set Ch3 (wave) output volume
-		mixer->setChannelVolume(2, config->getFloat());
+		mixer.setInputLevel(2, config->getFloat());
 	if (config->search("AUDIO_VOLUME_CH4", true)) // Set Ch4 (noise) output volume
-		mixer->setChannelVolume(3, config->getFloat());
+		mixer.setInputLevel(3, config->getFloat());
 	if (config->search("AUDIO_DC_OFFSET", true)) // Set audio output DC offset
-		mixer->setOffsetDC(config->getFloat());
+		mixer.setOffsetDC(config->getFloat());
 	if (config->search("AUDIO_SAMPLE_RATE", true)) // Set output audio sample rate (in Hz)
 		setSampleRate(config->getFloat());
 	if (config->search("AUDIO_PACKET_SIZE", true)) { // Set the number of samples in outgoing audio packet
 		audio->setFramesPerBuffer(config->getUInt());
-		mixer->setNumberSamplesPerBuffer(config->getUInt());
+		mixer.setNumberSamplesPerBuffer(config->getUInt());
 	}
-	mixer->setOutputLevels(fLeftVolume, fRightVolume);
+	mixer.setOutputLevel(0, fLeftVolume); // L
+	mixer.setOutputLevel(1, fRightVolume); // R
 }
 
 void SoundProcessor::userAddSavestateValues(){
@@ -681,7 +684,7 @@ void SoundProcessor::onUserReset(){
 	stopMidiFile(); // Stop midi file recording (if active)
 	powerDown(); // Power off the APU
 	reload(); // Reset APU clock
-	mixer->reset(); // Reset mixer clock
+	mixer.reset(); // Reset mixer clock
 	nSequencerTicks = 0;
 }
 
