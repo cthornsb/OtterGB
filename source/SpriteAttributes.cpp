@@ -31,7 +31,14 @@ bool SpriteAttributes::compareCGB(const SpriteAttributes &s1, const SpriteAttrib
 /////////////////////////////////////////////////////////////////////
 
 SpriteHandler::SpriteHandler() : 
-	SystemComponent("OAM", 0x204d414f, 160, 1) // "OAM " (1 160 B bank of RAM)
+	SystemComponent("OAM", 0x204d414f, 160, 1), // "OAM " (1 160 B bank of RAM)
+	bModified{ 
+		0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0 
+	},
+	lModified()
 { 
 	reset();
 }
