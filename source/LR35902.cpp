@@ -64,67 +64,47 @@ unsigned short LR35902::evaluate(){
   */
 bool LR35902::onClockUpdate(){
 	if(!opcodes()->executing()){ // Previous instruction finished executing, read the next one.
-		// Check for pending interrupts.
-		if(!rIME->zero() && ((*rIE) & (*rIF))){
-			if(rIF->getBit(0)) // VBlank
-				acknowledgeVBlankInterrupt();
-			if(rIF->getBit(1)) // LCDC STAT
-				acknowledgeLcdInterrupt();
-			if(rIF->getBit(2)) // Timer
-				acknowledgeTimerInterrupt();
-			if(rIF->getBit(3)) // Serial
-				acknowledgeSerialInterrupt();
-			if(rIF->getBit(4)) // Joypad
-				acknowledgeJoypadInterrupt();
+		// Wait a specified number of clock cycles before reading next instruction
+		if (nExtraCycles) {
+			nExtraCycles--;
+			return false;
 		}
+
+		// Check for pending interrupts (VBlank -> LCDC STAT -> Timer -> Serial -> Joypad)
+		// The CPU will clear each interrupt's corresponding IF bit and disables 
+		// master interrupt (IME) whenever it executes an interrupt.
+		if(!rIME->zero() && ((*rIE) & (*rIF))){
+			for (unsigned char i = 0; i < 5; i++) {
+				if (rIF->getBit(i))
+					acknowledgeInterrupt(i);
+			}
+		}
+
+		// Evaluate next instruction and begin execution
 		evaluate();
 	}
 	return opcodes.clock(); // Execute the instruction on the last cycle
 }
 
-void LR35902::acknowledgeVBlankInterrupt(){
-	rIF->resetBit(0);
-	if(rIE->getBit(0)){ // Execute interrupt
-		(*rIME) = 0;
-		callInterruptVector(0x40);
-	}
-}
+void LR35902::acknowledgeInterrupt(const unsigned char& interrupt){
+	rIF->resetBit(interrupt); // Reset interrupt flag bit
+	if(rIE->getBit(interrupt)){ // Execute interrupt
+		(*rIME) = 0; // Disable further interrupts		
 
-void LR35902::acknowledgeLcdInterrupt(){
-	rIF->resetBit(1);
-	if(rIE->getBit(1)){ // Execute interrupt
-		(*rIME) = 0;
-		callInterruptVector(0x48);
-	}
-}
+		// Interrupt vectors behave the same way that RST vectors do.
+		// Current PC is pushed to stack, and interrupt vector is called.
+		rst_n(interruptVectors[interrupt]); 
 
-void LR35902::acknowledgeTimerInterrupt(){
-	rIF->resetBit(2);
-	if(rIE->getBit(2)){ // Execute interrupt
-		(*rIME) = 0;
-		callInterruptVector(0x50);
-	}
-}
-
-void LR35902::acknowledgeSerialInterrupt(){
-	rIF->resetBit(3);
-	if(rIE->getBit(3)){ // Execute interrupt
-		(*rIME) = 0;
-		callInterruptVector(0x58);
-	}
-}
-
-void LR35902::acknowledgeJoypadInterrupt(){
-	rIF->resetBit(4);
-	if(rIE->getBit(4)){ // Execute interrupt
-		(*rIME) = 0;
-		callInterruptVector(0x60);
+		// As per Pan Docs specifications, handling an interrupt should take 5 machine cycles to complete.
+		nExtraCycles = 5;
 	}
 }
 
 void LR35902::setFlag(const unsigned char &bit, bool state/*=true*/){
-	if(state) set_d8(&F, bit);
-	else      res_d8(&F, bit);
+	if(state) 
+		set_d8(&F, bit);
+	else
+		res_d8(&F, bit);
 }
 
 void LR35902::setFlags(bool zflag, bool sflag, bool hflag, bool cflag){
@@ -510,17 +490,22 @@ void LR35902::pop_d16(unsigned short *addr){
 
 void LR35902::jp_d16(const unsigned char &addrH, const unsigned char &addrL){
 	// Jump to address
-	PC = getUShort(addrH, addrL);
+	PC = getUShort(addrH, addrL);// Jump to address
 }
 
 void LR35902::jp_cc_d16(const unsigned char &addrH, const unsigned char &addrL){
 	opcodes()->addCycles(1); // Conditional JP takes 4 additional cycles if true (12->16)
-	jp_d16(addrH, addrL);
+	PC = getUShort(addrH, addrL); // Jump to address
+}
+
+void LR35902::call_a16(const unsigned short& addr) {
+	push_d16(PC); // Push the program counter onto the stack
+	PC = addr; // Jump to called address
 }
 
 void LR35902::call_a16(const unsigned char &addrH, const unsigned char &addrL){
 	push_d16(PC); // Push the program counter onto the stack
-	jp_d16(addrH, addrL); // Jump to the called address
+	PC = getUShort(addrH, addrL); // Jump to called address
 }
 
 void LR35902::call_cc_a16(const unsigned char &addrH, const unsigned char &addrL){
@@ -590,11 +575,6 @@ void LR35902::swap_d8(unsigned char *arg){
 	unsigned char highNibble = (*arg) & 0xF0;
 	(*arg) = (lowNibble << 4) + (highNibble >> 4);
 	setFlags((*arg == 0), 0, 0, 0);
-}
-
-void LR35902::callInterruptVector(const unsigned char &offset){
-	// Interrupt vectors behave the same way that RST vectors do
-	rst_n(offset);
 }
 
 /////////////////////////////////////////////////////////////////////

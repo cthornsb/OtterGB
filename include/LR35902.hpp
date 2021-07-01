@@ -38,26 +38,32 @@ public:
 
 	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
 
-	LR35902() : 
+	LR35902() :
 		SystemComponent("CPU", 0x20555043), // "CPU "
-		halfCarry(false), 
-		fullCarry(false), 
-	    A(0), 
+		halfCarry(false),
+		fullCarry(false),
+		A(0),
 		B(0),
 		C(0),
 		D(0),
-		E(0), 
+		E(0),
 		H(0),
-		L(0), 
-		F(0), 
-	    d8(0),
+		L(0),
+		F(0),
+		d8(0),
 		d16h(0),
-		d16l(0), 
+		d16l(0),
 		memoryValue(0),
 		memoryAddress(0),
-		SP(0), 
+		SP(0),
 		PC(0),
-		opcodes(this) 
+		opcodes(this),
+		rget8(),
+		rset8(),
+		rget16(),
+		rset16(),
+		interruptVectors{ 0x40, 0x48, 0x50, 0x58, 0x60 },
+		nExtraCycles(0)
 	{ 
 	}
 
@@ -140,9 +146,13 @@ public:
 	}
 
 	unsigned short getd16() const ;
+
 	unsigned short getAF() const ;
+
 	unsigned short getBC() const ;
+
 	unsigned short getDE() const ;
+
 	unsigned short getHL() const ;
 	
 	unsigned short getProgramCounter() const { 
@@ -238,16 +248,14 @@ protected:
 	
 	unsigned char L; ///< L register
 
-	unsigned char F; ///< Flags register
+	unsigned char F; ///< CPU flags register
 
-	// Immediate data
 	unsigned char d8; ///< 8-bit immediate data
 
 	unsigned char d16h; ///< High 8 bits of 16-bit immediate data
 
 	unsigned char d16l; ///< Low 8 bits of 16-bit immediate data
 
-	// Memory data
 	unsigned char memoryValue; ///< Value read from and/or written to memory
 
 	unsigned short memoryAddress; ///< Address in memory which will be read/written
@@ -255,10 +263,8 @@ protected:
 	unsigned short SP; ///< Stack Pointer (16-bit)
 
 	unsigned short PC; ///< Program Counter (16-bit)
-	
-	//OpcodeData lastOpcode; ///< Pointer to the last read opcode.
 
-	OpcodeHandlerLR35902 opcodes;
+	OpcodeHandlerLR35902 opcodes; ///< LR35902 CPU opcode instructions
 
 	std::map<std::string, regGet8bit> rget8; ///< Map of 8-bit register getters
 
@@ -268,17 +274,16 @@ protected:
 
 	std::map<std::string, regSet16bit> rset16; ///< Map of 16-bit register setters
 
-	void acknowledgeVBlankInterrupt();
+	unsigned char interruptVectors[5]; ///< LR35902 interrupt vector addresses
 
-	void acknowledgeLcdInterrupt();
+	unsigned short nExtraCycles; ///< Number of extra cycles to wait before executing next instruction
 
-	void acknowledgeTimerInterrupt();
-
-	void acknowledgeSerialInterrupt();
-
-	void acknowledgeJoypadInterrupt();
-
-	void callInterruptVector(const unsigned char &offset);
+	/** Acknowledge LR35902 interrupt.
+	  * Reset interrupt's corresponding IF bit and disable master interrupt (IME) to 
+	  * prevent further interrupts from being handled until re-enabled by the program.
+	  * @param interrupt CPU interrupt number (0:VBlank, 1:STAT, 2:Timer, 3:Serial, 4:Joypad)
+	  */
+	void acknowledgeInterrupt(const unsigned char& interrupt);
 
 	bool getFlagZ() const { 
 		return ((F & FLAG_Z_MASK) != 0); 
@@ -357,6 +362,8 @@ protected:
 	void jp_d16(const unsigned char &addrH, const unsigned char &addrL);
 
 	void jp_cc_d16(const unsigned char &addrH, const unsigned char &addrL);
+
+	void call_a16(const unsigned short& addr);
 
 	void call_a16(const unsigned char &addrH, const unsigned char &addrL);
 
