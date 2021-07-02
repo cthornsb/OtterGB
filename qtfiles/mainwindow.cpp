@@ -735,10 +735,10 @@ void MainWindow::on_checkBox_APU_MasterEnable_clicked(bool arg1)
 		ui->checkBox_APU_Ch3Enable->setEnabled(true);
 		ui->checkBox_APU_Ch4Enable->setEnabled(true);
 		mixer->mute();
-		mixer->setChannelVolume(0, 1.f);
-		mixer->setChannelVolume(1, 1.f);
-		mixer->setChannelVolume(2, 1.f);
-		mixer->setChannelVolume(3, 1.f);
+		mixer->setInputLevel(0, 1.f);
+		mixer->setInputLevel(1, 1.f);
+		mixer->setInputLevel(2, 1.f);
+		mixer->setInputLevel(3, 1.f);
 	}
 	else{
 		ui->checkBox_APU_Ch1Enable->setEnabled(false);
@@ -746,10 +746,10 @@ void MainWindow::on_checkBox_APU_MasterEnable_clicked(bool arg1)
 		ui->checkBox_APU_Ch3Enable->setEnabled(false);
 		ui->checkBox_APU_Ch4Enable->setEnabled(false);
 		mixer->mute();
-		mixer->setChannelVolume(0, 0.f);
-		mixer->setChannelVolume(1, 0.f);
-		mixer->setChannelVolume(2, 0.f);
-		mixer->setChannelVolume(3, 0.f);
+		mixer->setInputLevel(0, 0.f);
+		mixer->setInputLevel(1, 0.f);
+		mixer->setInputLevel(2, 0.f);
+		mixer->setInputLevel(3, 0.f);
 	}
 }
 
@@ -757,36 +757,36 @@ void MainWindow::on_checkBox_APU_Ch1Enable_clicked(bool arg1)
 {
 	SoundMixer* mixer = components->apu->getMixer();
 	if(arg1) // On
-		mixer->setChannelVolume(0, 1.f);
+		mixer->setInputLevel(0, 1.f);
 	else // Off
-		mixer->setChannelVolume(0, 0.f);
+		mixer->setInputLevel(0, 0.f);
 }
 
 void MainWindow::on_checkBox_APU_Ch2Enable_clicked(bool arg1)
 {
 	SoundMixer* mixer = components->apu->getMixer();
 	if(arg1) // On
-		mixer->setChannelVolume(1, 1.f);
+		mixer->setInputLevel(1, 1.f);
 	else // Off
-		mixer->setChannelVolume(1, 0.f);
+		mixer->setInputLevel(1, 0.f);
 }
 
 void MainWindow::on_checkBox_APU_Ch3Enable_clicked(bool arg1)
 {
 	SoundMixer* mixer = components->apu->getMixer();
 	if(arg1) // On
-		mixer->setChannelVolume(2, 1.f);
+		mixer->setInputLevel(2, 1.f);
 	else // Off
-		mixer->setChannelVolume(2, 0.f);
+		mixer->setInputLevel(2, 0.f);
 }
 
 void MainWindow::on_checkBox_APU_Ch4Enable_clicked(bool arg1)
 {
 	SoundMixer* mixer = components->apu->getMixer();
 	if(arg1) // On
-		mixer->setChannelVolume(3, 1.f);
+		mixer->setInputLevel(3, 1.f);
 	else // Off
-		mixer->setChannelVolume(3, 0.f);
+		mixer->setInputLevel(3, 0.f);
 }
 
 void MainWindow::on_checkBox_APU_Mute_clicked()
@@ -796,12 +796,12 @@ void MainWindow::on_checkBox_APU_Mute_clicked()
 
 void MainWindow::on_radioButton_APU_Stereo_clicked()
 {
-	components->apu->getMixer()->setStereoOutput();
+	components->apu->getMixer()->setMonoOutput(false);
 }
 
 void MainWindow::on_radioButton_APU_Mono_clicked()
 {
-	components->apu->getMixer()->setMonoOutput();
+	components->apu->getMixer()->setMonoOutput(true);
 }
 
 void MainWindow::on_pushButton_APU_ClockSequencer_pressed()
