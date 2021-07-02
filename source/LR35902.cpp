@@ -1379,12 +1379,12 @@ void LR35902::userAddSavestateValues(){
 
 void LR35902::onUserReset(){
 	// Set startup values for the CPU registers
-	setAF(0x11B0); // 0x01B0
-	setBC(0x0013); // 0x0013
-	setDE(0x00D8); // 0x00D8
-	setHL(0x014D); // 0x014D
-	SP = 0xFFFE;   // 0xFFFE
-	PC = 0x0100;   // 0x0100
+	setAF(0x01B0);
+	setBC(0x0013);
+	setDE(0x00D8);
+	setHL(0x014D);
+	SP = 0xFFFE;
+	PC = 0x0100;
 	halfCarry = false;
 	fullCarry = false;
 	opcodes.resetOpcode(); // Reset currently executing opcode

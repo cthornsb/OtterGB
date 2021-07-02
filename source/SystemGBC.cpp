@@ -157,16 +157,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	winScrollPositions(),
 	subsystems()
 { 
-	// Check that the CWD is the same as the executable.
-	// The directory will probably need to be changed when running ROMs from the file explorer.
-	std::string sCurrentDir = ott::getCurrentWorkingDirectory();
-	std::string sExecuteDir = ott::getExecutingDirectory();
-	if (sCurrentDir != sExecuteDir) {
-		std::cout << sysMessage << "Current directory is not the same directory as the executable" << std::endl;
-		std::cout << sysMessage << "Changing directory to \"" << sExecuteDir << "\"" << std::endl;
-		ott::setCurrentWorkingDirectory(sExecuteDir);
-	}
-
 	// Configuration file handler
 	std::string configFilePath = "default.cfg";
 	ConfigFile cfgFile;
@@ -199,6 +189,16 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 		romPath = handler.getOption(1)->argument;
 	}
 #else // ifndef _WIN32	
+	// Check that the CWD is the same as the executable.
+	// The directory will probably need to be changed when running ROMs from the file explorer.
+	std::string sCurrentDir = ott::getCurrentWorkingDirectory();
+	std::string sExecuteDir = ott::getExecutingDirectory();
+	if (sCurrentDir != sExecuteDir) {
+		std::cout << sysMessage << "Current directory is not the same directory as the executable" << std::endl;
+		std::cout << sysMessage << "Changing directory to \"" << sExecuteDir << "\"" << std::endl;
+		ott::setCurrentWorkingDirectory(sExecuteDir);
+	}
+
 	if (argc > 1) { // Handle path string dropped on exe file
 		std::string cmdLineArg(argv[1]);
 		size_t index = cmdLineArg.find_last_of('.');
@@ -349,13 +349,11 @@ void SystemGBC::initialize(){
 	enableInterrupts(); // Interrupts enabled by default
 
 	// Undocumented registers
-	addSystemRegister(0x6C, rFF6C, "FF6C", "30000000");
 	addSystemRegister(0x72, rFF72, "FF72", "33333333");
-	addSystemRegister(0x73, rFF73, "FF73", "33333333");
 	addSystemRegister(0x74, rFF74, "FF74", "33333333");
 	addSystemRegister(0x75, rFF75, "FF75", "00003330");
-	addSystemRegister(0x76, rFF76, "FF76", "11111111");
-	addSystemRegister(0x77, rFF77, "FF77", "11111111");
+	addSystemRegister(0x76, rFF76, "FF76", "11111111"); // PCM 1 & 2
+	addSystemRegister(0x77, rFF77, "FF77", "11111111"); // PCM 3 & 4
 
 	// Define sub-system registers and connect to the system bus.
 	for(auto comp = subsystems->list.begin(); comp != subsystems->list.end(); comp++){
@@ -515,13 +513,13 @@ void SystemGBC::handleHBlankPeriod(){
 		}
 		dma->onHBlank();
 	}
-#ifdef USE_QT_DEBUGGER
+/*#ifdef USE_QT_DEBUGGER
 	if(debugMode && pauseAfterNextHBlank){
 		pauseAfterNextHBlank = false;
 		pause();
 		gpu->render(); // Show the newly drawn scanline
 	}
-#endif
+#endif*/
 }
 	
 void SystemGBC::handleVBlankInterrupt(){ 
@@ -1174,6 +1172,46 @@ bool SystemGBC::reset() {
 		reg->clear();
 	}
 
+	// Set registers to initial values
+	// Timer registers
+	(*rTIMA) = 0x00;
+	(*rTMA) = 0x00;
+	(*rTAC) = 0x00;
+
+	// Sound processor registers
+	(*rNR10) = 0x80;
+	(*rNR11) = 0xBF;
+	(*rNR12) = 0xF3;
+	(*rNR14) = 0xBF;
+	(*rNR21) = 0x3F;
+	(*rNR22) = 0x00;
+	(*rNR24) = 0xBF;
+	(*rNR30) = 0x7F;
+	(*rNR31) = 0xFF;
+	(*rNR32) = 0x9F;
+	(*rNR34) = 0xBF;
+	(*rNR41) = 0xFF;
+	(*rNR42) = 0x00;
+	(*rNR43) = 0x00;
+	(*rNR44) = 0xBF;
+	(*rNR50) = 0x77;
+	(*rNR51) = 0xF3;
+	(*rNR52) = 0xF1;
+
+	// GPU registers
+	(*rLCDC) = 0x91;
+	(*rSCY) = 0x00;
+	(*rSCX) = 0x00;
+	(*rLYC) = 0x00;
+	(*rBGP) = 0xFC;
+	(*rOBP0) = 0xFF;
+	(*rOBP1) = 0xFF;
+	(*rWY) = 0x00;
+	(*rWX) = 0x00;
+
+	// System registers
+	(*rIE) = 0x00;
+
 	// Reset all system components (except for ROM)
 	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
 		if(comp->first != "Cartridge")
@@ -1244,33 +1282,6 @@ bool SystemGBC::reset() {
 	}
 
 	if(bootROM.empty()){ // Initialize the system registers with default values.
-		// Sound processor registers
-		(*rNR10)  = 0x80;
-		(*rNR11)  = 0xBF;
-		(*rNR12)  = 0xFE;
-		(*rNR14)  = 0xBF;
-		(*rNR21)  = 0x3F;
-		(*rNR24)  = 0xBF;
-		(*rNR30)  = 0x7F;
-		(*rNR31)  = 0xFF;
-		(*rNR32)  = 0x9F;
-		(*rNR33)  = 0xBF;
-		(*rNR41)  = 0xFF;
-		(*rNR44)  = 0xBF;
-		(*rNR50)  = 0x77;
-		(*rNR51)  = 0xF3;
-		(*rNR52)  = 0xF1;
-
-		// GPU registers
-		(*rLCDC)  = 0x91;
-		(*rBGP)   = 0xFC;
-		(*rOBP0)  = 0xFF;
-		(*rOBP1)  = 0xFF;
-
-		// Undocumented registers (for completeness)
-		(*rFF6C)  = 0xFE;
-		(*rFF75)  = 0x8F;
-
 		// Set the PC to the entry point of the program. Skip boot sequence.
 		cpu->setProgramCounter(cart->getProgramEntryPoint());
 		
