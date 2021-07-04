@@ -41,7 +41,7 @@ Cartridge::Cartridge() :
 }
 
 bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& value) {
-	if (!extRamSupport || !getExternalRamEnabled())
+	if (!getExternalRamEnabled())
 		return false;
 	if (addr >= 0xa000 && addr < 0xc000) {
 		if (mbc->writeToRam(addr, value))
@@ -53,7 +53,7 @@ bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& valu
 }
 
 bool Cartridge::readFromRam(const unsigned short& addr, unsigned char& value) {
-	if (!extRamSupport || !getExternalRamEnabled())
+	if (!getExternalRamEnabled())
 		return false;
 	if (addr >= 0xa000 && addr < 0xc000) {	
 		if (mbc->readFromRam(addr, value))
@@ -174,8 +174,8 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		rumbleSupport = bitTest(cartFlags[cartridgeType], 4);
 	}
 	
-	// Build list of MBC registers
-	mbc->createRegisters();
+	// Enable cartridge features
+	mbc->setCartridgeFeatures(extRamSupport, batterySupport, timerSupport, rumbleSupport);
 	
 	// Initialize ROM storage
 	mem.clear();

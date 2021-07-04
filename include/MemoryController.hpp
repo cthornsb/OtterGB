@@ -28,6 +28,10 @@ public:
 	MemoryController() :
 		bValid(false),
 		bRamEnabled(false),
+		bRamSupport(false),
+		bBatterySupport(false),
+		bTimerSupport(false),
+		bRumbleSupport(false),
 		mbcType(CartMBC::UNKNOWN),
 		sTypeString("UNKNOWN"),
 		cart(0x0),
@@ -40,11 +44,24 @@ public:
 	MemoryController(const CartMBC& type, const std::string& typeStr) :
 		bValid(true),
 		bRamEnabled(false),
+		bRamSupport(false),
+		bBatterySupport(false),
+		bTimerSupport(false),
+		bRumbleSupport(false),
 		mbcType(type),
 		sTypeString(typeStr),
 		cart(0x0),
 		ram(0x0)
 	{
+	}
+
+	/** Set which cartridge features are present
+	  */
+	void setCartridgeFeatures(const bool& bRam, const bool& bBattery, const bool& bTimer, const bool& bRumble) {
+		bRamSupport = bRam;
+		bBatterySupport = bBattery;
+		bTimerSupport = bTimer;
+		bRumbleSupport = bRumble;
 	}
 
 	/** Set pointers to cartridge ROM and RAM (if present)
@@ -54,10 +71,10 @@ public:
 		ram = RAM;
 	}
 
-	/** Return true if cartridge RAM is enabled
+	/** Return true if cartridge RAM is present and is currently enabled
 	  */
 	bool getRamEnabled() const { 
-		return bRamEnabled; 
+		return (bRamSupport && bRamEnabled);
 	}
 
 	/** Get cartridge MBC type
@@ -70,11 +87,6 @@ public:
 	  */
 	std::string getTypeString() const {
 		return sTypeString;
-	}
-
-	/** Create internal MBC registers and add them to the register vector
-	  */	
-	virtual void createRegisters() {
 	}
 
 	/** Write cartridge MBC register
@@ -119,6 +131,14 @@ protected:
 	bool bValid; ///< Set if this object is a valid MBC
 
 	bool bRamEnabled; ///< Set if cartridge ram is enabled
+	
+	bool bRamSupport; ///< Cartridge contains internal RAM bank(s)
+
+	bool bBatterySupport; ///< Cartridge supports battery-backup saves
+
+	bool bTimerSupport; ///< Cartridge supports internal timer
+
+	bool bRumbleSupport; ///< Catridge supports rumble feature
 
 	CartMBC mbcType; ///< ROM cartridge type
 	
@@ -187,14 +207,14 @@ public:
 		bLatchState(false),
 		nRtcTimerSeconds(0),
 		rtcTimer(32), // 32.768 kHz clock
-		rRamEnable("MBC3_ENABLE",  "22220000"),
+		rRamEnable("MBC3_ENABLE", "22220000"),
 		rRomBank("MBC3_ROMBANK", "22222220"),
 		rRamBank("MBC3_RAMBANK", "22220000"),
-		rLatch("MBC3_LATCH",   "20000000"),
+		rLatch("MBC3_LATCH", "20000000"),
 		rSeconds("MBC3_SECONDS", "33333333"),
 		rMinutes("MBC3_MINUTES", "33333333"),
-		rHours("MBC3_HOURS",   "33333000"),
-		rDayLow("MBC3_DAYLOW",  "33333333"),
+		rHours("MBC3_HOURS", "33333000"),
+		rDayLow("MBC3_DAYLOW", "33333333"),
 		rDayHigh("MBC3_DAYHIGH", "30000033"),
 		registerSelect(0x0)
 		
@@ -256,9 +276,9 @@ class MBC5 : public MemoryController {
 public:
 	MBC5() : 
 		MemoryController(CartMBC::MBC5, "MBC5"),
-		rRamEnable("MBC5_ENABLE",  "22220000"),
-		rRomBankLow("MBC5_BANKLO",  "22222222"),
-		rRomBankHigh("MBC5_BANKHI",  "20000000"),
+		rRamEnable("MBC5_ENABLE", "22220000"),
+		rRomBankLow("MBC5_BANKLO", "22222222"),
+		rRomBankHigh("MBC5_BANKHI", "20000000"),
 		rRamBank("MBC5_BANKRAM", "22220000")
 	{
 	}

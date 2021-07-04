@@ -1,3 +1,5 @@
+#include <iostream> // TEMP CRT
+
 #include "MemoryController.hpp"
 #include "SystemComponent.hpp"
 #include "Cartridge.hpp"
@@ -181,16 +183,26 @@ bool MBC5::writeRegister(const unsigned short &reg, const unsigned char &val) {
 	bRamEnabled = (rRamEnable.getBits(0, 3) == 0x0a);
 	
 	// ROM bank (MBC5 reads bank 0 as bank 0, unlike MBC1)
-	cart->setBank((unsigned short)rRomBankLow.getValue() + (rRomBankHigh.getBit(0) ? 0x0100 : 0x0));
-	
-	//if (bs >= nBanks)
-	//	bs &= (nBanks - 1);
+	unsigned short bank = (unsigned short)rRomBankLow.getValue() + (rRomBankHigh.getBit(0) ? 0x0100 : 0x0);
+	if (bank >= cart->getNumberOfBanks()) {
+		bank &= (cart->getNumberOfBanks() - 1);
+	}
+	cart->setBank(bank);
 	
 	// RAM bank
-	unsigned char ramBank = rRamBank.getBits(0, 3);
-	if (ramBank < ram->getNumberOfBanks()) // Ensure new bank number is not garbage
-		ram->setBank(ramBank);
-		
+	unsigned short ramBank = 0;
+	if (!bRumbleSupport) { // No rumble pak
+		ramBank = (unsigned short)rRamBank.getBits(0, 3);
+	}
+	else{ // Rumble pak is present
+		ramBank = (unsigned short)rRamBank.getBits(0, 2);
+		/*if (rRamBank.getBit(3)) { // Activate rumble
+		}
+		else{ // Deactivate rumble
+		}*/
+	}
+	ram->setBank(ramBank);
+	
 	return true;
 }
 
