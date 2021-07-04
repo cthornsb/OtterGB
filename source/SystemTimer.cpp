@@ -15,7 +15,7 @@ SystemTimer::SystemTimer() :
 bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(reg){
 		case 0xFF04: // DIV (Divider register)
-			// Register incremented at 16384 Hz (256 cycles) or 32768 Hz (128 cycles) in 
+			// Register incremented at 16384 Hz (64 1 MHz cycles) or 32768 Hz (64 2 MHz cycles) in 
 			// GBC double speed mode. Writing any value resets to zero.
 			rDIV->setValue(0x0);
 			break;
@@ -28,7 +28,7 @@ bool SystemTimer::writeRegister(const unsigned short &reg, const unsigned char &
 			break;
 		case 0xFF07: // TAC (Timer control)
 			bEnabled = rTAC->getBit(2); // Timer stop [0: Stop, 1: Start]
-			clockSelect = rTAC->getBits(0,1); // Input clock select (see below)
+			clockSelect = rTAC->getBits(0, 1); // Input clock select (see below)
 			/** Input clocks:
 				0:   4096 Hz (256 cycles)
 				1: 262144 Hz (4 cycles)
@@ -74,11 +74,15 @@ bool SystemTimer::readRegister(const unsigned short &reg, unsigned char &dest){
 }
 
 bool SystemTimer::onClockUpdate(){
-	if(!bEnabled) return false;
-	if((nDividerCycles++) >= 64){ // DIV (divider register) incremented at a rate of 16384 Hz
+	// DIV (divider register) incremented at a rate of 16384 Hz
+	if((nDividerCycles++) >= 64){ 
 		nDividerCycles = 0;
 		(*rDIV)++;
 	}
+	// DIV is always counting, even when timer is disabled.
+	// The timer enable flag only affects the TIMA register
+	if(!bEnabled)
+		return false;
 	nCyclesSinceLastTick++;
 	while(nCyclesSinceLastTick / nPeriod){ // Handle a timer tick.
 		if(++(*rTIMA) == 0x0) // Timer counter has rolled over
