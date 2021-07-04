@@ -40,13 +40,13 @@ bool SystemComponent::write(const unsigned short &loc, const unsigned short &ban
 	writeVal = src;
 	if(readOnly || !preWriteAction())
 		return false;
-#ifdef DEEP_ERROR_CHECKING
+#ifdef DEBUG_OUTPUT
 	if (nBytes == 0 || (writeLoc - offset) >= nBytes || writeBank >= nBanks) {
 		if (verboseMode)
-			std::cout << " [" << sName << "] Warning! Failed to write to memory addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
+			std::cout << " [" << sName << "] ERROR! Illegal memory write attempt: addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
 		return false;
 	}
-#endif // ifdef DEEP_ERROR_CHECKING
+#endif // ifdef DEBUG_OUTPUT
 	mem[writeBank][writeLoc-offset] = writeVal;
 	return true;		
 }	
@@ -80,34 +80,45 @@ bool SystemComponent::read(const unsigned short &loc, const unsigned short &bank
 	readBank = bank;
 	if(!preReadAction())
 		return false;
-#ifdef DEEP_ERROR_CHECKING
+#ifdef DEBUG_OUTPUT
 	if (nBytes == 0 || (readLoc - offset) >= nBytes || readBank >= nBanks) {
-		if (verboseMode) 
-			std::cout << " [" << sName << "] Warning! Failed to read from memory addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
+		std::cout << " [" << sName << "] ERROR! Illegal memory read attempt: addr=" << getHex(readLoc) << ", bank=" << readBank << std::endl;
 		return false;
 	}
-#endif // ifdef DEEP_ERROR_CHECKING
+#endif // ifdef DEBUG_OUTPUT
 	dest = mem[readBank][readLoc-offset];
 	return true;
 }
 
 void SystemComponent::readFast(const unsigned short &loc, unsigned char &dest){ 
-	dest = mem[bs][loc-offset];
+#ifdef DEBUG_OUTPUT
+	if (nBytes == 0 || (loc - offset) >= nBytes || bs >= nBanks) {
+		std::cout << " [" << sName << "] ERROR! Illegal fast write attempt: addr=" << getHex(loc) << ", bank=" << getHex(bs) << std::endl;
+		return;
+	}
+#endif // ifdef DEBUG_OUTPUT
+	dest = mem[bs][loc - offset];
 }
 
 void SystemComponent::readFastBank0(const unsigned short &loc, unsigned char &dest){ 
-	dest = mem[0][loc-offset];
+#ifdef DEBUG_OUTPUT
+	if (nBytes == 0 || (loc - offset) >= nBytes || bs >= nBanks) {
+		std::cout << " [" << sName << "] ERROR! Illegal bank-0 fast write attempt: addr=" << getHex(loc) << std::endl;
+		return;
+	}
+#endif // ifdef DEBUG_OUTPUT
+	dest = mem[0][loc - offset];
 }
 
 void SystemComponent::setBank(const unsigned short& b) {
-#ifdef DEEP_ERROR_CHECKING
+#ifdef DEBUG_OUTPUT
 	if (nBytes == 0 || (writeLoc - offset) >= nBytes || writeBank >= nBanks) {
 		if (verboseMode) {
-			std::cout << " [" << sName << "] Warning! Invalid bank number " << getHex(b) << std::endl;
+			std::cout << " [" << sName << "] ERROR! Illegal swap bank selected: " << getHex(b) << std::endl;
 		}
 		return;
 	}
-#endif // ifdef DEEP_ERROR_CHECKING
+#endif // ifdef DEBUG_OUTPUT
 	if (b < nBanks)
 		bs = b;
 }

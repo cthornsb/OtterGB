@@ -27,8 +27,8 @@ enum cmdType {
 	DIRECTORY, ///< ROM directory
 	FILENAME,  ///< ROM filename
 	VSYNC,     ///< Toggle VSync on/off
+	RECORD     ///< Start/Stop recording CPU state to log file
 };
-
 
 ConsoleGBC::ConsoleGBC() :
 	OTTConsole(20, 18),
@@ -94,6 +94,7 @@ void ConsoleGBC::onUserAddCommands() {
 	addConsoleCommand("dir", 0, cmdType::DIRECTORY, "[path]", "Print ROM directory");
 	addConsoleCommand("file", 0, cmdType::FILENAME, "[fname]", "Print ROM filename");
 	addConsoleCommand("vsync", 0, cmdType::VSYNC, "", "Toggle VSync on or off");
+	addConsoleCommand("record", 0, cmdType::RECORD, "[fname]", "Start recording CPU state log file");
 }
 
 void ConsoleGBC::onUserPrompt() {
@@ -278,6 +279,12 @@ void ConsoleGBC::onUserHandleInput(ConsoleCommand* cmd, const std::vector<std::s
 				sys->disableVSync();
 				(*this) << "vsync disabled\n";
 			}
+			break;
+		case cmdType::RECORD: // Start/Stop recording CPU state log file
+			if (!cpu->recordingLogFile()) // Start a new log file
+				cpu->startLogFile(args.size() >= 2 ? args.at(1) : "ottergb.log");
+			else // Close current log file
+				cpu->stopLogFile();
 			break;
 		default:
 			break;

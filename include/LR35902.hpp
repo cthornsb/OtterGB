@@ -2,6 +2,7 @@
 #define LR35902_HPP
 
 #include <string>
+#include <fstream>
 #include <map>
 
 #include "OpcodeLR35902.hpp"
@@ -38,8 +39,11 @@ public:
 
 	enum class cpuRegister{A, B, C, D, E, F, H, L, AF, BC, DE, HL, PC, SP};
 
+	/** Default constructor
+	  */
 	LR35902() :
 		SystemComponent("CPU", 0x20555043), // "CPU "
+		bRecordingLogFile(false),
 		halfCarry(false),
 		fullCarry(false),
 		A(0),
@@ -63,9 +67,15 @@ public:
 		rget16(),
 		rset16(),
 		interruptVectors{ 0x40, 0x48, 0x50, 0x58, 0x60 },
-		nExtraCycles(0)
+		nExtraCycles(0),
+		cpuLogFile()
 	{ 
 	}
+	
+	/** Destructor.
+	  * Closes the output CPU log file, if it is currently open.
+	  */
+	~LR35902();
 
 	void initialize();
 
@@ -77,6 +87,12 @@ public:
 	  * @return True if the current instruction has completed execution (i.e. nCyclesRemaining==0).
 	  */
 	bool onClockUpdate() override ;
+
+	/** Return true if CPU state log file is currently being recorded
+	  */
+	bool recordingLogFile() const {
+		return bRecordingLogFile;
+	}
 
 	/** Get a pointer to the LR35902 opcode handler
 	  */
@@ -229,7 +245,19 @@ public:
 
 	bool findOpcode(const std::string& mnemonic, OpcodeData& data);
 
+	/** Open CPU state log file
+	  * @return True if CPU log file was opened successfully
+	  */	
+	bool startLogFile(const std::string& fname);
+	
+	/** Close current CPU state log file
+	  * @return True if current CPU log file is closed or false if no log file is currently open
+	  */
+	bool stopLogFile();
+
 protected:
+	bool bRecordingLogFile; ///< Set if CPU state log file is currently being written
+
 	bool halfCarry;
 	
 	bool fullCarry;
@@ -277,6 +305,8 @@ protected:
 	unsigned char interruptVectors[5]; ///< LR35902 interrupt vector addresses
 
 	unsigned short nExtraCycles; ///< Number of extra cycles to wait before executing next instruction
+
+	std::ofstream cpuLogFile; ///< Output CPU state log file
 
 	/** Acknowledge LR35902 interrupt.
 	  * Reset interrupt's corresponding IF bit and disable master interrupt (IME) to 

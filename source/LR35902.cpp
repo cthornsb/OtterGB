@@ -21,8 +21,11 @@ const unsigned char IMMEDIATE_RIGHT_BIT = 1;
 const unsigned char ADDRESS_LEFT_BIT    = 2;
 const unsigned char ADDRESS_RIGHT_BIT   = 3;
 
-/** Read the next instruction from memory and return the number of clock cycles. 
-  */
+LR35902::~LR35902() {
+	// Close CPU log file, if it is open
+	cpuLogFile.close();
+}
+
 unsigned short LR35902::evaluate(){
 	// Read an opcode
 	unsigned char op;
@@ -55,6 +58,15 @@ unsigned short LR35902::evaluate(){
 	// Set the memory read/write address (if any)
 	if(opcodes.getCurrentOpcode()->addrptr) // Set memory address
 		memoryAddress = (this->*opcodes.getCurrentOpcode()->addrptr)();
+
+#ifdef DEBUG_OUTPUT
+	// Record current CPU state to output log file (if recording in progress)
+	if (bRecordingLogFile) {
+		cpuLogFile << getHex(A) << " " << getHex(B) << " " << getHex(C) << 
+			" " << getHex(D) << " " << getHex(E) << " " << getHex(F) << " " << 
+			getHex(H) << " " << getHex(L) << " " << getInstruction() << std::endl;
+	}
+#endif // ifdef DEBUG_OUTPUT
 
 	return opcodes()->nCycles;
 }
@@ -286,6 +298,34 @@ bool LR35902::findOpcode(const std::string& mnemonic, OpcodeData& data) {
 		return true;
 	}
 	return false;
+}
+
+
+bool LR35902::startLogFile(const std::string& fname) {
+#ifdef DEBUG_OUTPUT
+	if (bRecordingLogFile) // File already open
+		return true;
+	cpuLogFile.open(fname.c_str());
+	if (!cpuLogFile.good()) {
+		cpuLogFile.close();
+		return false;
+	}
+	bRecordingLogFile = true;
+	return true;
+#else
+	return false;
+#endif // ifdef DEBUG_OUTPUT
+}
+
+bool LR35902::stopLogFile() {
+#ifdef DEBUG_OUTPUT
+	if (!bRecordingLogFile)
+		return false;
+	cpuLogFile.close();
+	return true;
+#else
+
+#endif // ifdef DEBUG_OUTPUT
 }
 
 void LR35902::rlc_d8(unsigned char *arg){
