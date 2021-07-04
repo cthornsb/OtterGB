@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 
 #include "Support.hpp"
 #include "SystemComponent.hpp"
@@ -206,12 +207,20 @@ unsigned int SystemComponent::readSavestateHeader(std::ifstream &f){
 	return 13;
 }
 
-void SystemComponent::resetMemory(){
+void SystemComponent::resetMemory(const unsigned char& val/* = 0*/){
 	if(!size)
 		return;
 	for(std::vector<std::vector<unsigned char> >::iterator iter = mem.begin(); iter != mem.end(); iter++){
-		std::fill(iter->begin(), iter->end(), 0);
+		std::fill(iter->begin(), iter->end(), val);
 	}
 	bs = 0; // Reset bank select
+}
+
+void SystemComponent::fillRandom() {
+	for(std::vector<std::vector<unsigned char> >::iterator iter = mem.begin(); iter != mem.end(); iter++){
+		for(std::vector<unsigned char>::iterator addr = iter->begin(); addr != iter->end(); addr++){
+			*addr = (unsigned char)(rand() % 256);
+		}
+	}
 }
 

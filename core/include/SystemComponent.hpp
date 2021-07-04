@@ -404,6 +404,10 @@ public:
 	  * Clear component memory and call onUserReset().
 	  */
 	void reset();
+	
+	/** Fill component memory with random values
+	  */
+	void fillRandom();	
 
 protected:
 	SystemGBC *sys; ///< Pointer to the system bus
@@ -500,7 +504,7 @@ protected:
 	
 	/** Reset component memory
 	  */
-	void resetMemory();
+	void resetMemory(const unsigned char& val = 0);
 	
 	/** Handle call to reset system component
 	  * Called from reset().

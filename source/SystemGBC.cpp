@@ -971,13 +971,18 @@ bool SystemGBC::loadSRAM(const std::string &fname){
 	}
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
 	if(!ifile.good() || !cart->getRam()->readMemoryFromFile(ifile)){
-		if(verboseMode)
-			std::cout << sysMessage << "Reading cartridge RAM from file \"" << fname << "\"... FAILED!" << std::endl;
+		// Failed to read cartridge SRAM from file.
+		// Populate blank SRAM with random data.
+		cart->getRam()->fillRandom();
+		if (verboseMode) {
+			std::cout << sysMessage << "Failed to load cartridge SRAM (" << fname << "\")!" << std::endl;
+			std::cout << sysMessage << " File does not exist or is corrupted and cannot be read." << std::endl;
+		}
 		return false;
 	}
 	ifile.close();
 	if(verboseMode)
-		std::cout << sysMessage << "Reading cartridge RAM from file \"" << fname << "\"... DONE!" << std::endl;
+		std::cout << sysMessage << "Successfully loaded cartridge SRAM from file \"" << fname << "\"." << std::endl;
 	return true;
 }
 
@@ -1218,7 +1223,11 @@ bool SystemGBC::reset() {
 			comp->second->reset();
 	}
 	
-	// Reset cartridge ROM
+	// Fill system RAM with random data
+	wram->fillRandom();
+	hram->fillRandom();
+	
+	// Reset cartridge ROM bank settings
 	cart->setBank(1); // Set the default ROM bank for SWAP
 	cart->getRam()->setBank(0); // Set initial cartridge RAM swap bank
 
