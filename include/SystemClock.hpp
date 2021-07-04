@@ -75,7 +75,7 @@ public:
 	/** Return true if the LCD driver is in vertical blank (VBlank) interval
 	  */
 	bool getVSync() const { 
-		return vsync; 
+		return bVSync; 
 	}
 	
 	/** Set the number of pixel clock (~4 MHz) ticks to delay start of HBlank interval (mode 0)
@@ -88,7 +88,7 @@ public:
 	/** Poll the VSync (vertical blank interval) flag and reset it.
 	  */
 	bool pollVSync(){ 
-		return (vsync ? !(vsync = false) : false); 
+		return (bVSync ? !(bVSync = false) : false); 
 	}
 	
 	/** Perform one system clock tick
@@ -106,7 +106,9 @@ public:
 	void resetScanline();
 
 private:
-	bool vsync; ///< Set if LCD driver is in vertical blank interval
+	bool bDoubleSpeedMode; ///< Set if emulator is in CGB double speed mode (~2 MHz)
+
+	bool bVSync; ///< Set if LCD driver is in vertical blank interval
 
 	unsigned int cyclesSinceLastVSync; ///< Number of pixel clock ticks since the last vertical blank interval
 	

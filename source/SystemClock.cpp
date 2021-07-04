@@ -19,7 +19,8 @@ constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 456;   // CPU cycles per HSYNC (
 SystemClock::SystemClock() : 
 	OTTFrameTimer(),
 	SystemComponent("Clock", 0x204b4c43), // "CLK "
-	vsync(false), 
+	bDoubleSpeedMode(false),
+	bVSync(false), 
 	cyclesSinceLastVSync(0), 
 	cyclesSinceLastHSync(0),
 	currentClockSpeed(0),
@@ -52,6 +53,7 @@ void SystemClock::setDoubleSpeedMode(){
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to double-speed mode." << std::endl;
 	}
+	bDoubleSpeedMode = true;
 }
 
 void SystemClock::setNormalSpeedMode(){
@@ -68,6 +70,7 @@ void SystemClock::setNormalSpeedMode(){
 	if(verboseMode){
 		std::cout << " [Clock] Switched CPU speed to normal." << std::endl;
 	}
+	bDoubleSpeedMode = false;
 }
 
 double SystemClock::getCyclesPerSecond() const {
@@ -90,16 +93,18 @@ bool SystemClock::onClockUpdate(){
 		}
 	}*/
 
-	// Check if the display is enabled. If it's not, set STAT to mode 1
-	if(!rLCDC->bit7()){
-		if(lcdDriverMode != 1){
-			startMode1();
-		}
-		return false;
-	}
-
 	// Tick the pixel clock (~4 MHz)
 	cyclesSinceLastVSync += 4;
+	
+	if(!rLCDC->bit7()){ // LCD disabled
+		if(cyclesSinceLastVSync >= cyclesPerVSync){
+			this->sync();
+			cyclesSinceLastVSync = 0;
+		}
+		return bVSync;
+	}
+
+	// Tick the current scanline's pixel clock
 	cyclesSinceLastHSync += 4;
 
 	// Check if we're on the next scanline (every 456 cycles)
@@ -142,10 +147,9 @@ bool SystemClock::onClockUpdate(){
 	else{ // Start the next frame (Mode 1->2)
 		this->sync(); // vsync flag set to false
 		resetScanline(); // VBlank period has ended, next frame started
-		//startMode2(); // resetScanline() automatically starts mode 2
 	}
 	
-	return vsync;
+	return bVSync;
 }
 
 void SystemClock::readConfigFile(ConfigFile* config) {
@@ -156,17 +160,12 @@ void SystemClock::readConfigFile(ConfigFile* config) {
 }
 
 void SystemClock::resetScanline(){
-	vsync = false;
+	bVSync = false;
 	cyclesSinceLastVSync = 0;
 	cyclesSinceLastHSync = 0;	
-	if(rLCDC->bit7()){ // LCD enabled
-		startMode2();
-	}
-	else{ // LCD disabled
-		startMode1();
-	}
+	startMode2();
 	rLY->clear();
-	rWLY->clear();
+	rWLY->clear();	
 	compareScanline(); // Handle LY / LYC coincidence
 }
 
@@ -198,7 +197,7 @@ void SystemClock::startMode0(){
 }
 
 void SystemClock::startMode1(){
-	vsync = true;
+	bVSync = true;
 	lcdDriverMode = 1;
 	rSTAT->setBits(0, 1, 0x1);
 	sys->lockMemory(false, false); // VRAM and OAM now accessible
@@ -235,19 +234,17 @@ void SystemClock::userAddSavestateValues(){
 	addSavestateValue(modeStart,             sizeULong * 4);
 	// Bytes
 	addSavestateValue(&lcdDriverMode, sizeof(unsigned char));
-	addSavestateValue(&vsync,         sizeof(bool));
+	addSavestateValue(&bVSync,        sizeof(bool));
 	// Doubles
 	addSavestateValue(&dFramerate, sizeDouble);
 	addSavestateValue(&dFramePeriod, sizeDouble);
 	addSavestateValue(&cyclesPerSecond, sizeDouble);
-	//hrclock::time_point timeOfInitialization; ///< The time that the system clock was initialized
-	//hrclock::time_point timeOfLastVSync; ///< The time at which the screen was last refreshed
-	//hrclock::time_point cycleTimer;
 }
 
 void SystemClock::onUserReset(){
-	vsync = false;
+	bVSync = false;
 	this->resetTimer();
+	setNormalSpeedMode();
 	//timeOfInitialization = hrclock::now();
 	//timeOfLastVSync = hrclock::now();
 	//cycleTimer = hrclock::now();
