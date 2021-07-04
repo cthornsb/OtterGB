@@ -9,6 +9,7 @@ add_library(
 	GPU.cpp
 	Joystick.cpp
 	LR35902.cpp
+	MemoryController.cpp
 	OpcodeLR35902.cpp
 	Serial.cpp
 	Sound.cpp

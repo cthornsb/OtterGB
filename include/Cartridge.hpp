@@ -4,26 +4,17 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "SystemComponent.hpp"
-#include "ComponentTimer.hpp"
-#include "Register.hpp"
+#include "MemoryController.hpp"
 
 class Cartridge : public SystemComponent {
 public:
-	enum class CartMBC {
-		UNKNOWN, 
-		ROMONLY, 
-		MBC1, 
-		MBC2, 
-		MBC3, 
-		MBC5
-	};
-
 	/** Default constructor
 	  */
 	Cartridge();
-
+	
 	/** Write to cartridge RAM (if available)
 	  * @param addr 16-bit system memory address
 	  * @param value 8-bit value to write to RAM
@@ -95,10 +86,6 @@ public:
 		return (language == 0x0 ? "Japanese" : "English"); 
 	}
 
-	/** Get catridge ROM MBC type string
-	  */
-	std::string getCartridgeType() const;
-	
 	/** Get size of catridge ROM (in kB)
 	  */
 	unsigned short getRomSize() const { 
@@ -123,10 +110,10 @@ public:
 		return programStart; 
 	}	
 	
-	/** Return true if cartridge RAM is enabled
+	/** Return true if cartridge RAM is present and is enabled
 	  */
-	bool getExternalRamEnabled() const { 
-		return extRamEnabled; 
+	bool getExternalRamEnabled() const {
+		return (!ram.empty() && mbc->getRamEnabled());
 	}
 	
 	/** Return true if cartridge supports battery-backup saves (SRAM)
@@ -172,13 +159,15 @@ public:
 	  * Clock the real-time-clock, if the cartridge contains an MBC which uses it.
 	  */
 	bool onClockUpdate() override;
+	
+	/** Get cartridge ROM MBC type string
+	  */
+	std::string getCartridgeType() const {
+		return mbc->getTypeString();
+	}
 
-private:
+protected:
 	bool bLoaded; ///< Set to true if a ROM is loaded in memory
-
-	bool ramSelect; ///< Cartridge ROM/RAM select (0: ROM, 1: RAM)
-
-	bool extRamEnabled; ///< Cartridge internal RAM enabled
 
 	bool extRamSupport; ///< Cartridge contains internal RAM bank(s)
 
@@ -188,15 +177,13 @@ private:
 
 	bool rumbleSupport; ///< Catridge supports rumble feature
 
-	bool bLatchState; ///< Cartridge real-time-clock (RTC) latch state
-
 	unsigned char leader; ///< Header block leader opcode (usually a JP)
 
 	unsigned short programStart; ///< Program entry point address
 
 	unsigned char bootBitmapString[48]; ///< Boot bitmap
 
-	char titleString[12]; ///< Cartridge tile string
+	char titleString[12]; ///< Cartridge title string
 
 	char manufacturer[5]; ///< 4 character manufacturer code
 
@@ -224,30 +211,34 @@ private:
 
 	SystemComponent ram; ///< Internal RAM bank(s)
 	
-	CartMBC mbcType; ///< Input ROM catridge type
-	
-	Register* registerSelect; ///< Pointer to the currently selected MBC register
-
-	ComponentTimer rtcTimer; ///< Real-time-clock (RTC) timer
-
-	unsigned int nRtcTimerSeconds; ///< The number of seconds elapsed according to the RTC
-
-	std::vector<Register> mbcRegisters; ///< Map of MBC registers (if used by the ROM)
+	std::unique_ptr<mbcs::MemoryController> mbc; ///< Cartridge memory bank controller (MBC)
 	
 	/** Read input ROM header
 	  * Initialize ROM memory (and RAM if enabled) and set cartridge feature flags
 	  * @return The number of header bytes read from input stream
 	  */
 	unsigned int readHeader(std::ifstream &f);
-	
+
 	/** Create internal MBC registers and add them to the register vector
-	  */
-	void createRegisters();
+	  */	
+	virtual void createRegisters() {
+	}
 	
-	/** Attempt to write to an MBC register
-	  * If the value is written successfully, a pointer to the MBC register which was written to is returned.
+	/** Called whenever a cartridge RAM write is requested.
+	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
+	  * @return True if write was handled by MBC and no further RAM access should occur
 	  */
-	Register* writeToMBC(const unsigned short &reg, const unsigned char &val);
+	virtual bool onUserWriteToRam(const unsigned short& addr, const unsigned char& value) {
+		return false;
+	}
+
+	/** Called whenever a cartridge RAM read is requested.
+	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
+	  * @return True if write was handled by MBC and no further RAM access should occur
+	  */
+	virtual bool onUserReadFromRam(const unsigned short& addr, unsigned char& value) {
+		return false;
+	}
 };
 
 #endif
