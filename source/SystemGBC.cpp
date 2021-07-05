@@ -847,6 +847,7 @@ void SystemGBC::openTileViewer(){
 		return;
 	tileViewer.reset(new OTTWindow(160, 160));
 	tileViewer->initialize("Tile Viewer");
+	tileViewer->enableImageBuffer();
 	bUseTileViewer = true;
 	debugMode = true;
 }
@@ -856,6 +857,7 @@ void SystemGBC::openLayerViewer(){
 		return;	
 	layerViewer.reset(new OTTWindow(256, 256));
 	layerViewer->initialize("Layer Viewer");
+	layerViewer->enableImageBuffer();
 	layerViewer->getBuffer()->setBlendMode(BlendMode::MULT);
 	winScrollPositions.resize(144, BackgroundWindowSettings{ 0, 0, 0, 0 });
 	bUseLayerViewer = true;
