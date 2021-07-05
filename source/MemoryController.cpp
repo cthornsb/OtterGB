@@ -1,5 +1,3 @@
-#include <iostream> // TEMP CRT
-
 #include "MemoryController.hpp"
 #include "SystemComponent.hpp"
 #include "Cartridge.hpp"
@@ -32,11 +30,11 @@ bool MBC1::writeRegister(const unsigned short &reg, const unsigned char &val) {
 	unsigned short bankSelected = 0;
 	if (!rBankModeSelect.getBit(0)) { // Mode 0: Simple ROM banking. Specify bits 5 & 6 of the ROM bank number.
 		bankSelected = (rRomBankHigh.getBits(0, 1) << 5) + bankLow;
-		ram->setBank(0);
+		setBank(0);
 	}
 	else{ // Mode1: RAM bank or advanced ROM banking
 		bankSelected = bankLow;
-		ram->setBank(rRomBankHigh.getBits(0, 1));
+		setBank(rRomBankHigh.getBits(0, 1));
 	}
 
 	// Set ROM bank, masked with the maximum number of bits in the event that the selected bank was out of range.
@@ -80,14 +78,14 @@ bool MBC3::writeRegister(const unsigned short &reg, const unsigned char &val) {
 	bRamEnabled = (rRamEnable.getBits(0, 3) == 0x0a);
 
 	// 7 bit ROM bank (MBC3 reads bank 0 as bank 1, like MBC1)
-	unsigned char bankSelected = rRomBank.getBits(0, 7);
+	unsigned char bankSelected = rRomBank.getBits(0, 6);
 	cart->setBank(bankSelected != 0 ? bankSelected : 1);
 
 	// RAM bank select or RTC register select
 	registerSelect = 0x0;
 	unsigned char ramBankSelect = rRamBank.getBits(0, 3); // (0-3: RAM bank, 8-C: RTC register)
 	if (ramBankSelect <= 0x3) // RAM bank
-		ram->setBank(ramBankSelect);
+		setBank(ramBankSelect);
 	else {
 		switch (ramBankSelect) {
 		case 0x8:
@@ -159,7 +157,7 @@ bool MBC3::writeToRam(const unsigned short& addr, const unsigned char& value) {
 }
 
 bool MBC3::readFromRam(const unsigned short& addr, unsigned char& value) {
-	if (mbcType == CartMBC::MBC3 && registerSelect) { // RTC register			
+	if (registerSelect) { // RTC register	
 		registerSelect->read(value);
 		return true;
 	}
@@ -201,7 +199,7 @@ bool MBC5::writeRegister(const unsigned short &reg, const unsigned char &val) {
 		else{ // Deactivate rumble
 		}*/
 	}
-	ram->setBank(ramBank);
+	setBank(ramBank);
 	
 	return true;
 }

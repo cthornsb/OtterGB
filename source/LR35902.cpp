@@ -324,7 +324,7 @@ bool LR35902::stopLogFile() {
 	cpuLogFile.close();
 	return true;
 #else
-
+	return false;
 #endif // ifdef DEBUG_OUTPUT
 }
 

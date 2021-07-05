@@ -155,7 +155,8 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	registers(),
 	bootROM(),
 	winScrollPositions(),
-	subsystems()
+	subsystems(),
+	mbc(0x0)
 { 
 	// Configuration file handler
 	std::string configFilePath = "default.cfg";
@@ -362,7 +363,6 @@ void SystemGBC::initialize(){
 
 	// Set memory offsets for all components	
 	gpu->setOffset(VRAM_SWAP_START);
-	cart->getRam()->setOffset(CART_RAM_START);
 	wram->setOffset(WRAM_ZERO_START);
 	oam->setOffset(OAM_TABLE_START);
 	hram->setOffset(HIGH_RAM_START);
@@ -677,7 +677,7 @@ unsigned char *SystemGBC::getPtr(const unsigned short &loc){
 		retval = gpu->getPtr(loc);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
-		retval = cart->getRam()->getPtr(loc);
+		retval = mbc->getPtr(loc);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
 		retval = wram->getPtr(loc);
@@ -706,7 +706,7 @@ const unsigned char *SystemGBC::getConstPtr(const unsigned short &loc){
 		retval = gpu->getConstPtr(loc);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM (if available)
-		retval = cart->getRam()->getConstPtr(loc);
+		retval = mbc->getConstPtr(loc);
 	}
 	else if(loc <= 0xFDFF){ // Work RAM (WRAM) 0-1 and ECHO
 		retval = wram->getConstPtr(loc);
@@ -952,7 +952,7 @@ bool SystemGBC::saveSRAM(const std::string &fname){
 		return false;
 	}
 	std::ofstream ofile(fname.c_str(), std::ios::binary);
-	if(!ofile.good() || !cart->getRam()->writeMemoryToFile(ofile)){
+	if(!ofile.good() || !mbc->writeMemoryToFile(ofile)){
 		if(verboseMode)
 			std::cout << sysMessage << "Writing cartridge RAM to file \"" << fname << "\"... FAILED!" << std::endl;
 		return false;
@@ -970,10 +970,10 @@ bool SystemGBC::loadSRAM(const std::string &fname){
 		return false;
 	}
 	std::ifstream ifile(fname.c_str(), std::ios::binary);
-	if(!ifile.good() || !cart->getRam()->readMemoryFromFile(ifile)){
+	if(!ifile.good() || !mbc->readMemoryFromFile(ifile)){
 		// Failed to read cartridge SRAM from file.
 		// Populate blank SRAM with random data.
-		cart->getRam()->fillRandom();
+		mbc->fillRandom();
 		if (verboseMode) {
 			std::cout << sysMessage << "Failed to load cartridge SRAM (" << fname << "\")!" << std::endl;
 			std::cout << sysMessage << " File does not exist or is corrupted and cannot be read." << std::endl;
@@ -1138,6 +1138,9 @@ bool SystemGBC::reset() {
 
 		// ROM loaded successfully 		
 		bNeedsReloaded = false;
+
+		// Get pointer to cartridge memory bank controller (MBC)
+		mbc = cart->getMBC();
 	}
 
 	if(forceColor){
@@ -1229,7 +1232,7 @@ bool SystemGBC::reset() {
 	
 	// Reset cartridge ROM bank settings
 	cart->setBank(1); // Set the default ROM bank for SWAP
-	cart->getRam()->setBank(0); // Set initial cartridge RAM swap bank
+	mbc->setBank(0); // Set initial cartridge RAM swap bank
 
 	// Interrupts enabled by default
 	enableInterrupts();
@@ -1395,7 +1398,7 @@ bool SystemGBC::quicksave(const std::string& fname/*=""*/){
 
 	// Write cartridge RAM (if enabled)
 	if(cartRam)
-		nBytesWritten += cart->getRam()->writeSavestate(ofile);
+		nBytesWritten += mbc->writeSavestate(ofile);
 
 	// Write state of all system components
 	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){
@@ -1457,7 +1460,7 @@ bool SystemGBC::quickload(const std::string& fname/*=""*/){
 
 	// Copy cartridge RAM (if enabled)
 	if(cartRam)
-		nBytesRead += cart->getRam()->readSavestate(ifile);
+		nBytesRead += mbc->readSavestate(ifile);
 
 	// Copy state of all system components
 	for(auto comp = subsystems->list.cbegin(); comp != subsystems->list.cend(); comp++){

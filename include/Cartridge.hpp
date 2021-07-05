@@ -53,7 +53,7 @@ public:
 	/** Return true if the cartridge has an internal RAM bank
 	  */
 	bool hasRam() const { 
-		return !ram.empty(); 
+		return !mbc->empty(); 
 	}
 
 	/** Return true if a ROM is loaded in memory
@@ -62,10 +62,10 @@ public:
 		return bLoaded; 
 	}
 
-	/** Get pointer to internal RAM bank
+	/** Get pointer to cartridge memory bank controller (MBC)
 	  */
-	SystemComponent *getRam(){ 
-		return &ram; 
+	mbcs::MemoryController* getMBC(){ 
+		return mbc.get(); 
 	}
 
 	/** Get cartridge title c-string
@@ -95,7 +95,7 @@ public:
 	/** Get size of internal cartridge RAM (in kB)
 	  */
 	unsigned short getRamSize() const { 
-		return ram.getSize()/1024; 
+		return mbc->getSize()/1024; 
 	}
 	
 	/** Get the cartridge type ID
@@ -113,13 +113,13 @@ public:
 	/** Return true if cartridge RAM is present and is enabled
 	  */
 	bool getExternalRamEnabled() const {
-		return (!ram.empty() && mbc->getRamEnabled());
+		return (!mbc->empty() && mbc->getRamEnabled());
 	}
 	
 	/** Return true if cartridge supports battery-backup saves (SRAM)
 	  */
 	bool getSaveSupport() const { 
-		return (!ram.empty() && batterySupport); 
+		return (!mbc->empty() && batterySupport); 
 	}
 	
 	/** Return true if cartridge has internal timer support
@@ -208,8 +208,6 @@ protected:
 	unsigned char headerChecksum; ///< Checksum of header
 
 	unsigned short globalChecksum; ///< Checksum of ROM
-
-	SystemComponent ram; ///< Internal RAM bank(s)
 	
 	std::unique_ptr<mbcs::MemoryController> mbc; ///< Cartridge memory bank controller (MBC)
 	
@@ -218,27 +216,6 @@ protected:
 	  * @return The number of header bytes read from input stream
 	  */
 	unsigned int readHeader(std::ifstream &f);
-
-	/** Create internal MBC registers and add them to the register vector
-	  */	
-	virtual void createRegisters() {
-	}
-	
-	/** Called whenever a cartridge RAM write is requested.
-	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
-	  * @return True if write was handled by MBC and no further RAM access should occur
-	  */
-	virtual bool onUserWriteToRam(const unsigned short& addr, const unsigned char& value) {
-		return false;
-	}
-
-	/** Called whenever a cartridge RAM read is requested.
-	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
-	  * @return True if write was handled by MBC and no further RAM access should occur
-	  */
-	virtual bool onUserReadFromRam(const unsigned short& addr, unsigned char& value) {
-		return false;
-	}
 };
 
 #endif

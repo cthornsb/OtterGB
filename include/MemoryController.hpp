@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Register.hpp"
+#include "SystemComponent.hpp"
 #include "ComponentTimer.hpp"
 
 class Cartridge;
@@ -21,11 +22,12 @@ enum class CartMBC {
 	MBC5
 };
 
-class MemoryController {
+class MemoryController : public SystemComponent {
 public:
 	/** Default constructor (invalid MBC)
 	  */
 	MemoryController() :
+		SystemComponent("SRAM", 0x4d415253),
 		bValid(false),
 		bRamEnabled(false),
 		bRamSupport(false),
@@ -34,14 +36,14 @@ public:
 		bRumbleSupport(false),
 		mbcType(CartMBC::UNKNOWN),
 		sTypeString("UNKNOWN"),
-		cart(0x0),
-		ram(0x0)
+		cart(0x0)
 	{
 	}
 
 	/** MBC type constructor
 	  */
 	MemoryController(const CartMBC& type, const std::string& typeStr) :
+		SystemComponent("SRAM", 0x4d415253),
 		bValid(true),
 		bRamEnabled(false),
 		bRamSupport(false),
@@ -50,8 +52,7 @@ public:
 		bRumbleSupport(false),
 		mbcType(type),
 		sTypeString(typeStr),
-		cart(0x0),
-		ram(0x0)
+		cart(0x0)
 	{
 	}
 
@@ -64,11 +65,10 @@ public:
 		bRumbleSupport = bRumble;
 	}
 
-	/** Set pointers to cartridge ROM and RAM (if present)
+	/** Set pointer to cartridge ROM
 	  */
-	void setMemory(Cartridge* ROM, SystemComponent* RAM){
+	void setCartridge(Cartridge* ROM){
 		cart = ROM;
-		ram = RAM;
 	}
 
 	/** Return true if cartridge RAM is present and is currently enabled
@@ -89,20 +89,6 @@ public:
 		return sTypeString;
 	}
 
-	/** Write cartridge MBC register
-	  * @return True if MBC register is written successfully and return false otherwise
-	  */
-	virtual bool writeRegister(const unsigned short &reg, const unsigned char &val) {
-		return false;
-	}
-	
-	/** Read cartridge MBC register
-	  * @return True if MBC register is read successfully and return false otherwise
-	  */
-	virtual bool readRegister(const unsigned short &reg, unsigned char &val) {
-		return false;
-	}
-	
 	/** Request a value to be written to cartridge RAM
 	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
 	  * @return True if write was handled by MBC and no further RAM access should occur
@@ -113,20 +99,12 @@ public:
 
 	/** Request a value to be read from cartridge RAM
 	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
-	  * @return True if write was handled by MBC and no further RAM access should occur
+	  * @return True if read was handled by MBC and no further RAM access should occur
 	  */
 	virtual bool readFromRam(const unsigned short& addr, unsigned char& value) {
 		return false;
 	}
 	
-	/** Method called once per 1 MHz system clock tick.
-	  * Clock the real-time-clock, if MBC contains one.
-	  * @return True if clocking the MBC timer caused it to rollover
-	  */
-	virtual bool onClockUpdate() {
-		return false;
-	}
-
 protected:
 	bool bValid; ///< Set if this object is a valid MBC
 
@@ -145,8 +123,6 @@ protected:
 	std::string sTypeString; ///< Human readable MBC type string
 	
 	Cartridge* cart; ///< Pointer to cartridge object
-	
-	SystemComponent* ram; ///< Pointer to cartridge RAM (if present)
 };
 
 class NoMBC : public MemoryController {
@@ -217,7 +193,6 @@ public:
 		rDayLow("MBC3_DAYLOW", "33333333"),
 		rDayHigh("MBC3_DAYHIGH", "30000033"),
 		registerSelect(0x0)
-		
 	{
 	}
 	
@@ -267,7 +242,7 @@ protected:
 	
 	/** Request a value to be read from cartridge RAM
 	  * Cartridge MBC may intercept request and prevent RAM access by returning true.
-	  * @return True if write was handled by MBC and no further RAM access should occur
+	  * @return True if read was handled by MBC and no further RAM access should occur
 	  */
 	bool readFromRam(const unsigned short& addr, unsigned char& value) override ;
 };

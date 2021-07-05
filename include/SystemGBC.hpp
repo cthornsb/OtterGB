@@ -8,6 +8,7 @@
 #include "SystemComponent.hpp"
 #include "SystemRegisters.hpp"
 #include "ComponentThread.hpp"
+#include "MemoryController.hpp"
 
 #ifdef USE_QT_DEBUGGER
 	class MainWindow;
@@ -36,18 +37,18 @@ class OTTWindow;
 
 class ComponentList{
 public:
-	SerialController   *serial; ///< Serial I/O controller
-	DmaController      *dma;    ///< Direct memory access (DMA) controller
-	Cartridge          *cart;   ///< Cartridge (ROM) controller
-	GPU                *gpu;    ///< Pixel processing unit (PPU) controller
-	SoundProcessor     *apu;    ///< Audio processing unit (APU) controller
-	SpriteHandler      *oam;    ///< Object attribute memory (OAM) controller
-	JoystickController *joy;    ///< Joypad input controller
-	WorkRam            *wram;   ///< 32 kB work ram (WRAM) controller
-	SystemComponent    *hram;   ///< 127 B high ram (HRAM) controller
-	SystemClock        *sclk;   ///< System clock controller
-	SystemTimer        *timer;  ///< System timer controller
-	LR35902            *cpu;    ///< LR35902 CPU controller
+	SerialController*   serial; ///< Serial I/O controller
+	DmaController*      dma;    ///< Direct memory access (DMA) controller
+	Cartridge*          cart;   ///< Cartridge (ROM) controller
+	GPU*                gpu;    ///< Pixel processing unit (PPU) controller
+	SoundProcessor*     apu;    ///< Audio processing unit (APU) controller
+	SpriteHandler*      oam;    ///< Object attribute memory (OAM) controller
+	JoystickController* joy;    ///< Joypad input controller
+	WorkRam*            wram;   ///< 32 kB work ram (WRAM) controller
+	SystemComponent*    hram;   ///< 127 B high ram (HRAM) controller
+	SystemClock*        sclk;   ///< System clock controller
+	SystemTimer*        timer;  ///< System timer controller
+	LR35902*            cpu;    ///< LR35902 CPU controller
 	
 	std::map<std::string, SystemComponent*> list; ///< Map of all named system components
 	
@@ -769,7 +770,7 @@ private:
 	std::unique_ptr<DmaController> dma; ///< Pointer to Direct Memory Access (DMA) controller
 	
 	std::unique_ptr<Cartridge> cart; ///< Pointer to cartridge ROM
-	
+
 	std::unique_ptr<GPU> gpu; ///< Pointer to Pixel Processing Unit (PPU)
 	
 	std::unique_ptr<SoundProcessor> sound; ///< Pointer to Audio Processing Unit (APU)
@@ -817,6 +818,8 @@ private:
 	std::vector<BackgroundWindowSettings> winScrollPositions; ///< Vector of window and scroll coordinates for each scanline
 
 	std::unique_ptr<ComponentList> subsystems; ///< List of all system component pointers 
+
+	mbcs::MemoryController* mbc; ///< Pointer to cartridge memory bank controller (MBC)
 
 	/** Write to a system register 
 	  * Note: The true register value will be AND-ed together with its writable bit bitmask

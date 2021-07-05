@@ -35,7 +35,6 @@ Cartridge::Cartridge() :
 	versionNumber(0),
 	headerChecksum(0),
 	globalChecksum(0),
-	ram("SRAM", 0x4d415253),
 	mbc()
 { 
 }
@@ -46,7 +45,7 @@ bool Cartridge::writeToRam(const unsigned short& addr, const unsigned char& valu
 	if (addr >= 0xa000 && addr < 0xc000) {
 		if (mbc->writeToRam(addr, value))
 			return true;
-		ram.write(addr, value);
+		mbc->write(addr, value);
 		return true;
 	}
 	return false;
@@ -58,7 +57,7 @@ bool Cartridge::readFromRam(const unsigned short& addr, unsigned char& value) {
 	if (addr >= 0xa000 && addr < 0xc000) {	
 		if (mbc->readFromRam(addr, value))
 			return true;	
-		ram.read(addr, value);
+		mbc->read(addr, value);
 		return true;
 	}
 	return false;
@@ -161,6 +160,7 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		mbc.reset(new mbcs::MemoryController);
 		std::cout << " [" << sName << "] Error! Unknown cartridge type (" << getHex(cartridgeType) << ")." << std::endl;
 	}
+	mbc->setOffset(0xa000); // Cartridge save RAM (SRAM) is located at address 0xa000 to 0xbfff
 	
 	// Set cartridge component flags
 	if(cartridgeType <= 30){
@@ -226,27 +226,27 @@ unsigned int Cartridge::readHeader(std::ifstream &f){
 		case 0x0: // No onboard RAM
 			break;
 		case 0x1: // 2 kB (unofficial size)
-			ram.initialize(2048);
+			mbc->initialize(2048);
 			break;
 		case 0x2: // 8 kB
-			ram.initialize(8192);
+			mbc->initialize(8192);
 			break;
 		case 0x3: // 32 kB (4 banks)
-			ram.initialize(8192, 4);
+			mbc->initialize(8192, 4);
 			break;
 		case 0x4: // 128 kB (16 banks)
-			ram.initialize(8192, 16);
+			mbc->initialize(8192, 16);
 			break;
 		case 0x5: // 64 kB (8 banks)
-			ram.initialize(8192, 8);
+			mbc->initialize(8192, 8);
 			break;
 		default:
 			std::cout << " [" << sName << "] Error! Unknown cartridge RAM size (" << getHex(ramSize) << ")." << std::endl;
 			break;
 	}
 
-	// Link MBC to cartridge ROM and RAM
-	mbc->setMemory(this, &ram);
+	// Link MBC to cartridge ROM
+	mbc->setCartridge(this);
 	
 	// Set the default ROM bank for SWAP
 	bs = 1;
