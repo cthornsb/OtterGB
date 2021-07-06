@@ -29,7 +29,9 @@ public:
 	void setNormalSpeedMode();
 	
 	/** Set the main LCD and PPU enable flag (LCDC bit 7).
-	  * 
+	  * If LCD is currently enabled and is being disabled, PPU enters mode 1 and immediately stops drawing.
+	  * If LCD is disabled and is being re-enabled, PPU is reset to a new frame and immediatley resumes drawing.
+	  * If the state is not being changed, nothing happens.
 	  */
 	void setLcdState(const bool& state);
 
@@ -148,25 +150,22 @@ private:
 	bool compareScanline();
 
 	/** Begin mode 0 (horizontal blank period)
-	  * Request mode 0 STAT interrupt (INT 48, if enabled)
+	  * Request mode 0 STAT interrupt (INT 48, if enabled by STAT bit 3)
 	  */
 	void startMode0();
 
 	/** Begin mode 1 (vertical blank period)
-	  * Request mode 1 STAT interrupt (INT 48, if enabled)
-	  * Request VBlank interrupt (INT 40)
+	  * @param requestInterrupt Request mode 1 STAT interrupt (INT 48, if enabled by STAT bit 4) and VBlank interrupt (INT 40)
 	  */
-	void startMode1();
+	void startMode1(bool requestInterrupt = true);
 
-	/** Begin mode 2 (OAM search)
-	  * OAM inaccessible
-	  * Request mode 2 STAT interrupt (INT 48, if enabled)
+	/** Begin mode 2 (OAM search). OAM is inaccessible.
+	  * @param requestInterrupt Request mode 2 STAT interrupt (INT 48, if enabled by STAT bit 5)
 	  */
-	void startMode2();
+	void startMode2(bool requestInterrupt = true);
 	
-	/** Begin mode 3 (drawing scanline)
-	  * VRAM and OAM inaccessible
-	  * Trigger PPU to start drawing scanline
+	/** Begin mode 3 (drawing scanline). VRAM and OAM are inaccessible.
+	  * Trigger PPU to start drawing scanline.
 	  */
 	void startMode3();
 	

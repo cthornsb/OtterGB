@@ -19,7 +19,7 @@ constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 456;   // CPU cycles per HSYNC (
 SystemClock::SystemClock() : 
 	OTTFrameTimer(),
 	SystemComponent("Clock", 0x204b4c43), // "CLK "
-	bLcdEnabled(false),
+	bLcdEnabled(true), // LCD driver starts enabled in the event the ROM does not activate it
 	bDoubleSpeedMode(false),
 	bVSync(false), 
 	cyclesSinceLastVSync(0), 
@@ -76,17 +76,21 @@ void SystemClock::setNormalSpeedMode(){
 
 void SystemClock::setLcdState(const bool& state) {
 	if (!state) { // LCD & PPU disabled
-		if (bLcdEnabled) // LY is reset if LCD is turned off
-			sys->getClock()->resetScanline();
-		lcdDriverMode = 1;
-		rSTAT->setBits(0, 1, 0x1);
-		sys->lockMemory(false, false); // VRAM and OAM now accessible immediately
+		// Enter PPU mode 1
+		bVSync = true;
+		startMode1(false);
 		bLcdEnabled = false;
-		//bVSync = true;
 	}
 	else{ // LCD & PPU enabled
 		if (!bLcdEnabled) { // LCD is being turned on
-			// PPU immediately resumes drawing operations, but the screen will stay white until the next frame
+			// PPU immediately resumes drawing operations
+			// Reset to a new frame to start drawing
+			bVSync = false;
+			cyclesSinceLastVSync = 0;
+			cyclesSinceLastHSync = 0;	
+			startMode2(false);
+			rLY->clear();
+			rWLY->clear();	
 		}
 		bLcdEnabled = true;
 	}
@@ -115,8 +119,8 @@ bool SystemClock::onClockUpdate(){
 	// Tick the pixel clock (~4 MHz)
 	cyclesSinceLastVSync += 4;
 
-	if(!rLCDC->bit7()){ // LCD disabled
-		if(cyclesSinceLastVSync >= cyclesPerVSync){
+	if (!bLcdEnabled) { // LCD disabled
+		if (cyclesSinceLastVSync >= cyclesPerVSync) {
 			this->sync();
 			cyclesSinceLastVSync = 0;
 		}
@@ -210,26 +214,27 @@ void SystemClock::startMode0(){
 	lcdDriverMode = 0;
 	rSTAT->setBits(0, 1, 0x0);
 	sys->lockMemory(false, false); // VRAM and OAM now accessible
-	if(rSTAT->bit3()){ // Request LCD STAT interrupt (INT 48)
+	if (rSTAT->bit3())  // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
-	}
 }
 
-void SystemClock::startMode1(){
+void SystemClock::startMode1(bool requestInterrupt/* = true*/){
 	bVSync = true;
 	lcdDriverMode = 1;
 	rSTAT->setBits(0, 1, 0x1);
 	sys->lockMemory(false, false); // VRAM and OAM now accessible
-	if(rSTAT->bit4())
-		sys->handleLcdInterrupt(); // Request LCD STAT interrupt (INT 48)
-	sys->handleVBlankInterrupt(); // Request VBlank interrupt (INT 40)
+	if (requestInterrupt) {
+		if (rSTAT->bit4())
+			sys->handleLcdInterrupt(); // Request LCD STAT interrupt (INT 48)
+		sys->handleVBlankInterrupt(); // Request VBlank interrupt (INT 40)
+	}
 }
 
-void SystemClock::startMode2(){
+void SystemClock::startMode2(bool requestInterrupt/* = true*/){
 	lcdDriverMode = 2;
 	rSTAT->setBits(0, 1, 0x2);
 	sys->lockMemory(false, true); // OAM inaccessible
-	if(rSTAT->bit5()) // Request LCD STAT interrupt (INT 48)
+	if (requestInterrupt && rSTAT->bit5()) // Request LCD STAT interrupt (INT 48)
 		sys->handleLcdInterrupt();
 }
 
