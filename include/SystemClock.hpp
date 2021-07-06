@@ -27,6 +27,11 @@ public:
 	  * Note: Changing clock speed does not directly affect output framerate
 	  */
 	void setNormalSpeedMode();
+	
+	/** Set the main LCD and PPU enable flag (LCDC bit 7).
+	  * 
+	  */
+	void setLcdState(const bool& state);
 
 	/** Get the current system clock speed in cycles per second
 	  */
@@ -106,6 +111,8 @@ public:
 	void resetScanline();
 
 private:
+	bool bLcdEnabled; ///< Set if LCD & PPU are currently enabled (LCDC register bit 7)
+
 	bool bDoubleSpeedMode; ///< Set if emulator is in CGB double speed mode (~2 MHz)
 
 	bool bVSync; ///< Set if LCD driver is in vertical blank interval

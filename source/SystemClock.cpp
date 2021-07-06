@@ -19,6 +19,7 @@ constexpr unsigned int HORIZONTAL_SYNC_CYCLES = 456;   // CPU cycles per HSYNC (
 SystemClock::SystemClock() : 
 	OTTFrameTimer(),
 	SystemComponent("Clock", 0x204b4c43), // "CLK "
+	bLcdEnabled(false),
 	bDoubleSpeedMode(false),
 	bVSync(false), 
 	cyclesSinceLastVSync(0), 
@@ -73,6 +74,24 @@ void SystemClock::setNormalSpeedMode(){
 	bDoubleSpeedMode = false;
 }
 
+void SystemClock::setLcdState(const bool& state) {
+	if (!state) { // LCD & PPU disabled
+		if (bLcdEnabled) // LY is reset if LCD is turned off
+			sys->getClock()->resetScanline();
+		lcdDriverMode = 1;
+		rSTAT->setBits(0, 1, 0x1);
+		sys->lockMemory(false, false); // VRAM and OAM now accessible immediately
+		bLcdEnabled = false;
+		//bVSync = true;
+	}
+	else{ // LCD & PPU enabled
+		if (!bLcdEnabled) { // LCD is being turned on
+			// PPU immediately resumes drawing operations, but the screen will stay white until the next frame
+		}
+		bLcdEnabled = true;
+	}
+}
+
 double SystemClock::getCyclesPerSecond() const {
 	return (VERTICAL_SYNC_CYCLES * dFramerateCap / 4.0);
 }
@@ -95,7 +114,7 @@ bool SystemClock::onClockUpdate(){
 
 	// Tick the pixel clock (~4 MHz)
 	cyclesSinceLastVSync += 4;
-	
+
 	if(!rLCDC->bit7()){ // LCD disabled
 		if(cyclesSinceLastVSync >= cyclesPerVSync){
 			this->sync();

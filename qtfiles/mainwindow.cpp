@@ -12,6 +12,7 @@
 #include "GPU.hpp"
 #include "DmaController.hpp"
 #include "Cartridge.hpp"
+#include "MemoryController.hpp"
 #include "WorkRam.hpp"
 #include "Sound.hpp"
 #include "SoundMixer.hpp"
@@ -303,7 +304,7 @@ void MainWindow::updateCartridgeTab(){
 	
 	// Cartridge status
 	setLineEditHex(ui->lineEdit_ROM_Bank, cart->getBankSelect());
-	setLineEditHex(ui->lineEdit_SRAM_Bank, cart->getRam()->getBankSelect());
+	setLineEditHex(ui->lineEdit_SRAM_Bank, cart->getMBC()->getBankSelect());
 	setRadioButtonState(ui->radioButton_RomSramEnabled, cart->getExternalRamEnabled());
 	setRadioButtonState(ui->radioButton_RomCgbEnabled, cart->getSupportCGB());
 }

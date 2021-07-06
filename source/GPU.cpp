@@ -608,8 +608,7 @@ void GPU::print(const std::string &str, const unsigned char &x, const unsigned c
 bool GPU::writeRegister(const unsigned short &reg, const unsigned char &val){
 	switch(reg){
 		case 0xFF40: // LCDC (LCD Control Register)
-			if(!rLCDC->bit7()) // LY is reset if LCD goes from on to off
-				sys->getClock()->resetScanline();
+			sys->getClock()->setLcdState(rLCDC->bit7());
 			checkWindowVisible();
 			break;
 		case 0xFF41: // STAT (LCDC Status Register)
