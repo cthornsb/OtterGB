@@ -15,7 +15,9 @@ public:
 		AudioUnit(),
 		bSweepEnabled(false),
 		bFrequencyUpdated(false),
-		nWaveform(0),
+		nDuty(0),
+		nDutyStep(1),
+		nWaveform(0xf0), // 50% duty
 		volume(),
 		frequency()
 	{
@@ -70,6 +72,8 @@ private:
 	bool bFrequencyUpdated; ///< Flag indicating that the channel frequency was updated by the frequency sweep
 
 	unsigned char nDuty; ///< Square waveform duty cycle
+
+	unsigned char nDutyStep; ///< Current duty waveform step bitmask (0x1, 0x2, ..., 0x80)
 
 	unsigned char nWaveform; ///< Current square audio waveform
 	

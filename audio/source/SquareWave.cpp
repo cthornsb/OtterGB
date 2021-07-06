@@ -4,8 +4,10 @@
 SquareWave::SquareWave(FrequencySweep* sweep) :
 	AudioUnit(),
 	bSweepEnabled(true),
+	bFrequencyUpdated(false),
 	nDuty(0),
-	nWaveform(0x01), // 12.5% duty
+	nDutyStep(1),
+	nWaveform(0xf0), // 50% duty
 	volume(),
 	frequency(sweep)
 {
@@ -16,16 +18,16 @@ SquareWave::SquareWave(FrequencySweep* sweep) :
 void SquareWave::setWaveDuty(const unsigned char& duty){
 	switch(duty){
 	case 0: // 12.5%
-		nWaveform = 0x01;
+		nWaveform = 0x80;
 		break;
 	case 1: // 25%
-		nWaveform = 0x81;
+		nWaveform = 0xc0;
 		break;
 	case 2: // 50%
-		nWaveform = 0x87;
+		nWaveform = 0xf0;
 		break;
 	case 3: // 75%
-		nWaveform = 0x7e;
+		nWaveform = 0xfc;
 		break;
 	default: // Invalid duty cycle
 		return;
@@ -34,7 +36,7 @@ void SquareWave::setWaveDuty(const unsigned char& duty){
 }
 
 unsigned char SquareWave::sample(){
-	return ((nWaveform & 0x1) == 0x1 ? volume() : 0x0);
+	return ((nWaveform & nDutyStep) == nDutyStep ? volume() : 0x0);
 }
 
 void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
@@ -56,29 +58,23 @@ void SquareWave::clockSequencer(const unsigned int& sequencerTicks){
 		}
 	}
 	if(sequencerTicks % 2 == 0){ // Clock the length counter (256 Hz)
-		//if(bSweepEnabled)
 		if(length.clock()){
 			// If length counter rolls over, disable the channel
 			bDisableThisChannel = true;
 		}
 	}
 	if(sequencerTicks % 8 == 7){ // Clock the volume envelope (64 Hz)
-		if(volume.clock()){
-			// If volume envelope counter rolls over, do nothing 
-			// since the volume unit will simply output 0 volume
-		}
+		volume.clock();
 	}
 }
 
 void SquareWave::rollover(){
 	// Update square wave duty waveform
 	reload(); // Reset period counter
-	bool lowBit = ((nWaveform & 0x1) == 0x1);
-	nWaveform = nWaveform >> 1;
-	if(lowBit) // Set high bit
-		nWaveform |= 0x80;
-	else // Clear high bit
-		nWaveform &= 0x7f;
+	if (nDutyStep < 0x80)
+		nDutyStep = nDutyStep << 1;
+	else // Reset to bit 0
+		nDutyStep = 0x1;
 }
 
 void SquareWave::trigger(const unsigned int& nTicks){
@@ -102,6 +98,7 @@ void SquareWave::userReset(){
 	volume.reset();
 	if(bSweepEnabled)
 		frequency->reset();	
+	nDutyStep = 1; // Pulse duty step index is only reset when APU is powered off
 	setWaveDuty(nDuty); // Reset duty waveform to starting position
 }
 
