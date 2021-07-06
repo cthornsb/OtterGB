@@ -1,21 +1,29 @@
 #include "VolumeEnvelope.hpp"
 
 void VolumeEnvelope::update(const unsigned char& nrx2){
-	bool oldAddMode = bAdd;
-	setVolume((nrx2 & 0xf0) >> 4);
-	/*if(!nPeriod && bUpdating){ // Old envelope period is zero and still updating volume, add one to volume
-		nVolume += 1;
+	// Set initial envelope volume. Current volume will not be set until triggered
+	nInitialVolume = ((nrx2 & 0xf0) >> 4); // Bits 4-7
+
+	// Set envelope volume add mode (0: Subtract, 1: Add)
+	bAdd = ((nrx2 & 0x8) == 0x8); // Bit 3
+
+	// Set envelope period
+	unsigned short envelopePeriod = (unsigned short)(nrx2 & 0x7); // Bits 0-2
+	if (envelopePeriod > 0) {
+		setPeriod(envelopePeriod);
+		bUpdating = true;
 	}
-	else if(!bAdd){ // Old envelope is in subtract mode, add two to volume
-		nVolume += 2;
-	}*/	
-	setAddMode((nrx2 & 0x8) == 0x8);
-	setPeriod(nrx2 & 0x7);
-	if(bAdd != oldAddMode){ // Add mode switched, set volume to 16-volume
-		nVolume = 16 - nVolume;
+	else { // Envelope period is zero
+		// Disable automatic volume updates
+		setPeriod(0);
+		bUpdating = false;
+
+		// Using add mode with period == 0 allows manual volume control.
+		// Writing 0x08 to NRx2 increments the current volume by one (without triggering).
+		if (bAdd)
+			nVolume++;
+		nVolume &= 0x0f;
 	}
-	nVolume &= 0x0f;
-	bUpdating = true;
 }
 
 void VolumeEnvelope::trigger(){
@@ -23,6 +31,10 @@ void VolumeEnvelope::trigger(){
 	reload(); // Volume envelope timer reloaded with period
 	nVolume = nInitialVolume; // Reload initial channel volume
 	bUpdating = true;
+	if (nPeriod)
+		bEnabled = true;
+	else
+		bEnabled = false;
 }
 
 void VolumeEnvelope::reload(){
@@ -30,6 +42,7 @@ void VolumeEnvelope::reload(){
 }
 
 void VolumeEnvelope::rollover(){
+	reload();
 	if(nPeriod && bUpdating){
 		if(bAdd){ // Add (louder)
 			if(nVolume + 1 <= 15)
@@ -44,6 +57,5 @@ void VolumeEnvelope::rollover(){
 				bUpdating = false;
 		}
 	}
-	reload();
 }
 

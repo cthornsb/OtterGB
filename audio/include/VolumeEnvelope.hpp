@@ -46,7 +46,7 @@ public:
 		return bAdd;
 	}
 
-	/** Set the initial 4-bit volume
+	/** Set the initial 4-bit volume as well as the current output volume
 	  */
 	void setVolume(const unsigned char& volume) { 
 		nInitialVolume = volume & 0xf;

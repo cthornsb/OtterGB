@@ -315,21 +315,16 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 }
 
 bool SoundProcessor::onClockUpdate(){
-	if(!bEnabled) // If timer not enabled
-		return false;
-
-	if(bMasterSoundEnable){
-		// Clock audio units (4 MHz clock)
-		for(int i = 0; i < 4; i++){
-			if(ch1.clock())
-				mixer.setInputSample(0, ch1.sample() / 15.f);
-			if(ch2.clock())
-				mixer.setInputSample(1, ch2.sample() / 15.f);
-			if(ch3.clock())
-				mixer.setInputSample(2, ch3.sample() / 15.f);
-			if(ch4.clock())
-				mixer.setInputSample(3, ch4.sample() / 15.f);
-		}
+	// Clock audio units (4 MHz clock)
+	for(int i = 0; i < 4; i++){
+		if(ch1.clock())
+			mixer.setInputSample(0, ch1.sample() / 15.f);
+		if(ch2.clock())
+			mixer.setInputSample(1, ch2.sample() / 15.f);
+		if(ch3.clock())
+			mixer.setInputSample(2, ch3.sample() / 15.f);
+		if(ch4.clock())
+			mixer.setInputSample(3, ch4.sample() / 15.f);
 	}
 
 	// Clock the mixer
