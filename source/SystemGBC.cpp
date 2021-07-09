@@ -1516,16 +1516,16 @@ void SystemGBC::help(){
 	}
 
 	std::cout << " System Keys-" << std::endl;
-	std::cout << "  F1 : Display this help screen" << std::endl;
-	std::cout << "  F2 : Pause emulation" << std::endl;
-	std::cout << "  F3 : Resume emulation" << std::endl;
+	std::cout << "  F1 : Display this help screen" << std::endl;	
+	std::cout << "  F2 : Pause or resume emulation" << std::endl;
+	std::cout << "  F3 : Not used" << std::endl;
 	std::cout << "  F4 : Reset emulator" << std::endl;
 	std::cout << "  F5 : Quicksave state" << std::endl;
 	std::cout << "  F6 : Decrease frame-skip (slower)" << std::endl;
 	std::cout << "  F7 : Increase frame-skip (faster)" << std::endl;
 	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"" << std::endl;
 	std::cout << "  F9 : Quickload state" << std::endl;
-	std::cout << "  F10: Start/stop midi recording" << std::endl;
+	std::cout << "  F10: Start/stop wav recording (or midi recording ALT+F10)" << std::endl;
 	std::cout << "  F11: Enable/disable full screen mode" << std::endl;
 	std::cout << "  F12: Take screenshot" << std::endl;
 	std::cout << "   ` : Open interpreter console" << std::endl;
@@ -1654,30 +1654,34 @@ bool SystemGBC::readRegister(const unsigned short &reg, unsigned char &val){
 	return true; // Read register
 }
 
-void SystemGBC::checkSystemKeys(){
+void SystemGBC::checkSystemKeys() {
 	OTTJoypad* gamepad = window->getJoypad();
-	OTTKeyboard *keys = window->getKeypress();
-	if(gamepad->isReady()){ // Check for gamepad button presses
-		if(gamepad->poll(GamepadInput::GUIDE)){
-			if(!emulationPaused)
+	OTTKeyboard* keys = window->getKeypress();
+	if (gamepad->isReady()) { // Check for gamepad button presses
+		if (gamepad->poll(GamepadInput::GUIDE)) {
+			if (!emulationPaused)
 				pause();
 			else
 				unpause();
 		}
 	}
-	else if(keys->empty()){ // No keyboard keys pressed
+	else if (keys->empty()) { // No keyboard keys pressed
 		return;
 	}
 	// Function keys
 	if (keys->poll(0xf1))      // F1  Help
 		help();
-	else if (keys->poll(0xf2)) { // F2  Pause emulation
-		bHardPaused = true;
-		pause();
+	else if (keys->poll(0xf2)) { // F2  Pause or unpause emulation
+		if (!emulationPaused) { // Emulator running
+			bHardPaused = true;
+			pause();
+		}
+		else { // Emulator paused
+			bHardPaused = false;
+			unpause();
+		}
 	}
-	else if (keys->poll(0xf3)) { // F3  Resume emulation
-		bHardPaused = false;
-		unpause();
+	else if (keys->poll(0xf3)) { // F3  Unused
 	}
 	else if (keys->poll(0xf4)) // F4  Reset emulator
 		reset();
@@ -1692,11 +1696,19 @@ void SystemGBC::checkSystemKeys(){
 	else if (keys->poll(0xf9)) // F9  Quickload
 		quickload();
 	else if (keys->poll(0xfa)) { // F10 Start / stop midi recording
-		if (sound->midiFileEnabled()) {
+		if (sound->recordingEnabled()) { // Stop recording wav file
+			std::cout << sysMessage << "Finalizing WAV recording." << std::endl;
+			sound->stopRecording();
+		}
+		else if (sound->midiFileEnabled()) { // Stop recording midi file
 			std::cout << sysMessage << "Finalizing MIDI recording." << std::endl;
 			sound->stopMidiFile();
 		}
-		else {
+		else if (!keys->alt()) { // F10 - Start a wav recording
+			std::cout << sysMessage << "Starting WAV recording." << std::endl;
+			sound->startRecording("out.wav");
+		}
+		else { // Alt + F10 - Start a midi recording
 			std::cout << sysMessage << "Starting MIDI recording." << std::endl;
 			sound->startMidiFile("out.mid");
 		}

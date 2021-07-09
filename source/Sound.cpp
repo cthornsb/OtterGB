@@ -479,13 +479,13 @@ void SoundProcessor::startMidiFile(const std::string& filename/*="out.mid"*/){
 	if(bRecordMidi) // Midi recording already in progress
 		return;
 	midiFile.reset(new MidiFile::MidiFileRecorder(filename, sys->getRomFilename())); // New midi file recorder
-	// 16384 audio samples per second
-	// 120 metronome ticks per minute by default
+	// N audio samples per second
+	// 120 metronome ticks per minute (by default)
 	// 24 midi clocks per metronome tick
 	//  => 2880 midi clocks per minute
-	// So... 983040 audio samples per minute and 2880 midi clock ticks per minute
-	//  => 341.33 audio samples per midi clock tick
-	midiFile->setClockMultiplier(1 / 341.33f);
+	// So... 60 * N audio samples per minute and 2880 midi clock ticks per minute
+	//  => 172800 * N audio samples per midi clock tick
+	midiFile->setClockMultiplier(1.f / (float)(172800.0 * audio->getSampleRate()));
 	bRecordMidi = true;
 }
 
