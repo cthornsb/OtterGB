@@ -12,13 +12,12 @@
 #include "WaveTable.hpp"
 #include "ShiftRegister.hpp"
 
+#include "MidiFile.hpp"
+#include "WavFile.hpp"
+
 class SoundManager;
 
 class SoundBuffer;
-
-namespace MidiFile{
-	class MidiFileReader;
-}
 
 enum class Channels {
 	CH1, // Square 1
@@ -120,7 +119,7 @@ public:
 	  */
 	void resume();
 	
-	/** Start recording midi file
+	/** Start recording a midi file
 	  */
 	void startMidiFile(const std::string& filename="out.mid");
 	
@@ -132,6 +131,20 @@ public:
 	  */
 	bool midiFileEnabled() const {
 		return bRecordMidi;
+	}
+
+	/** Start recording a wav file
+	  */
+	bool startRecording(const std::string& filename = "out.wav");
+
+	/** Stop recording wav file and close its output file
+	  */
+	bool stopRecording();
+	
+	/** Return true if a wav recording is currently in progress
+	  */
+	bool recordingEnabled() const {
+		return bRecording;
 	}
 
 	/** The sound controller has no associated RAM, so return false to avoid trying to access it
@@ -179,6 +192,8 @@ private:
 
 	bool bRecordMidi; ///< Midi recording in progress
 
+	bool bRecording; ///< Set if wav recording is in progress
+
 	SoundManager* audio; ///< Main system audio handler
 	
 	SoundMixer mixer; ///< Audio output mixer
@@ -199,8 +214,10 @@ private:
 
 	unsigned short nMixerClockPeriod; ///< The period of the audio output mixer (in 1 MHz sys clock ticks)
 
-	std::unique_ptr<MidiFile::MidiFileReader> midiFile; ///< Midi file recorder
+	std::unique_ptr<MidiFile::MidiFileRecorder> midiFile; ///< Midi file recorder
 	
+	std::unique_ptr<WavFile::WavFileRecorder> wavFile; ///< Wav file recorder
+
 	/** Power down APU
 	  * Stop audio output stream, disable audio output channels, clear all APU registers, and reset all audio DACs.
 	  */

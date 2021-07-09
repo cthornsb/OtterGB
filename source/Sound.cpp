@@ -3,7 +3,6 @@
 #include "SoundManager.hpp"
 #include "Sound.hpp"
 #include "FrequencySweep.hpp"
-#include "MidiFile.hpp"
 #include "ConfigFile.hpp"
 
 /////////////////////////////////////////////////////////////////////
@@ -16,6 +15,7 @@ SoundProcessor::SoundProcessor() :
 	bInitialized(false),
 	bMasterSoundEnable(false),
 	bRecordMidi(false),
+	bRecording(false),
 	audio(&SoundManager::getInstance()),
 	mixer(4, 2),
 	ch1(new FrequencySweep()),
@@ -26,7 +26,8 @@ SoundProcessor::SoundProcessor() :
 	nSequencerTicks(0),
 	nMidiClockTicks(0),
 	nMixerClockPeriod(32),
-	midiFile()
+	midiFile(),
+	wavFile()
 { 
 }
 
@@ -329,8 +330,15 @@ bool SoundProcessor::onClockUpdate(){
 
 	// Clock the mixer
 	if(mixer.clock()){ // New sample is pushed onto the sample FIFO buffer
-		if(bRecordMidi)
+		if (bRecordMidi)
 			nMidiClockTicks++;
+		if (bRecording) { // Recording to WAV file
+			unsigned char sample[2] = {
+				(unsigned char)(mixer[0] * 128.f),
+				(unsigned char)(mixer[1] * 128.f)
+			};
+			wavFile->addSample(&sample);
+		}
 	}
 	
 	// Update the 512 Hz frame sequencer.
@@ -470,7 +478,7 @@ void SoundProcessor::resume(){
 void SoundProcessor::startMidiFile(const std::string& filename/*="out.mid"*/){
 	if(bRecordMidi) // Midi recording already in progress
 		return;
-	midiFile.reset(new MidiFile::MidiFileReader(filename, sys->getRomFilename())); // New midi file recorder
+	midiFile.reset(new MidiFile::MidiFileRecorder(filename, sys->getRomFilename())); // New midi file recorder
 	// 16384 audio samples per second
 	// 120 metronome ticks per minute by default
 	// 24 midi clocks per metronome tick
@@ -487,6 +495,22 @@ void SoundProcessor::stopMidiFile(){
 	midiFile->finalize(nMidiClockTicks); 
 	midiFile->write(); // Write midi file to disk
 	bRecordMidi = false;
+}
+
+bool SoundProcessor::startRecording(const std::string& filename/* = "out.wav"*/) {
+	if (bRecording) // Wav recording already in progress
+		return false;
+	wavFile.reset(new WavFile::WavFileRecorder()); // New wav recorder
+	wavFile->setSampleRate((unsigned int)audio->getSampleRate());
+	bRecording = true;
+	return wavFile->startRecording(filename);
+}
+
+bool SoundProcessor::stopRecording() {
+	if (!bRecording) // No recording in progress
+		return false;
+	bRecording = false;
+	return wavFile->stopRecording();
 }
 
 void SoundProcessor::powerDown(){
