@@ -11,8 +11,7 @@ public:
 		AudioUnit(256, 16),
 		data(0x0),
 		nIndex(0),
-		nBuffer(0),
-		nVolume(0)
+		nBuffer(0)
 	{
 		nPeriodMultiplier = 2;
 		nWavelengthPeriod = 32; // 32 samples per wavelength period
@@ -24,8 +23,7 @@ public:
 		AudioUnit(256, 16),
 		data(ptr),
 		nIndex(0),
-		nBuffer(0),
-		nVolume(0)
+		nBuffer(0)
 	{
 		nPeriodMultiplier = 2;
 		nWavelengthPeriod = 32; // 32 samples per wavelength period
@@ -61,8 +59,8 @@ public:
 	  *  2: 50%
 	  *  3: 25%
 	  */
-	void setVolumeLevel(const unsigned char& volume){
-		nVolume = volume;
+	void setVolumeLevel(const unsigned char& nVolume){
+		volume.setVolume(nVolume);
 	}
 	
 	/** Return a sample from the current state of the audio waveform
@@ -85,8 +83,6 @@ private:
 	unsigned char nIndex; ///< Wave table index
 	
 	unsigned char nBuffer; ///< Sample buffer
-
-	unsigned char nVolume; ///< Current output volume
 	
 	/** Method called when unit timer clocks over (every 16 system clock ticks)
 	  */	

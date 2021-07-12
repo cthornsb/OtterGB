@@ -3,6 +3,7 @@
 
 #include "UnitTimer.hpp"
 #include "LengthCounter.hpp"
+#include "VolumeEnvelope.hpp"
 
 class AudioUnit : public UnitTimer {
 public:
@@ -12,7 +13,8 @@ public:
 		UnitTimer(),
 		bDisableThisChannel(false),
 		bEnableThisChannel(false),
-		length(64)
+		length(64),
+		volume()
 	{ 
 	}
 
@@ -22,7 +24,8 @@ public:
 		UnitTimer(master),
 		bDisableThisChannel(false),
 		bEnableThisChannel(false),
-		length(maxLength)
+		length(maxLength),
+		volume()
 	{ 
 	}
 
@@ -35,7 +38,19 @@ public:
 	LengthCounter* getLengthCounter() { 
 		return &length; 
 	}
+
+	/** Get pointer to this channel's volume envelope
+	  */
+	VolumeEnvelope* getVolumeEnvelope() {
+		return &volume;
+	}
 	
+	/** Get the current volume envelope volume
+	  */
+	unsigned char getVolume() const {
+		return volume();
+	}
+
 	/** Get const pointer to channel's length counter
 	  */
 	const LengthCounter* getConstLengthCounter() const {
@@ -112,6 +127,8 @@ protected:
 	bool bEnableThisChannel; ///< Channel will be enabled immediately
 
 	LengthCounter length; ///< Sound length counter
+
+	VolumeEnvelope volume; ///< Channel volume envelope
 	
 	/** Enable this channel
 	  */

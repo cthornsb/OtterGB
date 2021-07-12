@@ -13,8 +13,7 @@ public:
 		bWidthMode(false),
 		nClockShift(0),
 		nDivisor(0),
-		reg(0x7fff),
-		volume()
+		reg(0x7fff)
 	{ 
 	}
 	
@@ -34,12 +33,6 @@ public:
 	/** Set current divisor value such that noise frequency is equal to F = 524288 / divisor / 2^(shift + 1) Hz
 	  */
 	void setDivisor(const unsigned char& divisor);
-
-	/** Get pointer to this channel's volume envelope
-	  */
-	VolumeEnvelope* getVolumeEnvelope() { 
-		return &volume; 
-	}
 
 	/** Return a sample from the current state of the audio waveform
 	  */
@@ -63,8 +56,6 @@ private:
 	unsigned char nDivisor; ///< Current divisor value (0 to 7)
 
 	unsigned short reg; ///< Shift register 15-bit waveform
-	
-	VolumeEnvelope volume; ///< Channel's volume envelope
 	
 	/** Update the timer phase after modifying the divsor or shift values
 	  */

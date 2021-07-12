@@ -12,6 +12,7 @@ public:
 		bOverflow(false),
 		bOverflow2(false),
 		bNegate(false),
+		bNegateModeUsed(false),
 		nTimer(0),
 		nShift(0),
 		nShadowFrequency(0),

@@ -18,7 +18,6 @@ public:
 		nDuty(0),
 		nDutyStep(1),
 		nWaveform(0xf0), // 50% duty
-		volume(),
 		frequency()
 	{
 		nPeriodMultiplier = 4;
@@ -76,8 +75,6 @@ private:
 	unsigned char nDutyStep; ///< Current duty waveform step bitmask (0x1, 0x2, ..., 0x80)
 
 	unsigned char nWaveform; ///< Current square audio waveform
-	
-	VolumeEnvelope volume; ///< Channel's volume envelope
 	
 	std::unique_ptr<FrequencySweep> frequency; ///< Channel's frequency sweep (if enabled, otherwise null)
 

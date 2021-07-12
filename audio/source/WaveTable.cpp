@@ -7,7 +7,7 @@ unsigned char WaveTable::sample(){
 		retval = (nBuffer & 0xf0) >> 4;
 	else // Low nibble
 		retval = nBuffer & 0xf;
-	switch(nVolume){
+	switch(volume()){
 	case 0: // Mute
 		break;
 	case 1: // 100% volume
@@ -55,5 +55,5 @@ void WaveTable::userReset(){
 	//length.reset(); // Length is reset by AudioUnit::reset()
 	nIndex = 0;
 	nBuffer = 0;
-	nVolume = 0; // muted
+	volume.setVolume(0); // muted
 }

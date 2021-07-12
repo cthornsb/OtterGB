@@ -8,7 +8,6 @@ SquareWave::SquareWave(FrequencySweep* sweep) :
 	nDuty(0),
 	nDutyStep(1),
 	nWaveform(0xf0), // 50% duty
-	volume(),
 	frequency(sweep)
 {
 	frequency->setUnitTimer(this);
