@@ -214,6 +214,8 @@ private:
 
 	unsigned short nMixerClockPeriod; ///< The period of the audio output mixer (in 1 MHz sys clock ticks)
 
+	MidiFile::MidiKey midiKeys[4]; ///< Corresponding midi keys for each of the four APU channels
+
 	std::unique_ptr<MidiFile::MidiFileRecorder> midiFile; ///< Midi file recorder
 	
 	std::unique_ptr<WavFile::WavFileRecorder> wavFile; ///< Wav file recorder

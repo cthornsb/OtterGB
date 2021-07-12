@@ -1,3 +1,5 @@
+#include <iostream> // TEMP CRT
+
 #include "Support.hpp"
 #include "SystemGBC.hpp"
 #include "SoundManager.hpp"
@@ -26,9 +28,15 @@ SoundProcessor::SoundProcessor() :
 	nSequencerTicks(0),
 	nMidiClockTicks(0),
 	nMixerClockPeriod(32),
+	midiKeys{
+		MidiFile::MidiKey(0),
+		MidiFile::MidiKey(1),
+		MidiFile::MidiKey(2),
+		MidiFile::MidiKey(9)
+	},
 	midiFile(),
 	wavFile()
-{ 
+{
 }
 
 void SoundProcessor::initialize(bool audioOutputEnabled, const double& clockSpeed/*=1*/){
@@ -330,12 +338,30 @@ bool SoundProcessor::onClockUpdate(){
 
 	// Clock the mixer
 	if(mixer.clock()){ // New sample is pushed onto the sample FIFO buffer
-		if (bRecordMidi)
-			nMidiClockTicks++;
+		if (bRecordMidi) {
+			for (int i = 0; i < 4; i++) { // Update any currently playing notes
+				AudioUnit* unit = getAudioUnit(i + 1);
+				if (!unit->isEnabled() && unit->getVolume() > 0) {
+					if (midiKeys[i].isPressed()) // Release the key, if pressed
+						midiFile->release(midiKeys[i]);
+					continue;
+				}
+				MidiFile::MidiKeyboard* notemap = midiFile->getNoteMap();
+				midiKeys[i].setKeyNumber(notemap->getKeyNumber(unit->getRealFrequency()));
+				if (!midiFile->matchNote(midiKeys[i])) { // Press the note, if it is not currently held
+					//midiKeys[i].setKeyVelocity((unsigned char)(unit->getVolume() * (127 / 15.f)));
+					midiFile->press(midiKeys[i]);
+				}
+			}
+			midiFile->setMidiClock(nMidiClockTicks++);
+		}
 		if (bRecording) { // Recording to WAV file
-			unsigned char sample[2] = {
-				(unsigned char)(mixer[0] * 128.f),
-				(unsigned char)(mixer[1] * 128.f)
+			auto clampFloat = [](const float& in) {
+				return std::min(std::max(in, 0.f), 1.f);
+			};
+			char sample[2] = {
+				(char)(clampFloat(mixer[0]) * 127.f),
+				(char)(clampFloat(mixer[1]) * 127.f)
 			};
 			wavFile->addSample(&sample);
 		}
@@ -414,11 +440,6 @@ void SoundProcessor::disableChannel(const int& ch){
 		return;
 	rNR52->resetBit(ch - 1); // Disable channel audio output
 	getAudioUnit(ch)->disable(); // Disable DAC
-	if (bRecordMidi) { // Add a note to the output midi file
-		// Disable the note, if one is currently playing
-		// Note that midi ch 10 (index = 9) is typically used for percussion
-		midiFile->release((ch < 4 ? ch - 1 : 9), nMidiClockTicks);
-	}
 }
 
 void SoundProcessor::disableChannel(const Channels& ch){
@@ -480,12 +501,13 @@ void SoundProcessor::startMidiFile(const std::string& filename/*="out.mid"*/){
 		return;
 	midiFile.reset(new MidiFile::MidiFileRecorder(filename, sys->getRomFilename())); // New midi file recorder
 	// N audio samples per second
-	// 120 metronome ticks per minute (by default)
+	// 120 metronome ticks per minute (quarter notes, by default)
 	// 24 midi clocks per metronome tick
 	//  => 2880 midi clocks per minute
 	// So... 60 * N audio samples per minute and 2880 midi clock ticks per minute
 	//  => 172800 * N audio samples per midi clock tick
-	midiFile->setClockMultiplier(1.f / (float)(172800.0 * audio->getSampleRate()));
+	midiFile->setClockMultiplier(1.f / (float)(60.0 * audio->getSampleRate() / 2880.0));
+	midiFile->setMinimumNoteLength(16); // Set minimum note length to 1/16th
 	bRecordMidi = true;
 }
 
@@ -501,7 +523,8 @@ bool SoundProcessor::startRecording(const std::string& filename/* = "out.wav"*/)
 	if (bRecording) // Wav recording already in progress
 		return false;
 	wavFile.reset(new WavFile::WavFileRecorder()); // New wav recorder
-	wavFile->setSampleRate((unsigned int)audio->getSampleRate());
+	wavFile->setSampleRate((unsigned int)audio->getSampleRate() / 2); // Not sure why the half is needed, but it sets the correct sample rate
+	wavFile->setBitsPerChannel(8);
 	bRecording = true;
 	return wavFile->startRecording(filename);
 }
@@ -541,11 +564,6 @@ bool SoundProcessor::handleTriggerEnable(const int& ch){
 	if(unit->pollDisable())
 		disableChannel(ch);
 	if(rNR52->getBit(ch - 1)){ // Trigger has enabled channel
-		if (bRecordMidi) { // Add a note to the output midi file
-			// If a note is currently pressed on this channel, the midi handler will automatically release it.
-			// Note that midi ch 10 (index = 9) is typically used for percussion
-			midiFile->press((ch < 4 ? ch - 1 : 9), nMidiClockTicks, unit->getRealFrequency());
-		}
 		return true;
 	}
 	return false;
