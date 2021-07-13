@@ -79,7 +79,6 @@ ComponentList::ComponentList(SystemGBC *sys){
 }
 
 SystemGBC::SystemGBC(int& argc, char* argv[]) : 
-	ThreadObject(),
 	dummyComponent("System"),
 	nFrames(0),
 	frameSkip(1),
@@ -498,21 +497,19 @@ bool SystemGBC::execute(){
 }
 
 void SystemGBC::handleHBlankPeriod(){
-	if(!emulationPaused){
-		if(nFrames % frameSkip == 0){
-			if (bUseLayerViewer && rLY->getValue() < 144) { // Record current SCX, SCY, WX, and WY to use in the layer viewer
-				winScrollPositions[rLY->getValue()] = BackgroundWindowSettings{
-					rSCX->getValue(),
-					rSCY->getValue(),
-					rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWX->getValue() : (unsigned char)0xff, // to avoid int truncation warnings
-					rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWY->getValue() : (unsigned char)0xff  // to avoid int truncation warnings
-				};
-			}
-			// We multiply the pixel clock pause period by two if in double-speed mode
-			sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
+	if(nFrames % frameSkip == 0){
+		if (bUseLayerViewer && rLY->getValue() < 144) { // Record current SCX, SCY, WX, and WY to use in the layer viewer
+			winScrollPositions[rLY->getValue()] = BackgroundWindowSettings{
+				rSCX->getValue(),
+				rSCY->getValue(),
+				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWX->getValue() : (unsigned char)0xff, // to avoid int truncation warnings
+				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWY->getValue() : (unsigned char)0xff  // to avoid int truncation warnings
+			};
 		}
-		dma->onHBlank();
+		// We multiply the pixel clock pause period by two if in double-speed mode
+		sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
 	}
+	dma->onHBlank();
 /*#ifdef USE_QT_DEBUGGER
 	if(debugMode && pauseAfterNextHBlank){
 		pauseAfterNextHBlank = false;
@@ -1574,8 +1571,8 @@ void SystemGBC::resumeUntilNextVBlank(){
 }
 
 void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
-	//bLockedVRAM = lockVRAM;
-	//bLockedOAM = lockOAM;
+	bLockedVRAM = lockVRAM;
+	bLockedOAM = lockOAM;
 }
 
 void SystemGBC::enableVSync() {

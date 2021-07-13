@@ -57,9 +57,7 @@ GPU::GPU() :
 },
 	fNextFrameOpacity(1.f),
 	imageBuffer(0x0),
-	sprites(),
-	buffLock(),
-	mode(PPUMODE::SCANLINE)
+	sprites()
 {
 }
 
@@ -328,11 +326,11 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	nPosX = rSCX->getValue();
 	nPosY = nScanline + rSCY->getValue();
 
-	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
-		currentLineSprite[nPosX++].reset();
-
 	// A non-zero scroll (SCX) will delay the clock SCX % 8 ticks.		
 	nPauseTicks += nPosX % 8;
+
+	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
+		currentLineSprite[nPosX++].reset();
 
 	// Handle the background layer
 	nPosX = rSCX->getValue();
@@ -597,10 +595,6 @@ void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRG
 	bUserSelectedPalette = true;
 }
 
-void GPU::setOperationMode(const PPUMODE& newMode){
-	mode = newMode;
-}
-
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
 	cmap->drawString(str, x, y, window->getBuffer());
 }
@@ -851,7 +845,7 @@ bool GPU::showSplashScreen(const int& displayFrames/* = 300*/) {
 
 	// Generate a texture containing the version number
 	std::string version = "v" + sys->getVersionString();
-	OTTTexture versionTexture(version.length() * 8, 8, "version");
+	OTTTexture versionTexture((int)version.length() * 8, 8, "version");
 	//console->drawString(version, 0, 0, &versionTexture, 0, true);
 	versionTexture.getTexture(false);
 
@@ -884,15 +878,11 @@ bool GPU::checkWindowVisible(){
 }
 
 void GPU::writeImageBuffer(const unsigned short& x, const unsigned short& y, const ColorRGB& color){
-	buffLock.lock();
 	window->buffWrite(x, y, color);
-	buffLock.unlock();
 }
 
 void GPU::writeImageBuffer(const unsigned short& y, const ColorRGB& color){
-	buffLock.lock();
 	window->buffWriteLine(y, color);
-	buffLock.unlock();
 }
 
 void GPU::userAddSavestateValues(){
@@ -950,17 +940,4 @@ void GPU::onUserReset(){
 	sprites.clear();
 }
 
-void GPU::mainLoop(){
-	buffLock.lock();
-	if(mode == PPUMODE::SCANLINE){
-		renderScanline(); // Push pixel data into the image buffer
-	}
-	else if(mode == PPUMODE::DRAWBUFFER){
-		window->setCurrent();
-		window->renderBuffer();
-		mode = PPUMODE::SCANLINE; // Automatically switch back to rendering scanlines
-	}
-	parent->notify(1); // Notify the main thread operation completed successfully
-	buffLock.unlock();
-}
 

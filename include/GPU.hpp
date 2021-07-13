@@ -3,13 +3,11 @@
 
 #include <string>
 #include <memory>
-#include <mutex>
 
 #include "ColorRGB.hpp"
 #include "ColorGBC.hpp"
 #include "SystemComponent.hpp"
 #include "SpriteAttributes.hpp"
-#include "ComponentThread.hpp"
 
 class Register;
 
@@ -21,13 +19,7 @@ class OTTImageBuffer;
 
 class ConsoleGBC;
 
-enum class PPUMODE{
-	NONE, // Do nothing
-	SCANLINE, // Render the next scanline
-	DRAWBUFFER // Draw the image buffer to the screen
-};
-
-class GPU : public SystemComponent, public WorkerThread {
+class GPU : public SystemComponent {
 public:
 	/** Default constructor
 	  */
@@ -158,11 +150,6 @@ public:
 		bUserSelectedPalette = false;
 	}
 
-	/** Set current PPU operation mode
-	  * The new operation will be performed the next time PPU is notified by thread handler.
-	  */
-	void setOperationMode(const PPUMODE& newMode);
-	
 	/** Print a string to the interpreter console
 	  */
 	void print(const std::string &str, const unsigned char &x, const unsigned char &y);
@@ -242,10 +229,6 @@ private:
 
 	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
 
-	std::mutex buffLock; ///< Image buffer mutex lock
-
-	PPUMODE mode;
-
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The start address of the tile in VRAM [0x0000,0x1800].
 	  * @param dx    The horizontal pixel in the bitmap [0,7] where the right-most pixel is denoted as x=0.
@@ -318,10 +301,6 @@ private:
 	/** Reset all color palettes to startup values
 	  */
 	void onUserReset() override;
-	
-	/** Main graphical loop
-	  */
-	void mainLoop() override;
 };
 
 #endif

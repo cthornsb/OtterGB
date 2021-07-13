@@ -3,7 +3,6 @@ add_library(
 	OBJECT
 	ColorGBC.cpp 
 	ColorPalette.cpp
-	ComponentThread.cpp
 )
 
 # Set OtterEngine include directories

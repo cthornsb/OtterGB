@@ -7,7 +7,6 @@
 
 #include "SystemComponent.hpp"
 #include "SystemRegisters.hpp"
-#include "ComponentThread.hpp"
 #include "MemoryController.hpp"
 
 #ifdef USE_QT_DEBUGGER
@@ -143,7 +142,7 @@ private:
 	                         */
 };
 
-class SystemGBC : public ThreadObject {
+class SystemGBC {
 	friend class ComponentList;
 	
 public:
