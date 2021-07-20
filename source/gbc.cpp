@@ -18,13 +18,11 @@ void handlePathDrop(const std::string& path) {
 	ottergb->reset();
 }
 
-void handleWindowFocus(const bool& focused) {
-	if (focused) {
+void handleWindowFocus(GLFWwindow*, int focused) {
+	if (focused == GLFW_TRUE)
 		ottergb->unpause();
-	}
-	else {
+	else
 		ottergb->pause();
-	}
 }
 
 int main(int argc, char *argv[]){
@@ -54,26 +52,6 @@ int main(int argc, char *argv[]){
 	}
 #endif // ifdef USE_QT_DEBUGGER
 
-	// Graphical window
-	/*GPU* gpu = gbc->getGPU();
-	
-	// Setup the thread manager to synchronize emulator and graphics
-	ThreadManager manager;
-	
-	manager.addThread(gbc.get());
-	manager.addThread(gpu);
-	
-	// Lock threads so that they will be able to sync with eachother
-	manager.lock();
-	
-	// Define threads
-	std::thread threadMainloop( [&](){ gbc->execute(); } );
-	std::thread threadGraphics( [&](){ gpu->execute(); } );
-	
-	// Start threads
-	threadMainloop.join();
-	threadGraphics.join();*/
-	
 	// Start main emulator loop
 	gbc->execute();
 

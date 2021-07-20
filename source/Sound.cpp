@@ -314,7 +314,6 @@ bool SoundProcessor::readRegister(const unsigned short &reg, unsigned char &dest
 					dest = ch3.getBuffer();
 				else
 					dest = wavePatternRAM[reg - 0xFF30];
-
 			}
 			else {
 				return false;
@@ -356,14 +355,7 @@ bool SoundProcessor::onClockUpdate(){
 			midiFile->setMidiClock(nMidiClockTicks++);
 		}
 		if (bRecording) { // Recording to WAV file
-			auto clampFloat = [](const float& in) {
-				return std::min(std::max(in, 0.f), 1.f);
-			};
-			char sample[2] = {
-				(char)(clampFloat(mixer[0]) * 127.f),
-				(char)(clampFloat(mixer[1]) * 127.f)
-			};
-			wavFile->addSample(&sample);
+			wavFile->addSample(mixer);
 		}
 	}
 	
@@ -523,7 +515,7 @@ bool SoundProcessor::startRecording(const std::string& filename/* = "out.wav"*/)
 	if (bRecording) // Wav recording already in progress
 		return false;
 	wavFile.reset(new WavFile::WavFileRecorder()); // New wav recorder
-	wavFile->setSampleRate((unsigned int)audio->getSampleRate() / 2); // Not sure why the half is needed, but it sets the correct sample rate
+	wavFile->setSampleRate((unsigned int)audio->getSampleRate());
 	wavFile->setBitsPerChannel(8);
 	bRecording = true;
 	return wavFile->startRecording(filename);
