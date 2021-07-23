@@ -8,6 +8,7 @@
 #include "ColorGBC.hpp"
 #include "SystemComponent.hpp"
 #include "SpriteAttributes.hpp"
+#include "ColorPalette.hpp"
 
 class Register;
 
@@ -133,16 +134,23 @@ public:
 
 	/** Set default green DMG mode background and sprite color palettes
 	  */
-	void setColorPaletteDMG();
+	bool setColorPaletteDMG();
 
 	/** Set DMG mode background and sprite color palettes using a pre-defined CGB palette
 	  * @param paletteID Pre-defined CGB palette ID number (MSB table number, LSB entry number)
+	  * @return True if requested palette was located successfully
 	  */
-	void setColorPaletteDMG(const unsigned short& paletteID);
+	bool setColorPaletteDMG(const unsigned short& paletteID);
 
 	/** Set DMG mode background and sprite color palettes
 	  */
-	void setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3);
+	bool setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3);
+
+	/** Change DMG mode color palette. Has no effect in CGB mode.
+	  * @param bAdvance If set, advance to the next color palette; otherwise revert to the previous palette
+	  * @return True if the color palette was changed successfully
+	  */
+	bool changeColorPalette(bool bAdvance = true);
 
 	/** User-set color palette will be cleared on next emulator reset
 	  */
@@ -227,7 +235,7 @@ private:
 
 	OTTImageBuffer* imageBuffer; ///< Pointer to the output image buffer
 
-	std::vector<SpriteAttributes> sprites; ///< List of all currently active sprites
+	ColorPaletteDMG paletteData; ///< Container for all externally defined DMG color palettes
 
 	/** Retrieve the color of a pixel in a tile bitmap.
 	  * @param index The start address of the tile in VRAM [0x0000,0x1800].

@@ -6,9 +6,11 @@
 // class ColorPalette
 /////////////////////////////////////////////////////////////////////
 
-void ColorPalette::setColors(const unsigned char* components){
+void ColorPalette::setColors(const unsigned int& index, const unsigned char* components) {
+	if (index >= 3) 
+		return;
 	for(int i = 0; i < 4; i++){ // Over color index
-		trueColor[i] = ColorRGB(
+		trueColor[index][i] = ColorRGB(
 			convert(components[4 * i]),
 			convert(components[4 * i + 1]),
 			convert(components[4 * i + 2])
@@ -16,9 +18,11 @@ void ColorPalette::setColors(const unsigned char* components){
 	}
 }
 
-void ColorPalette::setColors(const float* components){
+void ColorPalette::setColors(const unsigned int& index, const float* components){
+	if (index >= 3)
+		return;
 	for(int i = 0; i < 4; i++){ // Over color index
-		trueColor[i] = ColorRGB(
+		trueColor[index][i] = ColorRGB(
 			clamp(components[4 * i]),
 			clamp(components[4 * i + 1]),
 			clamp(components[4 * i + 2])
@@ -26,52 +30,48 @@ void ColorPalette::setColors(const float* components){
 	}
 }
 
-void ColorPalette::setColors(const unsigned int& c0, const unsigned int& c1, const unsigned int& c2, const unsigned int& c3){
-	set(0, c0);
-	set(1, c1);
-	set(2, c2);
-	set(3, c3);
-}
-
-void ColorPalette::setColors(const ColorRGB& c0, const ColorRGB& c1, const ColorRGB& c2, const ColorRGB& c3){
-	set(0, c0);
-	set(1, c1);
-	set(2, c2);
-	set(3, c3);
-}
-
-void ColorPalette::set(const unsigned char& index, const unsigned int& color){
-	if(index > 3)
+void ColorPalette::setColors(const unsigned int& index, const unsigned int& c0, const unsigned int& c1, const unsigned int& c2, const unsigned int& c3){
+	if (index >= 3)
 		return;
-	trueColor[index] = convert(color);
+	trueColor[index][0] = convert(c0);
+	trueColor[index][1] = convert(c1);
+	trueColor[index][2] = convert(c2);
+	trueColor[index][3] = convert(c3);
 }
 
-void ColorPalette::set(const unsigned char& index, const ColorRGB& color){
-	if(index > 3)
+void ColorPalette::setColors(const unsigned int& index, const ColorRGB& c0, const ColorRGB& c1, const ColorRGB& c2, const ColorRGB& c3){
+	if (index >= 3)
 		return;
-	trueColor[index] = color;
+	trueColor[index][0] = c0;
+	trueColor[index][1] = c1;
+	trueColor[index][2] = c2;
+	trueColor[index][3] = c3;
 }
 
 bool ColorPalette::write(std::ofstream& f){
 	unsigned char r, g, b;
-	for(int i = 0; i < 4; i++){ // Over color index
-		// Write the color components
-		convert(trueColor[i], r, g, b);
-		f.write((char*)&r, 1);
-		f.write((char*)&g, 1);
-		f.write((char*)&b, 1);
+	for (int i = 0; i < 3; i++) { // Over all colors
+		for (int j = 0; j < 4; j++) { // Over color index
+			// Write the color components
+			convert(trueColor[i][j], r, g, b);
+			f.write((char*)&r, 1);
+			f.write((char*)&g, 1);
+			f.write((char*)&b, 1);
+		}
 	}
 	return (f.good());
 }
 
 bool ColorPalette::read(std::ifstream& f){
 	unsigned char r, g, b;
-	for(int i = 0; i < 4; i++){ // Over color index
-		// Write the color components
-		f.read((char*)&r, 1);
-		f.read((char*)&g, 1);
-		f.read((char*)&b, 1);
-		convert(trueColor[i], r, g, b);
+	for (int i = 0; i < 3; i++) { // Over all colors
+		for (int j = 0; j < 4; j++) { // Over color index
+			// Write the color components
+			f.read((char*)&r, 1);
+			f.read((char*)&g, 1);
+			f.read((char*)&b, 1);
+			convert(trueColor[i][j], r, g, b);
+		}
 	}
 	return (f.good() && !f.eof());
 }
@@ -114,6 +114,23 @@ float ColorPalette::clamp(const float& input){
 // class ColorPaletteDMG
 /////////////////////////////////////////////////////////////////////
 
+std::vector<ColorPalette>::iterator ColorPaletteDMG::next() {
+	if (allPalettes.empty())
+		return allPalettes.end();
+	paletteSelect++;
+	if (paletteSelect == allPalettes.end())
+		paletteSelect = allPalettes.begin();
+	return paletteSelect;
+}
+
+std::vector<ColorPalette>::iterator ColorPaletteDMG::prev() {
+	if (allPalettes.empty())
+		return allPalettes.end();
+	if (paletteSelect != allPalettes.begin())
+		--paletteSelect;
+	return paletteSelect;
+}
+
 void ColorPaletteDMG::setPaletteID(const unsigned char& table, const unsigned char& entry){
 	nTableNumber = table;
 	nEntryNumber = entry;
@@ -145,7 +162,7 @@ bool ColorPaletteDMG::read(std::ifstream& f){
 	return (readHeader(f) && readPalettes(f));
 }
 
-bool ColorPaletteDMG::find(const std::string& fname, const unsigned short& id, bool verbose/*=false*/){
+bool ColorPaletteDMG::find(const std::string& fname, const unsigned short& id, bool verbose/* = false*/){
 	std::ifstream f(fname.c_str(), std::ios::binary);
 	if(!f.good()){
 		if(verbose)
@@ -174,6 +191,36 @@ bool ColorPaletteDMG::find(const std::string& fname, const unsigned short& id, b
 	f.close();
 	
 	return retval;
+}
+
+unsigned int ColorPaletteDMG::findAll(const std::string& fname, bool verbose/* = false*/) {
+	unsigned int retval = 0;
+
+	std::ifstream f(fname.c_str(), std::ios::binary);
+	if (!f.good()) {
+		if (verbose)
+			std::cout << " [palettes] Error! Failed to read DMG palette file \"" << fname << "\"." << std::endl;
+		return false;
+	}
+
+	while (readHeader(f)) {
+		if (!readPalettes(f))
+			break;
+		allPalettes.push_back(palettes);
+		retval++;
+	}
+
+	if (verbose)
+		std::cout << " [palettes] Found " << retval << " DMG color palettes in file \"" << fname << "\""  << std::endl;
+
+	paletteSelect = allPalettes.begin();
+	bPalettesLoaded = true;
+
+	return retval;
+}
+
+void ColorPaletteDMG::addColorPalette(const ColorPalette& pal) {
+	allPalettes.push_back(pal);
 }
 
 bool ColorPaletteDMG::readHeader(std::ifstream& f){

@@ -2,6 +2,7 @@
 #define COLOR_PALETTE_HPP
 
 #include <fstream>
+#include <vector>
 
 #include "ColorRGB.hpp"
 
@@ -10,53 +11,71 @@ public:
 	/** Default constructor
 	  */
 	ColorPalette() :
-		trueColor{ Colors::WHITE, Colors::LTGRAY, Colors::DKGRAY, Colors::BLACK }
+		trueColor{ 
+			{ Colors::WHITE, Colors::LTGRAY, Colors::DKGRAY, Colors::BLACK },
+			{ Colors::WHITE, Colors::LTGRAY, Colors::DKGRAY, Colors::BLACK },
+			{ Colors::WHITE, Colors::LTGRAY, Colors::DKGRAY, Colors::BLACK }
+		}
+	{
+	}
+
+	/** Single palette constructor
+	  */
+	ColorPalette(const ColorRGB& c0, const ColorRGB& c1, const ColorRGB& c2, const ColorRGB& c3) :
+		trueColor{
+			{ c0, c1, c2, c3 },
+			{ c0, c1, c2, c3 },
+			{ c0, c1, c2, c3 }
+	}
+	{
+	}
+
+	/** Full CGB-mode palette constructor
+	  */
+	ColorPalette(
+		const ColorRGB& c00, const ColorRGB& c01, const ColorRGB& c02, const ColorRGB& c03,
+		const ColorRGB& c10, const ColorRGB& c11, const ColorRGB& c12, const ColorRGB& c13,
+		const ColorRGB& c20, const ColorRGB& c21, const ColorRGB& c22, const ColorRGB& c23
+	) :
+		trueColor{
+			{ c00, c01, c02, c03 },
+			{ c10, c11, c12, c13 },
+			{ c20, c21, c22, c23 }
+		}
 	{
 	}
 
 	/** Get a reference to one of the four palette colors
 	  */
-	ColorRGB& operator [] (const unsigned char& index){
+	ColorRGB* operator [] (const unsigned char& index){
 		return trueColor[index];
 	}
 
 	/** Get a const reference to one of the four palette colors
 	  */
-	ColorRGB operator [] (const unsigned char& index) const {
-		return trueColor[index];
+	ColorRGB* operator [] (const unsigned char& index) const {
+		return const_cast<ColorRGB*>(trueColor[index]);
 	}
 
-	/** Set all four palette colors in 5-bit RGB components (0 to 31)
+	/** Set all four palette colors in 5-bit RGB components (0 to 31) for one of the three palette colors
 	  * Array must contain AT LEAST 12 elements {R0, G0, B0, ... , R3, G3, B3}.
 	  */
-	void setColors(const unsigned char* components);
+	void setColors(const unsigned int& index, const unsigned char* components);
 	
-	/** Set all four palette colors in RGB components (0 to 1)
+	/** Set all four palette colors in RGB components (0 to 1) for one of the three palette colors
 	  * Array must contain AT LEAST 12 elements {R0, G0, B0, ... , R3, G3, B3}.
 	  */
-	void setColors(const float* components);
+	void setColors(const unsigned int& index, const float* components);
 
-	/** Set all four palette colors
+	/** Set all four palette colors for one of the three palette colors
 	  * Each integer contains red color component in bits 0-4, green in 5-9, and blue in 10-14.
 	  */
-	void setColors(const unsigned int& c0, const unsigned int& c1, const unsigned int& c2, const unsigned int& c3);
+	void setColors(const unsigned int& index, const unsigned int& c0, const unsigned int& c1, const unsigned int& c2, const unsigned int& c3);
 	
-	/** Set all four palette colors
+	/** Set all four palette colors for one of the three palette colors
 	  */
-	void setColors(const ColorRGB& c0, const ColorRGB& c1, const ColorRGB& c2, const ColorRGB& c3);
-	
-	/** Set a single palette color
-	  * @param index Color index (0-3)
-	  * @param color Contains red color component in bits 0-4, green in 5-9, and blue in 10-14
-	  */
-	void set(const unsigned char& index, const unsigned int& color);
-	
-	/** Set a single palette color
-	  * @param index Color index (0-3)
-	  * @param color Real RGB color
-	  */
-	void set(const unsigned char& index, const ColorRGB& color);
-	
+	void setColors(const unsigned int& index, const ColorRGB& c0, const ColorRGB& c1, const ColorRGB& c2, const ColorRGB& c3);
+
 	/** Write a color palette to a binary output file stream
 	  * Will attempt to write 12 bytes to output file
 	  */
@@ -101,12 +120,15 @@ public:
 	static float clamp(const float& input);
 	
 private:
-	ColorRGB trueColor[4]; ///< Real RGB palette colors
+	ColorRGB trueColor[3][4]; ///< Real RGB palette colors
 };
 
 class ColorPaletteDMG{
 public:
 	ColorPaletteDMG() :
+		bPalettesLoaded(false),
+		allPalettes(),
+		paletteSelect(allPalettes.end()),
 		palettes(),
 		nTableNumber(0),
 		nEntryNumber(0)
@@ -121,14 +143,26 @@ public:
 
 	/** Get a reference to one of the three DMG color palettes
 	  */
-	ColorPalette& operator [] (const unsigned char& index){
+	ColorRGB* operator [] (const unsigned char& index){
 		return palettes[index];
 	}
 
 	/** Get a const reference to one of the three DMG color palettes
 	  */
-	ColorPalette operator [] (const unsigned char& index) const {
-		return palettes[index];
+	ColorRGB* operator [] (const unsigned char& index) const {
+		return const_cast<ColorRGB*>(palettes[index]);
+	}
+
+	/** Get a reference to one of the three DMG color palettes
+	  */
+	ColorPalette& operator () () {
+		return (*paletteSelect);
+	}
+
+	/** Get a const reference to one of the three DMG color palettes
+	  */
+	ColorPalette operator () () const {
+		return (*paletteSelect);
 	}
 
 	/** Get the CGB palette table number
@@ -149,6 +183,32 @@ public:
 		return (nTableNumber + ((nEntryNumber & 0xffff) << 8));
 	}
 
+	/** Return true if external color palettes vector is empty
+	  */
+	bool empty() const {
+		return allPalettes.empty();
+	}
+
+	/** Return true if external color palettes have been loaded from an input file
+	  */
+	bool getPalettesLoaded() const {
+		return bPalettesLoaded;
+	}
+
+	/** Get the number of palettes which are currently loaded
+	  */
+	size_t getNumPalettesLoaded() const {
+		return allPalettes.size();
+	}
+
+	/** Switch to the next palette
+	  */
+	std::vector<ColorPalette>::iterator next();
+
+	/** Revert to the previous palette
+	  */
+	std::vector<ColorPalette>::iterator prev();
+
 	/** Set CGB palette table and entry number
 	  */
 	void setPaletteID(const unsigned char& table, const unsigned char& entry);
@@ -167,10 +227,25 @@ public:
 	  * @param fname Filename of binary file containing DMG color palettes
 	  * @return True if pre-defined palette (id) is found in the input file
 	  */
-	bool find(const std::string& fname, const unsigned short& id, bool verbose=false);
+	bool find(const std::string& fname, const unsigned short& id, bool verbose = false);
+
+	/** Extract all DMG color palettes from a list of pre-defined palettes
+	  * @return The total number of palettes added to the output vector
+	  */
+	unsigned int findAll(const std::string& fname, bool verbose = false);
+
+	/** Manually add a color palette to the list of all palettes
+	  */
+	void addColorPalette(const ColorPalette& pal);
 
 private:
-	ColorPalette palettes[3]; ///< DMG color palettes (0: BG/WIN, 1: OBJ0, 2: OBJ1)
+	bool bPalettesLoaded; ///< Set if external color palettes have been loaded from an input file
+
+	std::vector<ColorPalette> allPalettes; ///< Holder for all externally defined DMG color palettes
+	
+	std::vector<ColorPalette>::iterator paletteSelect; ///< Currently selected palette
+
+	ColorPalette palettes; ///< DMG color palettes (0: BG/WIN, 1: OBJ0, 2: OBJ1)
 
 	unsigned char nTableNumber; ///< Color palette table number
 	

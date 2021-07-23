@@ -1725,4 +1725,11 @@ void SystemGBC::checkSystemKeys() {
 		sound->getMixer()->mute();
 	else if (keys->check(0x6e)) // 'n' Next frame
 		resumeUntilNextVBlank();
+	else if (keys->poll(0x70)) { // 'p' Cycle color palettes
+		if (!keys->alt())
+			gpu->changeColorPalette();
+		else
+			gpu->changeColorPalette(false);
+	}
+
 }

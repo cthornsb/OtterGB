@@ -57,7 +57,7 @@ GPU::GPU() :
 },
 	fNextFrameOpacity(1.f),
 	imageBuffer(0x0),
-	sprites()
+	paletteData()
 {
 }
 
@@ -93,6 +93,17 @@ void GPU::initialize(){
 	// Get a pointer to the output image buffer
 	imageBuffer = window->enableImageBuffer(false);
 	imageBuffer->setBlendMode(BlendMode::AVERAGE);
+
+	// Add standard color palettes to list of all available palettes
+	ColorRGB grayscalePalette[4];
+	for (int i = 0; i < 4; i++) {
+		grayscalePalette[i] = dmgColorPalette[i];
+		grayscalePalette[i].toGrayscale();
+	}
+	paletteData.addColorPalette(ColorPalette(dmgColorPalette[0], dmgColorPalette[1], dmgColorPalette[2], dmgColorPalette[3])); // Default palette
+	paletteData.addColorPalette(ColorPalette(dmgColorPalette[3], dmgColorPalette[2], dmgColorPalette[1], dmgColorPalette[0])); // Inverted
+	paletteData.addColorPalette(ColorPalette(grayscalePalette[0], grayscalePalette[1], grayscalePalette[2], grayscalePalette[3])); // Grayscale 1
+	paletteData.addColorPalette(ColorPalette()); // Grayscale 2
 
 	// Set default color palettes
 	this->onUserReset();
@@ -476,9 +487,9 @@ void GPU::setFrameBlur(const float& blur) {
 	}
 }
 
-void GPU::setColorPaletteDMG(){
+bool GPU::setColorPaletteDMG(){
 	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
-		return;
+		return false;
 	// Monochrome green DMG color palette
 	if (bGrayscalePalette) { // Convert to sRGB grayscale
 		for (int i = 0; i < 4; i++)
@@ -495,35 +506,64 @@ void GPU::setColorPaletteDMG(){
 		dmgColorPalette[3]
 	);
 	bUserSelectedPalette = false; // Unset user palette flag, since we're using the default palette
+	return true;
 }
 
-void GPU::setColorPaletteDMG(const unsigned short& paletteID){
-	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
-		return;
-	ColorPaletteDMG palette;
-	if(palette.find("assets/palettes.dat", paletteID, verboseMode)){
+bool GPU::setColorPaletteDMG(const unsigned short& paletteID) {
+	if (bGBCMODE && paletteData.find("assets/palettes.dat", paletteID, verboseMode)) {
 		const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
-		for(int i = 0; i < 3; i++){
-			cgbPaletteColor[indices[i]][0] = palette[i][0];
-			cgbPaletteColor[indices[i]][1] = palette[i][1];
-			cgbPaletteColor[indices[i]][2] = palette[i][2];
-			cgbPaletteColor[indices[i]][3] = palette[i][3];
+		for (int i = 0; i < 3; i++) {
+			cgbPaletteColor[indices[i]][0] = paletteData[i][0];
+			cgbPaletteColor[indices[i]][1] = paletteData[i][1];
+			cgbPaletteColor[indices[i]][2] = paletteData[i][2];
+			cgbPaletteColor[indices[i]][3] = paletteData[i][3];
 		}
 		bUserSelectedPalette = true;
+		return true;
 	}
+	return false;
 }
 
-void GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3){
-	if(bGBCMODE) // Do not set DMG palettes when in CGB mode
-		return;
+bool GPU::setColorPaletteDMG(const ColorRGB c0, const ColorRGB c1, const ColorRGB c2, const ColorRGB c3) {
+	if (bGBCMODE) // Do not set DMG palettes when in CGB mode
+		return false;
 	const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
-	for(int i = 0; i < 3; i++){
+	for (int i = 0; i < 3; i++) {
 		cgbPaletteColor[indices[i]][0] = c0;
 		cgbPaletteColor[indices[i]][1] = c1;
 		cgbPaletteColor[indices[i]][2] = c2;
 		cgbPaletteColor[indices[i]][3] = c3;
 	}
 	bUserSelectedPalette = true;
+	return true;
+}
+
+bool GPU::changeColorPalette(bool bAdvance/* = true*/) {
+	if (bGBCMODE) // Do not set DMG palettes when in CGB mode
+		return false;
+
+	// Load external palettes
+	if (!paletteData.getPalettesLoaded()) {
+		if (paletteData.findAll("assets/palettes.dat", verboseMode) == 0)
+			return false;
+	}
+
+	if (bAdvance) // Advance to next color palette
+		paletteData.next();
+	else // Revert to previous color palette
+		paletteData.prev();
+
+	ColorPalette& palette = paletteData();
+	const int indices[3] = { 0, 8, 9 }; // The BG, OBJ0, and OBJ1 palettes
+	for (int i = 0; i < 3; i++) {
+		cgbPaletteColor[indices[i]][0] = palette[i][0];
+		cgbPaletteColor[indices[i]][1] = palette[i][1];
+		cgbPaletteColor[indices[i]][2] = palette[i][2];
+		cgbPaletteColor[indices[i]][3] = palette[i][3];
+	}
+	bUserSelectedPalette = true;
+
+	return true;
 }
 
 void GPU::print(const std::string &str, const unsigned char &x, const unsigned char &y){
@@ -866,9 +906,6 @@ void GPU::onUserReset(){
 		currentLineWindow[i].reset();
 		currentLineBackground[i].reset();
 	}
-
-	// Clear all sprite updates
-	sprites.clear();
 }
 
 
