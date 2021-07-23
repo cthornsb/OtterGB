@@ -12,6 +12,8 @@ public:
 	unsigned char xPos; ///< X-position of the current sprite
 	
 	unsigned char tileNum; ///< Tile index for the current sprite
+
+	unsigned char pixelY; ///< Vertical tile bitmap pixel offset
 	
 	bool objPriority; ///< Object to Background priority (0: OBJ above BG, 1: OBJ behind BG color 1-3, BG color 0 always behind))
 	
@@ -25,20 +27,24 @@ public:
 
 	unsigned char gbcPalette; ///< CGB palette number (OBP0-7)
 	
-	unsigned char oamIndex; ///< Sprite index in the OAM table (0-39)
-	
+	unsigned short bmpLow; ///< 
+
+	unsigned short oamIndex; ///< Sprite index in the OAM table (0-39)
+
 	/** Default constructor.
 	  */
 	SpriteAttributes() :
 		yPos(0),
 		xPos(0),
 		tileNum(0),
+		pixelY(0),
 		objPriority(false),
 		yFlip(false),
 		xFlip(false),
 		ngbcPalette(false),
 		gbcVramBank(false),
 		gbcPalette(0),
+		bmpLow(0),
 		oamIndex(0)
 	{ 
 	}
@@ -55,7 +61,7 @@ public:
 	  * @param index An index in OAM memory to check for equality.
 	  * @return True if the OAM sprite index is equal and return false otherwise.
 	  */
-	bool operator == (const unsigned char &index) const { 
+	bool operator == (const unsigned short &index) const { 
 		return (oamIndex == index); 
 	}
 	
@@ -84,28 +90,59 @@ public:
 	
 	/** Get the sprite attributes for a sprite in the OAM table
 	  */
-	SpriteAttributes getSpriteAttributes(const unsigned char &index);
-	
+	SpriteAttributes getSpriteAttributes(const unsigned short &index);
+
+	/** Get the number of sprites drawn on the most recent LCD scanline
+	  */
+	unsigned short getSpritesDrawn() const {
+		return nSpritesDrawn;
+	}
+
+	/** Get an iterator to the start of the vector of sprites appearing on the current scanline
+	  */
+	std::vector<SpriteAttributes*>::iterator begin() {
+		return spritesToDraw.begin();
+	}
+
+	/** Get an iterator to the end of the vector of sprites appearing on the current scanline
+	  */
+	std::vector<SpriteAttributes*>::iterator end() {
+		return spritesToDraw.end();
+	}
+
+	/** Set the maximum number of sprites per scanline
+	  */
+	void setMaxSpritesPerLine(const unsigned short& n) {
+		nMaxSpritesPerLine = n;
+	}
+
 	/** Decode the attributes of the next modified sprite and add it to a vector of sprite attributes
 	  * @return True if there was at least one modified sprite in the list
 	  */
 	bool updateNextSprite(std::vector<SpriteAttributes> &sprites);
 	
-	/** Return true if the attributes of at least one sprite have been modified
-	  */
-	bool modified(){ 
-		return !lModified.empty(); 
-	}
-	
 	/** Ignore any pending sprite attribute updates
 	  */
 	void clear();
+
+	/** Search OAM for sprites which overlap the current scanline (LY)
+	  * @return The number of ticks to pause the pixel clock due to the number of sprites found
+	  */
+	int search();
 	
 private:
 	bool bModified[40]; ///< Set if the attributes of a sprite have been modified
 
-	std::queue<unsigned char> lModified; ///< List of sprites whose attributes have been modified
+	unsigned short nSpritesDrawn; ///< Number of sprites drawn on the most recent scanline
+
+	unsigned short nMaxSpritesPerLine; ///< Maximum number of sprites which will be drawn per scanline
+
+	std::queue<unsigned short> lModified; ///< List of sprites whose attributes have been modified
 	
+	std::vector<SpriteAttributes> spritesVisible; ///< List of all sprites which are currently visible 
+	
+	std::vector<SpriteAttributes*> spritesToDraw; ///< List of pointers to sprites which are currently visible on the current scanline
+
 	/** Decode sprite attributes from raw input data
 	  * @param ptr Pointer to raw sprite data (expected to contain at least 4 bytes of data)
 	  * @param attr Sprite attributes pointer where decoded sprite attributes will be stored

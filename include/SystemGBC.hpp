@@ -520,11 +520,6 @@ public:
 	  */
 	bool loadSRAM(const std::string &fname);
 	
-	/** Handle system horizontal blank (HBlank) period
-	  * Draw current LCD scanline and call DMA controller to handle any active HBlank transfers.
-	  */
-	void handleHBlankPeriod();
-	
 	/** Request vertical blanking (VBlank) period interrupt (INT 40)
 	  */
 	void handleVBlankInterrupt();
@@ -664,10 +659,26 @@ public:
 	  */
 	void resumeUntilNextVBlank();
 	
-	/** Lock read / write access to VRAM and / or OAM
+	/** Start PPU mode 2 (OAM search).
+	  * VRAM and CGB palettes are accessible, OAM is locked.
 	  */
-	void lockMemory(bool lockVRAM, bool lockOAM);
-	
+	void startMode2();
+
+	/** Start PPU mode 3 (render scanline).
+	  * VRAM, CGB palettes, and OAM are locked.
+	  */
+	void startMode3();
+
+	/** Start PPU mode 0 (horizontal blanking interval).
+	  * VRAM, CGB palettes, and OAM are accessible.
+	  */
+	void startMode0();
+
+	/** Start PPU mode 1 (vertical blanking interval).
+	  * VRAM, CGB palettes, and OAM are accessible.
+	  */
+	void startMode1();
+
 	/** Enable vertical syncronization (VSync).
 	  * VSync may not be available on all platforms and hardware.
 	  */
@@ -691,6 +702,8 @@ private:
 	unsigned short frameSkip; ///< The value N for drawing every 1 out of N frames (or the number of frames to skip between rendered frames plus 1)
 
 	unsigned short bootLength; ///< Size of the boot ROM (bytes)
+
+	unsigned short nSpriteClockPause; ///< Number of ticks to pause the pixel clock due to OAM sprite search
 
 	bool verboseMode; ///< Verbosity flag
 	
@@ -717,10 +730,6 @@ private:
 	bool fatalError; ///< Set if a fatal error was encountered
 	
 	bool consoleIsOpen; ///< Set if interpreter console is currently open
-	
-	bool bLockedVRAM; ///< Set if VRAM is locked while being read by PPU 
-	
-	bool bLockedOAM; ///< Set if OAM is locked while being read by PPU
 
 	bool bNeedsReloaded; ///< Set if ROM file should be reloaded on call to reset()
 

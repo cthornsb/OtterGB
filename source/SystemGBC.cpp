@@ -83,6 +83,7 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	nFrames(0),
 	frameSkip(1),
 	bootLength(0),
+	nSpriteClockPause(0),
 	verboseMode(false),
 	debugMode(false),
 	cpuStopped(false),
@@ -96,8 +97,6 @@ SystemGBC::SystemGBC(int& argc, char* argv[]) :
 	initSuccessful(false),
 	fatalError(false),
 	consoleIsOpen(false),
-	bLockedVRAM(false),
-	bLockedOAM(false),
 	bNeedsReloaded(true),
 	bUseTileViewer(false),
 	bUseLayerViewer(false),
@@ -495,29 +494,6 @@ bool SystemGBC::execute(){
 		writeExternalRam();
 	return true;
 }
-
-void SystemGBC::handleHBlankPeriod(){
-	if(nFrames % frameSkip == 0){
-		if (bUseLayerViewer && rLY->getValue() < 144) { // Record current SCX, SCY, WX, and WY to use in the layer viewer
-			winScrollPositions[rLY->getValue()] = BackgroundWindowSettings{
-				rSCX->getValue(),
-				rSCY->getValue(),
-				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWX->getValue() : (unsigned char)0xff, // to avoid int truncation warnings
-				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWY->getValue() : (unsigned char)0xff  // to avoid int truncation warnings
-			};
-		}
-		// We multiply the pixel clock pause period by two if in double-speed mode
-		sclk->setPixelClockPause( (bCPUSPEED ? 1 : 2) * gpu->drawNextScanline(oam.get()) );
-	}
-	dma->onHBlank();
-/*#ifdef USE_QT_DEBUGGER
-	if(debugMode && pauseAfterNextHBlank){
-		pauseAfterNextHBlank = false;
-		pause();
-		gpu->render(); // Show the newly drawn scanline
-	}
-#endif*/
-}
 	
 void SystemGBC::handleVBlankInterrupt(){ 
 	rIF->setBit(0);
@@ -558,8 +534,6 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		cart->writeRegister(loc, src); // Write to cartridge MBC (if present)
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		//if(bLockedVRAM) // PPU is using VRAM, access restricted
-		//	return false;
 		gpu->write(loc, src);
 	}
 	else if(loc <= 0xBFFF){ // External (cartridge) RAM
@@ -569,8 +543,6 @@ bool SystemGBC::write(const unsigned short &loc, const unsigned char &src){
 		wram->write(loc, src);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		//if(bLockedOAM) // PPU is using OAM, access restricted
-		//	return false;
 		oam->write(loc, src);
 	}
 	else if (loc <= 0xFF7F){ // System registers / Inaccessible
@@ -619,8 +591,6 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		cart->readFast(loc-0x4000, dest);
 	}
 	else if(loc <= 0x9FFF){ // Video RAM (VRAM)
-		//if(bLockedVRAM) // PPU is using VRAM, access restricted
-		//	return false;
 		gpu->read(loc, dest);
 	}
 	else if(loc <= 0xBFFF){ // External RAM (SRAM)
@@ -630,8 +600,6 @@ bool SystemGBC::read(const unsigned short &loc, unsigned char &dest){
 		wram->read(loc, dest);
 	}
 	else if(loc <= 0xFE9F){ // Sprite table (OAM)
-		//if(bLockedOAM) // PPU is using OAM, access restricted
-		//	return false;
 		oam->read(loc, dest);
 	}
 	else if (loc <= 0xFF7F) { // System registers / Inaccessible
@@ -1241,9 +1209,8 @@ bool SystemGBC::reset() {
 	cpuStopped = false;
 	cpuHalted = false;
 
-	// Reset VRAM and OAM locks
-	bLockedVRAM = false;
-	bLockedOAM = false;
+	// Reset pixel clock pause
+	nSpriteClockPause = 0;
 
 	// Load save data (if available)
 	if(autoLoadExtRam)
@@ -1565,14 +1532,42 @@ void SystemGBC::resumeUntilNextHBlank(){
 	nBreakCycles = sclk->getCyclesUntilNextScanline();
 }
 
-void SystemGBC::resumeUntilNextVBlank(){
+void SystemGBC::resumeUntilNextVBlank() {
 	unpause(false); // Do not resume audio
 	nBreakCycles = sclk->getCyclesUntilNextFrame();
 }
 
-void SystemGBC::lockMemory(bool lockVRAM, bool lockOAM){
-	bLockedVRAM = lockVRAM;
-	bLockedOAM = lockOAM;
+void SystemGBC::startMode2() {
+	// VRAM, CGB palettes accessible. OAM inaccessible
+	// Search OAM for sprites which overlap current scanline
+	nSpriteClockPause = oam->search();
+}
+
+void SystemGBC::startMode3() {
+	// VRAM, CGB palettes, and OAM inaccessible
+	if (nFrames % frameSkip == 0) {
+		if (bUseLayerViewer && rLY->getValue() < 144) { // Record current SCX, SCY, WX, and WY to use in the layer viewer
+			winScrollPositions[rLY->getValue()] = BackgroundWindowSettings{
+				rSCX->getValue(),
+				rSCY->getValue(),
+				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWX->getValue() : (unsigned char)0xff, // to avoid int truncation warnings
+				rLCDC->getBit(5) && rLY->getValue() >= rWY->getValue() ? rWY->getValue() : (unsigned char)0xff  // to avoid int truncation warnings
+			};
+		}
+		// We multiply the pixel clock pause period by two if in double-speed mode
+		//sclk->setPixelClockPause((bCPUSPEED ? 1 : 2) * (nSpriteClockPause + gpu->drawNextScanline(oam.get())));
+		gpu->drawNextScanline(oam.get());
+	}
+}
+
+void SystemGBC::startMode0() {
+	// VRAM, CGB palettes, and OAM accessible
+	// Handle any pending HBlank DMA transfers
+	dma->onHBlank();
+}
+
+void SystemGBC::startMode1() {
+	// VRAM, CGB palettes, and OAM accessible
 }
 
 void SystemGBC::enableVSync() {

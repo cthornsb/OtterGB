@@ -246,7 +246,12 @@ private:
 	  * @param line Array of all pixels for the currnt scanline.
 	  * @return The number of pixels drawn.
 	  */
-	unsigned char drawTile(const unsigned char &x, const unsigned char &y, const unsigned char &x0, const unsigned short &offset, ColorGBC *line);
+	unsigned char drawTile(const unsigned char& x, const unsigned char& y, const unsigned char& x0, const unsigned short& offset, ColorGBC* line);
+
+	/** Draw the current sprite.
+	  * @param oam The currently selected sprite to draw.
+	  */
+	void drawSprite(const SpriteAttributes* oam);
 
 	/** Draw the current sprite.
 	  * @param y The current LCD screen scanline [0,144).

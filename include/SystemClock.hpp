@@ -85,11 +85,11 @@ public:
 		return bVSync; 
 	}
 	
-	/** Set the number of pixel clock (~4 MHz) ticks to delay start of HBlank interval (mode 0)
-	  * This delay is due to several factors, the primary one being the number of sprites the PPU drew on the current scanline
+	/** Set the number of pixel clock (~4 MHz) ticks to delay start of HBlank interval (mode 0).
+	  * This delay is due to several factors, the primary one being the number of sprites the PPU drew on the current scanline.
 	  */
 	void setPixelClockPause(const unsigned int& ticks){
-		nClockPause = ticks;
+		delayedModeStart0 = (modeStart[0] + ticks) - ((modeStart[0] + ticks) % 4);
 	}
 	
 	/** Poll the VSync (vertical blank interval) flag and reset it.
@@ -135,9 +135,9 @@ private:
 
 	double cyclesPerSecond; ///< Average number of system clock cycles per second over a ten second period
 
-	unsigned int nClockPause; ///< Number of pixel clock ticks to pause before entering HBlank period (mode 0)
+	unsigned int modeStart[4]; ///< Number of pixel clock ticks to elapse before starting each LCD driver mode
 
-	unsigned int modeStart[4]; ///< Number of pixel clock ticks to elapse before starting the next LCD driver mode
+	unsigned int delayedModeStart0; ///< Number of pixel clock ticks start LCD driver mode 0, delayed by the pixel clock pause
 
 	/** Increment the current scanline (register LY)
 	  */

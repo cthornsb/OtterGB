@@ -167,77 +167,25 @@ unsigned char GPU::drawTile(const unsigned char &x, const unsigned char &y, cons
 	return (7-pixelX)+1;
 }
 
-bool GPU::drawSprite(const unsigned char& y, const SpriteAttributes& oam) {
-	unsigned char xp = oam.xPos - 8; // X coordinate of left side of sprite
-	unsigned char yp, ybot; // Y coordinate of top and bottom of sprite
+void GPU::drawSprite(const SpriteAttributes* oam) {
+	unsigned char xp = oam->xPos - 8; // X coordinate of left side of sprite
 
-	// Check for sprites at the top of the screen
-	if (!rLCDC->bit2()) { // 8x8 sprites
-		if (oam.yPos >= 16) { // Sprite fully on screen
-			yp = oam.yPos - 16;
-			ybot = yp + 8;
-		}
-		else if (oam.yPos >= 8) { // At least one row of sprite on screen
-			yp = 0;
-			ybot = oam.yPos - 8;
-		}
-		else // Fully off top of screen
-			return false;
-	}
-	else { // 8x16 sprites
-		if (oam.yPos >= 16) { // Sprite fully on screen
-			yp = oam.yPos - 16;
-			ybot = yp + 16;
-		}
-		else {
-			yp = 0;
-			ybot = oam.yPos;
-		}
-	}
-
-	// Check that the current scanline goes through the sprite
-	if (y < yp || y >= ybot)
-		return false;
-
-	unsigned char pixelY = (oam.yPos >= 16 ? y - yp : y + (16 - oam.yPos)); // Vertical pixel in the tile
-	unsigned char pixelColor;
-	unsigned short bmpLow;
-
-	// Retrieve the background tile ID from OAM
-	// Tile map 0 is used (8000-8FFF)
-	if(!rLCDC->bit2()){ // 8x8 pixel sprites
-		if(oam.yFlip) // Vertical flip
-			pixelY = 7 - pixelY;
-		bmpLow = 16*oam.tileNum;
-	}
-	else{ // 8x16 pixel sprites	
-		if(oam.yFlip) // Vertical flip
-			pixelY = 15 - pixelY;
-		if(pixelY <= 7) // Top half of 8x16 pixel sprites
-			bmpLow = 16*(oam.tileNum & 0xFE);
-		else{ // Bottom half of 8x16 pixel sprites
-			bmpLow = 16*(oam.tileNum | 0x01); 
-			pixelY -= 8;
-		}
-	}
-	
 	// Draw the specified line
+	unsigned char pixelColor;
 	xp += rSCX->getValue();
-	for(unsigned short dx = 0; dx < 8; dx++){
-		if(!currentLineSprite[xp].getColor()){
-			if(bGBCMODE){ // GBC sprite palettes (OBP0-7)
-				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY, (oam.gbcVramBank ? 1 : 0));
-				currentLineSprite[xp].setColorOBJ(pixelColor, oam.gbcPalette + 8, oam.objPriority);
+	for (unsigned short dx = 0; dx < 8; dx++) {
+		if (!currentLineSprite[xp].getColor()) {
+			if (bGBCMODE) { // GBC sprite palettes (OBP0-7)
+				pixelColor = getBitmapPixel(oam->bmpLow, (!oam->xFlip ? (7 - dx) : dx), oam->pixelY, (oam->gbcVramBank ? 1 : 0));
+				currentLineSprite[xp].setColorOBJ(pixelColor, oam->gbcPalette + 8, oam->objPriority);
 			}
-			else{ // DMG sprite palettes (OBP0-1)
-				pixelColor = getBitmapPixel(bmpLow, (!oam.xFlip ? (7-dx) : dx), pixelY);
-				currentLineSprite[xp].setColorOBJ(pixelColor, (oam.ngbcPalette ? 2 : 1), oam.objPriority);
+			else { // DMG sprite palettes (OBP0-1)
+				pixelColor = getBitmapPixel(oam->bmpLow, (!oam->xFlip ? (7 - dx) : dx), oam->pixelY);
+				currentLineSprite[xp].setColorOBJ(pixelColor, (oam->ngbcPalette ? 2 : 1), oam->objPriority);
 			}
 		}
 		xp++;
 	}
-	
-	return true;
 }
 
 void GPU::drawConsole(){
@@ -309,7 +257,7 @@ void GPU::drawLayer(OTTWindow *win, bool mapSelect/*=true*/){
 unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	// The pixel clock delay is dependent upon the number of sprites drawn on a given
 	//  scanline, the background scroll register SCX, and the state of the window layer.
-	unsigned short nPauseTicks = 0;
+	unsigned short retval = 0;
 
 	// Here (nScanline) is the current scanline.
 	nScanline = rLY->getValue();
@@ -327,7 +275,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	nPosY = nScanline + rSCY->getValue();
 
 	// A non-zero scroll (SCX) will delay the clock SCX % 8 ticks.		
-	nPauseTicks += nPosX % 8;
+	retval += nPosX % 8;
 
 	for(unsigned short x = 0; x < 160; x++) // Reset the sprite line
 		currentLineSprite[nPosX++].reset();
@@ -358,31 +306,14 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	}
 	
 	// The window layer being visible delays for 6 ticks.
-	if(bWindowVisible)
-		nPauseTicks += 6;
+	if (bWindowVisible)
+		retval += 6;
 
 	// Handle the OBJ (sprite) layer
 	nPosX = rSCX->getValue();
-	if(rLCDC->bit1() && userLayerEnable[2]){
-		nSpritesDrawn = 0;
-		if(oam->modified()){
-			// Gather sprite attributes from OAM
-			while(oam->updateNextSprite(sprites)){
-			}
-			// Sort sprites by priority.
-			std::sort(sprites.begin(), sprites.end(), (bGBCMODE ? SpriteAttributes::compareCGB : SpriteAttributes::compareDMG));
-		}
-		if(!sprites.empty()){
-			// Search for sprites which overlap this scanline
-			// Get the number of sprites on this scanline
-			// Each sprite pauses the clock for N = 11 - min(5, (x + SCX) mod 8)
-			for(auto sp = sprites.cbegin(); sp != sprites.cend(); sp++){
-				if(drawSprite(nScanline, *sp)){ // Draw a row of the sprite
-					nPauseTicks += 11 - std::min(5, (sp->xPos + nPosX) % 8);
-					if(++nSpritesDrawn >= MAX_SPRITES_PER_LINE) // Max sprites per line
-						break;
-				}
-			}
+	if (userLayerEnable[2]) {
+		for (auto sp = oam->begin(); sp != oam->end(); sp++) {
+			drawSprite(*sp);
 		}
 	}
 	
@@ -393,7 +324,7 @@ unsigned short GPU::drawNextScanline(SpriteHandler *oam){
 	renderScanline();
 	
 	// Return the number of pixel clock ticks to delay HBlank interval
-	return nPauseTicks;
+	return retval;
 }
 
 void GPU::renderScanline(){
