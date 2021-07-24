@@ -858,15 +858,19 @@ void GPU::writeImageBuffer(const unsigned short& y, const ColorRGB& color){
 
 void GPU::userAddSavestateValues(){
 	// Bools
-	addSavestateValue(&bWinDisplayEnable, sizeof(bool));
+	addSavestateValue(&bWinDisplayEnable, SavestateType::BOOL);
 	// Bytes
-	unsigned int byte = sizeof(unsigned char);
-	addSavestateValue(&bgPaletteIndex,  byte);
-	addSavestateValue(&objPaletteIndex, byte);
-	addSavestateValue(dmgPaletteColor,  byte * 12);
-	addSavestateValue(bgPaletteData,    byte * 64);
-	addSavestateValue(objPaletteData,   byte * 64);
-	//ColorRGB cgbPaletteColor[16][4];
+	addSavestateValue(&bgPaletteIndex, SavestateType::BYTE);
+	addSavestateValue(&objPaletteIndex, SavestateType::BYTE);
+	addSavestateValue(dmgPaletteColor, SavestateType::BYTE, 12);
+	addSavestateValue(bgPaletteData, SavestateType::BYTE, 64);
+	addSavestateValue(objPaletteData, SavestateType::BYTE, 64);
+	for (int i = 0; i < 16; i++) { // Over 16 palettes
+		for (int j = 0; j < 4; j++) { // Over 4 palette colors
+			for (int k = 0; k < 4; k++) // RGBA
+				addSavestateValue(&cgbPaletteColor[i][j][k], SavestateType::BYTE);
+		}
+	}
 }
 
 void GPU::onUserReset(){

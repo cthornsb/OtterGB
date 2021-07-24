@@ -95,7 +95,7 @@ bool SystemTimer::onClockUpdate(){
 
 void SystemTimer::rollover(){
 	rTIMA->setValue(rTMA->getValue());
-	sys->handleTimerInterrupt();
+	rIF->setBit(2);
 }
 
 void SystemTimer::defineRegisters(){

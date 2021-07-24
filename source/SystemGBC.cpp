@@ -30,7 +30,6 @@
 #include "DmaController.hpp"
 #include "Serial.hpp"
 #include "SoundManager.hpp"
-#include "MidiFile.hpp"
 #include "Console.hpp"
 
 #ifdef USE_QT_DEBUGGER
@@ -38,10 +37,10 @@
 #endif
 
 #ifndef OTTERGB_VERSION
-#define OTTERGB_VERSION "0.9.1b"
+#define OTTERGB_VERSION "0.9.2"
 #endif
 
-constexpr unsigned char SAVESTATE_VERSION = 0x1;
+constexpr unsigned char SAVESTATE_VERSION = 0x2;
 constexpr unsigned short VRAM_SWAP_START = 0x8000;
 constexpr unsigned short CART_RAM_START  = 0xA000;
 constexpr unsigned short WRAM_ZERO_START = 0xC000;
@@ -493,26 +492,6 @@ bool SystemGBC::execute(){
 	if(autoLoadExtRam) // Save save data (if available)
 		writeExternalRam();
 	return true;
-}
-	
-void SystemGBC::handleVBlankInterrupt(){ 
-	rIF->setBit(0);
-}
-
-void SystemGBC::handleLcdInterrupt(){ 
-	rIF->setBit(1);
-}
-
-void SystemGBC::handleTimerInterrupt(){ 
-	rIF->setBit(2);
-}
-
-void SystemGBC::handleSerialInterrupt(){ 
-	rIF->setBit(3); 
-}
-
-void SystemGBC::handleJoypadInterrupt(){ 
-	rIF->setBit(4); 
 }
 
 void SystemGBC::enableInterrupts(){ 
@@ -1489,7 +1468,7 @@ void SystemGBC::help(){
 	std::cout << "  F7 : Increase frame-skip (faster)" << std::endl;
 	std::cout << "  F8 : Save cart SRAM to \"sram.dat\"" << std::endl;
 	std::cout << "  F9 : Quickload state" << std::endl;
-	std::cout << "  F10: Start/stop wav recording (or midi recording ALT+F10)" << std::endl;
+	std::cout << "  F10: Start/stop wav recording (or midi recording: alt^F10)" << std::endl;
 	std::cout << "  F11: Enable/disable full screen mode" << std::endl;
 	std::cout << "  F12: Take screenshot" << std::endl;
 	std::cout << "   ` : Open interpreter console" << std::endl;
@@ -1500,6 +1479,7 @@ void SystemGBC::help(){
 	std::cout << "   l : Toggle layer-viewer map number" << std::endl;
 	std::cout << "   m : Mute output audio" << std::endl;
 	std::cout << "   n : Break at the start of the next frame" << std::endl;
+	std::cout << "   p : Select next DMG color palette (or previous palette: alt^p)" << std::endl;
 }
 
 void SystemGBC::openDebugConsole(){

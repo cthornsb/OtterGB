@@ -520,26 +520,6 @@ public:
 	  */
 	bool loadSRAM(const std::string &fname);
 	
-	/** Request vertical blanking (VBlank) period interrupt (INT 40)
-	  */
-	void handleVBlankInterrupt();
-	
-	/** Request LCD STAT interrupt (INT 48)
-	  */
-	void handleLcdInterrupt();
-	
-	/** Request system timer interrupt (INT 50)
-	  */
-	void handleTimerInterrupt();
-	
-	/** Request serial controller interrupt (INT 58)
-	  */
-	void handleSerialInterrupt();
-	
-	/** Request joypad controller interrupt (INT 60)
-	  */
-	void handleJoypadInterrupt();
-
 	/** Enable all interrupts
 	  */
 	void enableInterrupts();

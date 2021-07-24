@@ -204,7 +204,7 @@ bool SystemClock::compareScanline(){
 	else{ // LY == LYC
 		rSTAT->setBit2(); // Set bit 2 of STAT (coincidence flag)
 		if(rSTAT->bit6()) // Issue LCD STAT interrupt
-			sys->handleLcdInterrupt();
+			rIF->setBit(1);
 		return true;
 	}
 	return false;
@@ -214,7 +214,7 @@ void SystemClock::startMode0(){
 	lcdDriverMode = 0;
 	rSTAT->setBits(0, 1, 0x0);
 	if (rSTAT->bit3())  // Request LCD STAT interrupt (INT 48)
-		sys->handleLcdInterrupt();
+		rIF->setBit(1);
 	sys->startMode0(); // VRAM and OAM now accessible
 }
 
@@ -224,8 +224,8 @@ void SystemClock::startMode1(bool requestInterrupt/* = true*/){
 	rSTAT->setBits(0, 1, 0x1);
 	if (requestInterrupt) {
 		if (rSTAT->bit4())
-			sys->handleLcdInterrupt(); // Request LCD STAT interrupt (INT 48)
-		sys->handleVBlankInterrupt(); // Request VBlank interrupt (INT 40)
+			rIF->setBit(1); // Request LCD STAT interrupt (INT 48)
+		rIF->setBit(0);; // Request VBlank interrupt (INT 40)
 	}
 	sys->startMode1(); // VRAM and OAM now accessible
 }
@@ -234,7 +234,7 @@ void SystemClock::startMode2(bool requestInterrupt/* = true*/){
 	lcdDriverMode = 2;
 	rSTAT->setBits(0, 1, 0x2);
 	if (requestInterrupt && rSTAT->bit5()) // Request LCD STAT interrupt (INT 48)
-		sys->handleLcdInterrupt();
+		rIF->setBit(1);
 	sys->startMode2(); // OAM inaccessible
 }
 
@@ -245,23 +245,21 @@ void SystemClock::startMode3(){
 }
 
 void SystemClock::userAddSavestateValues(){
-	unsigned int sizeULong = sizeof(unsigned int);
-	unsigned int sizeDouble = sizeof(double);
 	// Ints
-	addSavestateValue(&cyclesSinceLastVSync, sizeULong);
-	addSavestateValue(&cyclesSinceLastHSync, sizeULong);
-	addSavestateValue(&currentClockSpeed,    sizeULong);
-	addSavestateValue(&cyclesPerVSync,       sizeULong);
-	addSavestateValue(&cyclesPerHSync,       sizeULong);
-	addSavestateValue(&cycleCounter,         sizeULong);
-	addSavestateValue(modeStart,             sizeULong * 4);
+	addSavestateValue(&cyclesSinceLastVSync, SavestateType::ULONG);
+	addSavestateValue(&cyclesSinceLastHSync, SavestateType::ULONG);
+	addSavestateValue(&currentClockSpeed, SavestateType::ULONG);
+	addSavestateValue(&cyclesPerVSync, SavestateType::ULONG);
+	addSavestateValue(&cyclesPerHSync, SavestateType::ULONG);
+	addSavestateValue(&cycleCounter, SavestateType::ULONG);
+	addSavestateValue(modeStart, SavestateType::ULONG, 4);
 	// Bytes
-	addSavestateValue(&lcdDriverMode, sizeof(unsigned char));
-	addSavestateValue(&bVSync,        sizeof(bool));
+	addSavestateValue(&lcdDriverMode, SavestateType::BYTE);
+	addSavestateValue(&bVSync, SavestateType::BOOL);
 	// Doubles
-	addSavestateValue(&dFramerate, sizeDouble);
-	addSavestateValue(&dFramePeriod, sizeDouble);
-	addSavestateValue(&cyclesPerSecond, sizeDouble);
+	addSavestateValue(&dFramerate, SavestateType::DOUBLE);
+	addSavestateValue(&dFramePeriod, SavestateType::DOUBLE);
+	addSavestateValue(&cyclesPerSecond, SavestateType::DOUBLE);
 }
 
 void SystemClock::onUserReset(){

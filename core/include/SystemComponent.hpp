@@ -10,6 +10,20 @@ class ConfigFile;
 
 class SystemComponent{
 public:
+	enum class SavestateType {
+		BOOL,
+		CHAR,
+		SHORT,
+		LONG,
+		LLONG,
+		BYTE,
+		USHORT,
+		ULONG,
+		ULLONG,
+		FLOAT,
+		DOUBLE
+	};
+
 	/** Default constructor
 	  * No associated RAM banks.
 	  */
@@ -100,13 +114,14 @@ public:
 	/** Method called when emulator system is quitting
 	  * Does nothing by default.
 	  */
-	virtual void onExit(){ }
+	virtual void onExit() { 
+	}
 
 	/** Method called once per 1 MHz system clock tick
 	  * Should return true if clocking the component triggers additional actions (e.g. component state changes).
 	  * Returns false by default.
 	  */
-	virtual bool onClockUpdate(){ 
+	virtual bool onClockUpdate() { 
 		return false; 
 	}
 
@@ -259,13 +274,13 @@ public:
 
 	/** Enable writing (reading) component RAM contents to quicksave
 	  */
-	void enableSaveRAM(){
+	void enableSaveRAM() {
 		bSaveRAM = true;
 	}
 	
 	/** Disable writing (reading) component RAM contents to quicksave
 	  */
-	void disableSaveRAM(){
+	void disableSaveRAM() {
 		bSaveRAM = false;
 	}
 
@@ -351,7 +366,8 @@ public:
 
 	/** Read settings from an input user configuration file
 	  */
-	virtual void readConfigFile(ConfigFile*) { }
+	virtual void readConfigFile(ConfigFile*) { 
+	}
 
 	/** Get pointer to a location in component RAM
 	  * No validity checks are performed, undefined behavior may result.
@@ -446,25 +462,36 @@ protected:
 
 	std::vector<std::vector<unsigned char> > mem; ///< Physical memory
 
-	std::vector<std::pair<void*, unsigned int> > userValues;
+	std::vector<std::pair<void*, size_t> > userValues;
 
 	bool setReadOnly(bool state=true){ 
 		return (readOnly = state); 
 	}
 
-	bool toggleReadOnly(){ 
+	bool toggleReadOnly() { 
 		return (readOnly = !readOnly); 
 	}
 
-	void addSavestateValue(void* ptr, const unsigned int& len){
+	/** Add a spcified number of typed values to the savestate file
+	  * @param ptr Pointer to savestate data
+	  * @param type Variable type
+	  * @param N Number of typed values to copy starting at memory address ptr
+	  */
+	void addSavestateValue(void* ptr, const SavestateType& type, const unsigned int& N = 1);
+
+	/** Add a specified number of bytes to the savestate file
+	  * @param ptr Pointer to savestate data
+	  * @param len Number of bytes to copy starting at memory address ptr
+	  */
+	void addSavestateValue(void* ptr, const size_t& len){
 		userValues.push_back(std::make_pair(ptr, len));
 	}
 
-	virtual bool preWriteAction(){ 
+	virtual bool preWriteAction() { 
 		return true; 
 	}
 	
-	virtual bool preReadAction(){ 
+	virtual bool preReadAction() { 
 		return true; 
 	}
 
@@ -472,12 +499,12 @@ protected:
 	  * SystemGBC::addSystemRegister should be called here for every register related to the component.
 	  * Does nothing by default
 	  */
-	virtual void defineRegisters(){ 
+	virtual void defineRegisters() { 
 	}
 	
 	/** Add elements to a list of values which will be written to / read from an emulator savestate
 	  */
-	virtual void userAddSavestateValues(){
+	virtual void userAddSavestateValues() {
 	}
 	
 	/** Write 13 byte component header 
@@ -509,7 +536,8 @@ protected:
 	/** Handle call to reset system component
 	  * Called from reset().
 	  */
-	virtual void onUserReset() { }
+	virtual void onUserReset() { 
+	}
 };
 
 #endif

@@ -216,7 +216,7 @@ bool JoystickController::onClockUpdate(){
 	// Detect when one or more input lines go low
 	if(rJOYP->getBits(0,3) != initialState){
 		// Request a joypad interrupt
-		sys->handleJoypadInterrupt();
+		rIF->setBit(4);
 	}
 	
 	return true;

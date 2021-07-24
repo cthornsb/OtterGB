@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cstdlib>
+#include <cinttypes>
+#include <cfloat>
 
 #include "Support.hpp"
 #include "SystemComponent.hpp"
@@ -160,7 +162,7 @@ unsigned int SystemComponent::readMemoryFromFile(std::ifstream &f){
 }
 
 unsigned int SystemComponent::writeSavestate(std::ofstream &f){
-	unsigned int nWritten = 0; 
+	size_t nWritten = 0; 
 	nWritten += writeSavestateHeader(f); // Write the component header
 	for(auto val = userValues.cbegin(); val != userValues.cend(); val++){
 		f.write(static_cast<char*>(val->first), val->second);
@@ -168,11 +170,11 @@ unsigned int SystemComponent::writeSavestate(std::ofstream &f){
 	}
 	if(bSaveRAM)
 		nWritten += writeMemoryToFile(f); // Write associated component RAM
-	return nWritten;
+	return (unsigned int)nWritten;
 }
 
 unsigned int SystemComponent::readSavestate(std::ifstream &f){
-	unsigned int nRead = 0;
+	size_t nRead = 0;
 	nRead += readSavestateHeader(f); // Read component header
 	for(auto val = userValues.cbegin(); val != userValues.cend(); val++){
 		f.read(static_cast<char*>(val->first), val->second);
@@ -180,7 +182,47 @@ unsigned int SystemComponent::readSavestate(std::ifstream &f){
 	}
 	if(bSaveRAM)
 		nRead += readMemoryFromFile(f); // Read associated component RAM
-	return nRead;
+	return (unsigned int)nRead;
+}
+
+void SystemComponent::addSavestateValue(void* ptr, const SavestateType& type, const unsigned int& N/* = 1*/) {
+	switch (type) {
+	case SavestateType::BOOL:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(bool)));
+		break;
+	case SavestateType::CHAR:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(int8_t)));
+		break;
+	case SavestateType::SHORT:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(int16_t)));
+		break;
+	case SavestateType::LONG:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(int32_t)));
+		break;
+	case SavestateType::LLONG:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(int64_t)));
+		break;
+	case SavestateType::BYTE:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(uint8_t)));
+		break;
+	case SavestateType::USHORT:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(uint16_t)));
+		break;
+	case SavestateType::ULONG:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(uint32_t)));
+		break;
+	case SavestateType::ULLONG:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(uint64_t)));
+		break;
+	case SavestateType::FLOAT:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(float_t)));
+		break;
+	case SavestateType::DOUBLE:
+		userValues.push_back(std::make_pair(ptr, N * sizeof(double_t)));
+		break;
+	default:
+		break;
+	}
 }
 
 unsigned int SystemComponent::writeSavestateHeader(std::ofstream &f){
